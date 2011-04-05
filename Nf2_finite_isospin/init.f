@@ -41,7 +41,7 @@ c     internal variables
       read(*,*) dt              !! trajectory length
       read(*,*) residue         !! stopping criterion for inverter
       read(*,*) n_rand          !! number of random vectors 
-      remu_iso=0.1        !! imaginary isospin chemical potential/(pi T) 
+      remu_iso=0        !! imaginary isospin chemical potential/(pi T) 
       read(*,*) file_rhmc       !! file for rhmc expansion
 
       mass2=mass*mass
