@@ -337,7 +337,7 @@ c            endif
          endif
          enddo         
          rr=rfrf
-         write(*,*) rfrf
+c         write(*,*) rfrf
 !     check sul residuo
          if(rfrf<residue) exit
       enddo

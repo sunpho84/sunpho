@@ -18,7 +18,7 @@ c     color definition
 
 c     debug flag: (0=no), (1=print debug info), (2=extreme verbose)
       integer debug
-      parameter(debug=2)
+      parameter(debug=0)
       
 c     algorithm choice
       integer alg_din
