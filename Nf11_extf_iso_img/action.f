@@ -5,7 +5,7 @@ c  version 1.0 - 01/08
 c  local plaquette for molecular dynamics updating
 c=========================================================
       implicit none
-      include "parameters.f"
+#include "parameters.f"
 
 c     arguments
       real action(nvol),beta
@@ -27,45 +27,43 @@ c     internal variables
 
 
 c=========================================================
-      subroutine qaction_flav(action,phi_e,phi_o,emu,ememu)
+      subroutine qaction_flav(action,phi,potc,ud)
 c  written by Massimo D'Elia
 c  version 1.0 - 01/08
 c  local action for ud flavour
 c=========================================================
-
       implicit none
-      include "parameters.f"
+#include "parameters.f"
 
 c     arguments
       real action(nvol)
-      complex phi_e(ncol,nvolh),phi_o(ncol,nvolh)
-      real emu,ememu
+      complex phi(ncol,nvol_eo)
+      complex potc
+      integer ud
       
-c     common blocks
+c     common-block passed variables
       integer nterm
       real cost,pole,coef
       common/rhmc_a/nterm,cost,pole(nmr),coef(nmr)
       
 c     internal variables
-      integer ivol,icol,iodd
-      complex chi_e(ncol,nvolh),chi_o(ncol,nvolh)
+      integer ivol,icol
+      complex chi(ncol,nvol_eo)
+      real loc_action
 
+      call multi_shift_summed_inverter
+     $     (chi,phi,
+     $     potc,
+     $     cost,pole,coef,
+     $     nterm,ud)
 
-      call multi_shift_summed_inverter(chi_e,chi_o,phi_e,phi_o,emu,ememu
-     $     ,cost,pole,coef,nterm)
-
-      do ivol=1,nvol
-
+      do ivol=1,nvol_eo
+         loc_action=0
          do icol=1,ncol
-            if(ivol.le.nvolh) then
-               action(ivol)=action(ivol)+real(chi_e(icol,ivol)
-     $              *conjg(phi_e(icol,ivol)))
-            else
-               action(ivol)=action(ivol)+real(chi_o(icol,ivol-nvolh)
-     $              *conjg(phi_o(icol,ivol-nvolh)))
-            endif
+            loc_action=
+     $           loc_action+real(chi(icol,ivol)*conjg(phi(icol,ivol)))
          enddo
-
+         action(ivol)=action(ivol)+loc_action
       enddo
 
       return
@@ -78,9 +76,8 @@ c  written by Massimo D'Elia
 c  version 1.0 - 01/08
 c  link momentum - part system action
 c=========================================================
-
       implicit none
-      include "parameters.f"
+#include "parameters.f"
 
 c     arguments
       real action(nvol)
@@ -93,16 +90,12 @@ c     internal variables
 
 
       do ivol=1,nvol
-
          loc_action=0
-
          do idir=1,4
             call rtrace_uu(rtr,h(1,1,idir,ivol),h(1,1,idir,ivol))
             loc_action=loc_action+rtr
          enddo
-
          action(ivol)=action(ivol)+loc_action*0.5
-
       enddo
 
 
@@ -119,37 +112,33 @@ c  version 1.0 - 01/08
 c  calculate locally the total action of the system
 c  IMPORTANT: the action have to be calculated locally
 c=========================================================
-
       implicit none
-      include "parameters.f"
+#include "parameters.f"
 
 c     arguments
       real az(nvol)
 
-c     common blocks
-      integer nran,iad_flag
-      real beta_f,beta_a,rho,pi
-      common/param/nran,beta_f,beta_a,rho,pi,iad_flag
+c     common-block passed variables
+      real beta,mass,mass2,residue
+      common/param/beta,mass,mass2,residue
       complex p_w,ipdot
       common/momenta/p_w(ncol,ncol,4,nvol),ipdot(ncol,ncol,4,nvol)
-      complex phi_e,phi_o,chi_e,chi_o
-      common/pseudof/phi_e(ncol,nvolh),chi_e(ncol,nvolh),phi_o(ncol
-     $     ,nvolh),chi_o(ncol,nvolh)
-      real remu
-      real emu,ememu
-      common/param4/remu,emu,ememu
+      complex phi1,phi2,chi1,chi2
+      common/pseudof1/phi1(ncol,nvol_eo),chi1(ncol,nvol_eo)
+      common/pseudof2/phi2(ncol,nvol_eo),chi2(ncol,nvol_eo)
+      complex potc1,potc2
+      common/param3/potc1,potc2
 
-c     internal variables
       integer ivol
-
 
       do ivol=1,nvol
          az(ivol)=0
       enddo
 
-      call uaction(az,beta_f)
+      call uaction(az,beta)
       call haction(az,p_w)
-      call qaction_flav(az,phi_e,phi_o,emu,ememu)
+      call qaction_flav(az,phi1,potc1,1)
+      call qaction_flav(az,phi2,potc2,2)
 
 
       return
@@ -163,9 +152,8 @@ c  written by Massimo D'Elia
 c  version 1.0 - 01/08
 c  calculate the global differenxe between two locally-calculated action
 c=========================================================
-
       implicit none
-      include "parameters.f"
+#include "parameters.f"
 
 c     arguments
       real dif

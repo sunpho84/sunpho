@@ -1,5 +1,5 @@
 c=========================================================
-      subroutine singol_inverter(chi_e,chi_o,phi_e,phi_o,emu,ememu)
+      subroutine singol_inverter(chi_e,chi_o,phi_e,phi_o,emu,ememu,pole)
 c  written by Massimo D'Elia
 c  version 1.0 - 2007/2008
 c  chi = (MM~)^-1 phi
@@ -12,6 +12,7 @@ c     argomenti
       complex chi_e(ncol,nvolh),phi_e(ncol,nvolh)
       complex chi_o(ncol,nvolh),phi_o(ncol,nvolh)
       real emu,ememu
+      real pole
       
 c     variabili passate da common block
       real mass,mass2,residue
@@ -41,7 +42,7 @@ c     parametri
 
  1200 continue    !! loop over congrad to verify truerest
       
-      call m2d(s_e,s_o,chi_e,chi_o,emu,ememu,mass2)
+      call m2d(s_e,s_o,chi_e,chi_o,emu,ememu,pole**0.5)
       
       delta=0
       do ivol=1,nvolh
@@ -66,7 +67,7 @@ c     parametri
 
       iter=iter+1
       
-      call m2d(s_e,s_o,p_e,p_o,emu,ememu,mass2)
+      call m2d(s_e,s_o,p_e,p_o,emu,ememu,pole)
       
       alpha=0
       do ivol=1,nvolh
@@ -103,9 +104,10 @@ c     parametri
          enddo
       enddo 
       
+c      write(*,*) iter,lambda
       if(lambda.gt.residue.and.iter.lt.niter) goto 1201
       
-      call m2d(s_e,s_o,chi_e,chi_o,emu,ememu,mass2)
+      call m2d(s_e,s_o,chi_e,chi_o,emu,ememu,pole)
       
       lambda=0
       do ivol=1,nvolh
@@ -126,9 +128,38 @@ c     parametri
       end
 
 
+c=========================================================
+      subroutine multi_shift_inverter(x_e,x_o,b_e,b_o,emu,ememu,pole
+     $     ,nterm)
+c  written by Sanfo
+c  chiama il corretto inverter
+c=========================================================
+      implicit none
+      include "parameters.f"
+
+c     argomenti
+      complex x_e(ncol,nvolh,nmr),b_e(ncol,nvolh)
+      complex x_o(ncol,nvolh,nmr),b_o(ncol,nvolh)
+      real emu,ememu
+      real pole(nmr)
+      integer nterm
+      
+      if(alg_inv.eq.i_singol) then
+         call multi_shift_fuffa_inverter(x_e,x_o,b_e,b_o,emu,ememu,pole
+     $        ,nterm)
+      endif
+
+      if(alg_inv.eq.i_multi) then
+         call multi_shift_true_inverter(x_e,x_o,b_e,b_o,emu,ememu,pole
+     $        ,nterm)
+      endif
+      
+      return
+      end
+
 
 c=========================================================
-      subroutine multi_shift_inverter(x_e,x_o,b_e,b_o,emu,ememu
+      subroutine multi_shift_true_inverter(x_e,x_o,b_e,b_o,emu,ememu
      $     ,pole,nterm)
 c  written by Sanfo
 c  x_s = (m+X)^-1 b
@@ -237,7 +268,7 @@ c      endif
       do iter=1,niter
 
 !     -s=Ap
-         call m2d(s_e,s_o,p_e,p_o,emu,ememu,mass2)
+         call m2d(s_e,s_o,p_e,p_o,emu,ememu,mass)
       
 !     -pap=(p,s)=(p,Ap)
          pap=0
@@ -394,4 +425,34 @@ c     variabili interne
       return
       end
 
+
+c=========================================================
+      subroutine multi_shift_fuffa_inverter(x_e,x_o,b_e,b_o,emu,ememu
+     $     ,pole,nterm)
+c  written by Sanfo
+c     version 1.0 - 2007/2008
+c  esegue lo shift termine a termine e lo schiaffain x:
+c  x_i = (pole_i+MM~)^-1 b
+c=========================================================
+      implicit none
+      include "parameters.f"
+
+c     argomenti
+      complex x_e(ncol,nvolh,nmr),x_o(ncol,nvolh,nmr)
+      complex b_e(ncol,nvolh,nmr),b_o(ncol,nvolh,nmr)
+      real emu,ememu
+      real cost
+      real pole(nmr),coef(nmr)
+      integer nterm
+
+c     variabili interne
+      integer iterm
+      
+      do iterm=1,nterm
+         call singol_inverter(x_e(1,1,iterm),x_o(1,1,iterm),b_e,b_o,emu
+     $        ,ememu,pole(iterm))
+      enddo
+      
+      return
+      end
 
