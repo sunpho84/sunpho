@@ -1,5 +1,5 @@
 c=========================================================
-      subroutine m2d(y_e,y_o,x_e,x_o,emu,ememu,mass2)
+      subroutine m2d(y_e,y_o,x_e,x_o,emu,ememu,mass)
 c  written by Sanfo
 c  calculate y=(m^2 - DEO*DOE)*x
 c  that is the even\even part of M^+M
@@ -11,30 +11,30 @@ c     arguments
       complex y_e(ncol,nvolh),x_e(ncol,nvolh)
       complex y_o(ncol,nvolh),x_o(ncol,nvolh)
       real emu,ememu
-      real mass2
+      real mass
 
 c     internal variables
       integer ivol,icol
       complex h_e(ncol,nvolh),h_o(ncol,nvolh)
-      real massh
+      real mass2
       
-      massh=0.5*mass2**0.5
+      mass2=mass**2
       
-      call D(OE,0,h_o(1,1),x_e(1,1),emu,ememu)
-      call D(OE,1,y_e(1,1),h_o(1,1),emu,ememu)
+      call D(OE,UNDAG,h_o(1,1),x_e(1,1),emu,ememu)
+      call D(OE,DAG,y_e(1,1),h_o(1,1),emu,ememu)
 
-      call D(EO,0,h_e(1,1),x_o(1,1),emu,ememu)
-      call D(EO,1,y_o(1,1),h_e(1,1),emu,ememu)
+      call D(EO,UNDAG,h_e(1,1),x_o(1,1),emu,ememu)
+      call D(EO,DAG,y_o(1,1),h_e(1,1),emu,ememu)
       
       call DpDdag(OE,h_o(1,1),x_e(1,1),emu,ememu)
       call DpDdag(EO,h_e(1,1),x_o(1,1),emu,ememu)
 
       do ivol=1,nvolh
          do icol=1,ncol
-            y_e(icol,ivol)=mass2*x_e(icol,ivol)-0.25*y_e(icol,ivol)
-     $           +massh*h_e(icol,ivol)
-            y_o(icol,ivol)=mass2*x_o(icol,ivol)-0.25*y_o(icol,ivol)
-     $           +massh*h_o(icol,ivol)
+            y_e(icol,ivol)=mass2*x_e(icol,ivol)+y_e(icol,ivol)
+     $           +mass*h_e(icol,ivol)
+            y_o(icol,ivol)=mass2*x_o(icol,ivol)+y_o(icol,ivol)
+     $           +mass*h_o(icol,ivol)
          enddo
       enddo   
 
@@ -45,7 +45,7 @@ c     internal variables
 
 
 c=========================================================
-      subroutine D(eooe,dag,w,v,emu,ememu)
+      subroutine D(eooe,dagundag,w,v,emu,ememu)
 c  written by Massimo D'Elia, unified by Sanfo
 c  apply the even/odd part or the odd/even part of the Dirac
 c  Matrix, depending on the value of the passed variable eooe
@@ -59,8 +59,8 @@ c     arguments
       integer eooe
       complex w(ncol,nvolh),v(ncol,nvolh)
       real emu,ememu
-      integer dag
-
+      integer dagundag
+      
 c     common blocks
       integer sindeo,sindeoh,parity,cooreo,forweo,backeo
       common/geo/sindeo(nx,ny,nz,nt),sindeoh(nx,ny,nz,nt),parity(nx,ny
@@ -77,7 +77,8 @@ c     internal variables
       do base_ivol=1,nvolh
 
 c     select which part of D to apply
-         if((dag.eq.0.and.eooe.eq.EO).or.(dag.eq.1.and.eooe.eq.OE)) then
+         if((dagundag.eq.UNDAG.and.eooe.eq.EO).or.(dagundag.eq.DAG.and
+     $        .eooe.eq.OE)) then
             ivol=base_ivol
          else
             ivol=base_ivol+nvolh
@@ -99,10 +100,12 @@ c     reset temporary variable
 
 c     write final value
          do icol=1,ncol
-            if(dag.eq.0) then
-               w(icol,base_ivol)=w1(icol)+emu*w2(icol)-ememu*w3(icol) 
+            if(dagundag.eq.UNDAG) then
+               w(icol,base_ivol)=+0.5*(w1(icol)+emu*w2(icol)-ememu
+     $              *w3(icol))
             else
-               w(icol,base_ivol)=w1(icol)+ememu*w2(icol)-emu*w3(icol) 
+               w(icol,base_ivol)=-0.5*(w1(icol)+ememu*w2(icol)-emu
+     $              *w3(icol))
             endif
          enddo
          
@@ -135,9 +138,9 @@ c     common blocks
 c     internal variables
       integer base_ivol,ivol,icol
       complex w2(ncol),w3(ncol)
-      real twosinhmu
+      real sinhmu
       
-      twosinhmu=emu-ememu
+      sinhmu=(emu-ememu)*0.5
 
       do base_ivol=1,nvolh
 
@@ -152,7 +155,7 @@ c     select which part of D to apply
          call vhmult(w3,u(1,1,4,backeo2(ivol,4)),v(1,backeo(ivol,4)))
 
         do icol=1,ncol
-           w(icol,base_ivol)=twosinhmu*(w2(icol)+w3(icol))
+           w(icol,base_ivol)=sinhmu*(w2(icol)+w3(icol))
         enddo
         
       enddo

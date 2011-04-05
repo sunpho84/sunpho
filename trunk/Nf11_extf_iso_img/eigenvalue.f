@@ -1,5 +1,5 @@
 c=========================================================
-      subroutine eigenval(autmin,autmax,emu,ememu)
+      subroutine eigenval(autmin,autmax,potc,ud)
 c  written by Sanfo
 c  find minimum and maximum eigenvalue of even\even part of M^+M
 c  by using an approximated (and probably not stable) algorithm
@@ -7,90 +7,110 @@ c  This is used to find the appropriate interval where to scale the
 c  rational expansion
 c=========================================================
       implicit none
-      include "parameters.f"
+#include "parameters.f"
 
 c     arguments
       real autmin,autmax
-      real emu,ememu
+      complex potc
+      integer ud
 
 c     common blocks
-      real mass,mass2,residue
-      common/param2/mass,mass2,residue
+      real beta,mass,mass2,residue
+      common/param/beta,mass,mass2,residue
 
 c     internal variables
       integer aut
-      complex y_e(ncol,nvolh),x_e(ncol,nvolh)
-      complex y_o(ncol,nvolh),x_o(ncol,nvolh)
+      complex y(ncol,nvol_eo),x(ncol,nvol_eo)
       real norm
       integer icol,ivol,iter
       integer niter
 
 c     parameters
+      integer met,sane,marc
       real sigma
-      parameter(sigma=1)
+      parameter(sigma=1,sane=1,marc=2,met=marc)
 
 
+#ifdef mf
+      call add_extf(ud)
+#else
+      ud=ud !to avoid warning
+#endif
       do aut=1,2
-
-         do ivol=1,nvolh
-            call gauss_vector(x_e(1,ivol),sigma)
-            call gauss_vector(x_o(1,ivol),sigma)
+         do ivol=1,nvol_eo
+            call gauss_vector(x(1,ivol),sigma)
          enddo
-         
-         if(aut.eq.1) then
-            niter=50
-         else
-            niter=5
-         endif
 
+         if(met.eq.marc.and.aut.eq.2) then
+            niter=5
+         else
+            if(aut.eq.1) then
+               niter=50
+            else
+               niter=50
+            endif
+         endif
+         
          do iter=1,niter
             
             if(aut.eq.1) then
-               call m2d(y_e,y_o,x_e,x_o,emu,ememu,mass)
+               call m2d(y,x,potc,mass)
             else
-c               call singol_inverter(y_e,y_o,x_e,x_o,emu,ememu,mass2)
-               call m2d(y_e,y_o,x_e,x_o,emu,ememu,mass)
-               do ivol=1,nvolh
-                  do icol=1,ncol
-                     y_e(icol,ivol)=autmax*x_e(icol,ivol)-y_e(icol,ivol)
-                     y_o(icol,ivol)=autmax*x_o(icol,ivol)-y_o(icol,ivol)
+               if(met.eq.sane) then
+                  call singol_inverter(y,x,potc,mass)
+               else
+                  call m2d(y,x,potc,mass)
+                  do ivol=1,nvol_eo
+                     do icol=1,ncol
+                        y(icol,ivol)=autmax*x(icol,ivol)-y(icol,ivol)
+                     enddo
                   enddo
-               enddo
+               endif
             endif
             
             norm=0
-            do ivol=1,nvolh
+            do ivol=1,nvol_eo
                do icol=1,ncol
-                  norm=norm+real(y_e(icol,ivol))**2+aimag(y_e(icol
-     $                 ,ivol))**2
-                  norm=norm+real(y_o(icol,ivol))**2+aimag(y_o(icol
-     $                 ,ivol))**2
+                  norm=norm+real(y(icol,ivol))**2+aimag(y(icol,ivol))**2
                enddo
             enddo
-            norm=(norm/nvol/ncol)**0.5
+            norm=(norm/nvol_eo/ncol)**0.5
+            do ivol=1,nvol_eo
+               do icol=1,ncol
+                  x(icol,ivol)=y(icol,ivol)/norm
+               enddo
+            enddo
             
-            do ivol=1,nvolh
-               do icol=1,ncol
-                  x_e(icol,ivol)=y_e(icol,ivol)/norm
-                  x_o(icol,ivol)=y_o(icol,ivol)/norm
-               enddo
-            enddo
-
-            if(debug.ge.2) then
+#ifdef debug2
+            if(aut.eq.1) then
                write(*,*) "EIGEN_STEP:",iter,"NORM:",norm
+            else
+               write(*,*) "EIGEN_STEP:",iter,"NORM:",1/norm
             endif
+
+            call flush(6)
+            call flush(7)
+#endif
             
          enddo
          
          if(aut.eq.1) then 
             autmax=norm
          else
-c            autmin=1/norm
-            autmin=autmax-norm
+            if(met.eq.sane) then
+               autmin=1/norm
+            else
+               autmin=autmax-norm
+            endif
          endif
-         
-      enddo
 
+      enddo
+      
+
+#ifdef mf
+      call rem_extf(ud)
+#endif
+      
       return
       end
 
@@ -103,12 +123,11 @@ c  riscala i parametri dell'espansione adattandoli
 c  all'intervallo opportuno.
 c=========================================================
       implicit none
-      include "parameters.f"
+#include "parameters.f"
 
 c     common blocks
-      real remu
-      real emu,ememu
-      common/param4/remu,emu,ememu
+      complex potc1,potc2
+      common/param3/potc1,potc2
 
 c     AZIONE
 c     approssimazione di (m+x)^(-nf/4)
@@ -137,17 +156,31 @@ c     sono quelle che poi vengono scalate
      $     ocost_h,opole_h(nmr),ocoef_h(nmr),z_h
 
 c     variabili interne
+      real autmin1,autmax1
+      real autmin2,autmax2
       real autmin,autmax
       real scala_az,scala_hz
       integer iterm
 
 c     calcola gli autovalori massimo e minimo per le due matrici separatamente
-      call eigenval(autmin,autmax,emu,ememu)
+      call eigenval(autmin1,autmax1,potc1,1)
+      call eigenval(autmin2,autmax2,potc2,2)
 
-      if(debug.ge.1) then
-         write(*,*) "Eigenvalue:",autmin,autmax,autmax/autmin,z_a,z_h
+c     trova il minimo ed il massimo "assoluti"
+      if(autmax1.gt.autmax2) then
+         autmax=autmax1
+      else
+         autmax=autmax2
+      endif
+      if(autmin1.lt.autmin2) then
+         autmin=autmin1
+      else
+         autmin=autmin2
       endif
 
+#ifdef debug1
+         write(*,*) "Eigenvalue:",autmin,autmax,autmax/autmin,z_a,z_h
+#endif
 c     setta i fattori di scala
       scala=autmax*1.1
       scala_hz=scala**z_h

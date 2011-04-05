@@ -4,7 +4,7 @@ c  written by Sanfo
 c  version 1.0 - 04/2008
 c=========================================================
       implicit none
-      include "parameters.f"
+#include "parameters.f"
 
 c     arguments
       integer acc
@@ -12,53 +12,80 @@ c     arguments
       integer n_rand
 
 c     common blocks
-      real remu
-      real emu,ememu
-      common/param4/remu,emu,ememu
+      complex potc1,potc2
+      common/param3/potc1,potc2
 
 c     internal variables
       real plaq_s,plaq_t,plaq2_s,plaq2_t
       complex ploop
-      complex f1,f2,f3,f4,fv1,fv2,fv3,fv4
-      complex g1,g2,g3,g4,gv1,gv2,gv3,gv4
+#ifdef chiral_meas
+      complex f1,f2,f3,f4,f5,f6,f7,fv1,fv2,fv3,fv4,fv5,fv6,fv7
+      complex g1,g2,g3,g4,g5,g6,g7,gv1,gv2,gv3,gv4,gv5,gv6,gv7
+#endif
+
+#ifdef mf
+      complex m1
+#endif
+
+#ifdef debug1
       real timei,timef
 
-
-      if(debug.ge.1) then
-         write(*,*)
-         write(*,*)
-         write(*,*) "Init measures on config: ",n_traj
-         call cpu_time(timei)
-      endif
-
+      write(*,*)
+      write(*,*)
+      write(*,*) "Init measures on config: ",n_traj
+      call cpu_time(timei)
+#endif
+      n_rand=n_rand
 
 c     measure section
       call plaquette(plaq_s,plaq_t,plaq2_s,plaq2_t) 
       call polyakov(ploop)
-      call CHIRAL(n_rand,f1,f2,f3,f4,fv1,fv2,fv3,fv4,emu,ememu)
-      call CHIRAL(n_rand,g1,g2,g3,g4,gv1,gv2,gv3,gv4,emu,ememu)
-      
+
+#ifdef chiral_meas
+      call CHIRAL(n_rand,f1,f2,f3,f4,f5,f6,f7,fv1,fv2,fv3,fv4,fv5,fv6
+     $     ,fv7,potc1,1)
+      call CHIRAL(n_rand,g1,g2,g3,g4,g5,g6,g7,gv1,gv2,gv3,gv4,gv5,gv6
+     $     ,gv7,potc2,2)
+#endif
+
+#ifdef mf
+      call MAGNET(n_rand,m1)
+#endif
       
 c     the file writing is collapsed in order to minimize possible failure
       write(u_meas,*) n_traj,acc,plaq_s,plaq_t,real(ploop),aimag(ploop)
-      write(u_ferm_1,*) n_traj,Real(f1),Aimag(f1),Real(fv1),Aimag(fv1) 
-      write(u_ferm_2,*) n_traj,Real(f2),Aimag(f2),Real(fv2),Aimag(fv2) 
-      write(u_ferm_3,*) n_traj,Real(f3),Aimag(f3),Real(fv3),Aimag(fv3) 
-      write(u_ferm_4,*) n_traj,Real(f4),Aimag(f4),Real(fv4),Aimag(fv4) 
 
-      if(debug.ge.1) then
-         call cpu_time(timef)
-         write(*,*) "End measures, lasted time: ",int(timef
-     $        -timei),"seconds"
-         write(*,*)
-         write(*,*)
-      endif
+#ifdef chiral_meas
+      write(u_ferm_11,*) n_traj,Real(f1),Aimag(f1),Real(fv1),Aimag(fv1)
+      write(u_ferm_21,*) n_traj,Real(g1),Aimag(g1),Real(gv1),Aimag(gv1)
+      write(u_ferm_12,*) n_traj,Real(f2),Aimag(f2),Real(fv2),Aimag(fv2)
+      write(u_ferm_22,*) n_traj,Real(g2),Aimag(g2),Real(gv2),Aimag(gv2)
+      write(u_ferm_13,*) n_traj,Real(f3),Aimag(f3),Real(fv3),Aimag(fv3)
+      write(u_ferm_23,*) n_traj,Real(g3),Aimag(g3),Real(gv3),Aimag(gv3)
+      write(u_ferm_14,*) n_traj,Real(f4),Aimag(f4),Real(fv4),Aimag(fv4)
+      write(u_ferm_24,*) n_traj,Real(g4),Aimag(g4),Real(gv4),Aimag(gv4)
+#endif
 
+#ifdef mf
+      write(u_ferm_15,*) n_traj,Real(f5),imag(f5),Real(fv5),imag(fv5)
+      write(u_ferm_25,*) n_traj,Real(g5),imag(g5),Real(gv5),imag(gv5)
+      write(u_ferm_16,*) n_traj,Real(f6),imag(f6),Real(fv6),imag(fv6)
+      write(u_ferm_26,*) n_traj,Real(g6),imag(g6),Real(gv6),imag(gv6)
+      write(u_ferm_17,*) n_traj,Real(f7),imag(f7),Real(fv7),imag(fv7)
+      write(u_ferm_27,*) n_traj,Real(g7),imag(g7),Real(gv7),imag(gv7)
+      write(u_magnet,*) n_traj,Real(m1),Aimag(m1)
+#endif
+
+#ifdef debug1
+      call cpu_time(timef)
+      write(*,*) "End measures, lasted time: ",int(timef-timei)
+     $     ,"seconds"
+      write(*,*)
+      write(*,*)
+#endif
 
       return
       end
-
-
 
 
 c=========================================================
@@ -70,17 +97,15 @@ c     calculate the plaquette site by site. Used to avoid numerical
 c     rounding during the calculation of the diference between new and
 c     old gauge action (so do not change even if it seems unoptimized)
 c=========================================================
-
       implicit none
-      include "parameters.f"
+#include "parameters.f"
 
 c     arguments
       real locplaq(nvol)
 
 c     common blocks
-      integer nran,iad_flag
-      real beta_f,beta_a,rho,pi
-      common/param/nran,beta_f,beta_a,rho,pi,iad_flag 
+      real beta,mass,mass2,residue
+      common/param/beta,mass,mass2,residue
       integer forweo2,backeo2
       common/geo2/forweo2(nvol,4),backeo2(nvol,4)
       complex u
@@ -131,7 +156,7 @@ c  version 1.0 - 11/07/2004
 cc    compute staples to be used in the updating
 c=========================================================
       implicit none
-      include "parameters.f"
+#include "parameters.f"
 
 c     common blocks
       integer sind,coor,forw,back
@@ -147,13 +172,11 @@ c     internal variables
       integer ind,idir,jdir
       complex v1(ncol,ncol)
 
-
       do ind=1,nvol
          
          do idir=1,4
             
             call zero(staple(1,1,idir,ind))
-            
 c     loop on orthogonal directions
             do jdir=1,4
 
@@ -181,14 +204,14 @@ c     staple in the backward direction
       end
 
 c=========================================================
-      subroutine PLAQUETTE(plaq_s,plaq_t,plaq2_s,plaq2_t)
+      subroutine plaquette(plaq_s,plaq_t,plaq2_s,plaq2_t)
 c  written by Massimo D'Elia
 c  version 1.0 - 11/07/2004
 c  measures fundamental and adjoint plaquette
 c=========================================================
 
       implicit none
-      include "parameters.f"
+#include "parameters.f"
 
 c     arguments
       real plaq_s,plaq_t,plaq2_s,plaq2_t
@@ -248,13 +271,13 @@ c     loop on orthogonal directions
       end
 
 c=========================================================
-      subroutine POLYAKOV(poly_c)
+      subroutine polyakov(poly_c)
 c  written by Massimo D'Elia
 c  version 1.0 - 11/07/2004
 c=========================================================
 
       implicit none
-      include "parameters.f"
+#include "parameters.f"
 
 c     arguments
       complex poly_c
@@ -301,9 +324,10 @@ c     minus due to staggered phase
       end
 
 
-
+#ifdef chiral_meas
 c=========================================================
-      subroutine CHIRAL(n_rand,c1,c2,c3,c4,cv1,cv2,cv3,cv4,emu,ememu)
+      subroutine CHIRAL(n_rand,c1,c2,c3,c4,c5,c6,c7,
+     $     cv1,cv2,cv3,cv4,cv5,cv6,cv7,potc,ud)
 c  written by Massimo D'Elia
 c  version 1.0 - 2007/2008
 c  c1 -> chiral condensate
@@ -316,16 +340,17 @@ c  c7 -> baryon current direction z
 c=========================================================
 
       implicit none
-      include "parameters.f"
+#include "parameters.f"
       
 c     arguments
       integer n_rand
-      complex c1,c2,c3,c4,cv1,cv2,cv3,cv4
-      real emu,ememu
+      complex c1,c2,c3,c4,c5,c6,c7,cv1,cv2,cv3,cv4,cv5,cv6,cv7
+      complex potc
+      integer ud
 
 c     common blocks
-      real mass,mass2,residue
-      common/param2/mass,mass2,residue
+      real beta,mass,mass2,residue
+      common/param/beta,mass,mass2,residue
       integer sindeo,sindeoh,parity,cooreo,forweo,backeo
       common/geo/sindeo(nx,ny,nz,nt),sindeoh(nx,ny,nz,nt),
      $     parity(nx,ny,nz,nt),cooreo(nvol,4),
@@ -339,35 +364,44 @@ c     common blocks
 c     internal variables
       integer iaux,i_rand,ivol,idir,icol,iodd
       complex v1(ncol),v2(ncol)
-      complex phi_e(ncol,nvolh),phi_o(ncol,nvolh)
-      complex chi_e(ncol,nvolh),chi_o(ncol,nvolh)
-      complex rnd_e(ncol,nvolh),rnd_o(ncol,nvolh)
+      complex phi(ncol,nvol)
+      complex chi(ncol,nvol)
+      complex rnd(ncol,nvol)
       complex b1,b2,b3,b4,a1,a2
       complex ac1(3),ac2(3)
       complex bc(3)
 
 c     parameters
-      real sigma,invm,nfqv
+      real sigma,nfqv
       parameter(sigma=1,nfqv=n_quark_for_flavour/4.0/(nvol))
 
 
-      invm=1/mass
+#ifdef mf
+      call add_extf(ud)
+#else
+      ud=ud !to avoid warning
+#endif
 
       c1=(0,0)
       c2=(0,0)
       c3=(0,0)
       c4=(0,0)
+      c5=(0,0)
+      c6=(0,0)
+      c7=(0,0)
       cv1=(0,0)
       cv2=(0,0)
       cv3=(0,0)
       cv4=(0,0)
+      cv5=(0,0)
+      cv6=(0,0)
+      cv7=(0,0)
 
       do i_rand=1,n_rand  !! loop over random vectors
 
-         if(debug.ge.1) then
-            write(*,*) "Calculation of chiral observables, vector:"
-     $           ,i_rand
-         endif
+#ifdef debug1
+         write(*,*) "Calculation of chiral observables, vector:",i_rand
+#endif
 
          b1=(0,0)
          b2=(0,0)
@@ -381,30 +415,32 @@ c     parameters
             ac2(iaux)=(0,0)
          enddo   
          
-        do ivol = 1,nvolh
-         call gauss_vector(rnd_e(1,ivol),sigma)
-         call gauss_vector(rnd_o(1,ivol),sigma)
-      enddo 
+         do ivol = 1,nvol
+            call gauss_vector(rnd(1,ivol),sigma)
+         enddo 
 
-      call D(OE,DAG,phi_e(1,1),rnd_o(1,1),emu,ememu)
-      call D(EO,DAG,phi_o(1,1),rnd_e(1,1),emu,ememu)
+#ifdef ficp
+         call D(OE_DAG,phi(1,1),rnd(1,1+nvolh),potc)
+         call D(EO_DAG,phi(1,1+nvolh),rnd(1,1),potc)
+#else
+         call D(EO,phi(1,1),rnd(1,1+nvolh),potc)
+#endif
 
-      do ivol = 1,nvolh
-         do icol = 1,ncol
-            phi_e(icol,ivol)=mass*rnd_e(icol,ivol)+phi_e(icol,ivol)
-            phi_o(icol,ivol)=mass*rnd_o(icol,ivol)+phi_o(icol,ivol)
-         enddo
-      enddo 
+         do ivol = 1,nvol
+            do icol = 1,ncol
+               phi(icol,ivol)=mass*rnd(icol,ivol)+phi(icol,ivol)
+            enddo
+         enddo 
 
-      call singol_inverter(chi_e,chi_o,phi_e,phi_o,emu,ememu,mass2)
-      
-      
+         call singol_inverter(chi,phi,potc,mass2)
+#ifndef ficp
+         call D(OE,phi(1,1+nvolh),chi(1,1),potc)
+#endif
+
 !!=========COMPUTE CHIRAL CONDENSATE=====================================      
-         do ivol=1,nvolh
+         do ivol=1,nvol_eo
             do icol=1,ncol
-!! chiral condensate
-               b1=b1+conjg(rnd_o(icol,ivol))*chi_o(icol,ivol)
-     $              +conjg(rnd_e(icol,ivol))*chi_e(icol,ivol)
+               b1=b1+conjg(rnd(icol,ivol))*chi(icol,ivol)
             enddo
          enddo 
 
@@ -412,28 +448,28 @@ c     parameters
          do ivol = 1,nvolh
             iodd = ivol + nvolh
             
-            call vmult(v1,u(1,1,4,ivol),chi_o(1,forweo(ivol,4)))
-            call vmult(v2,u(1,1,4,ivol),rnd_o(1,forweo(ivol,4)))
+            call vmult(v1,u(1,1,4,ivol),chi(1,forweo(ivol,4)+nvolh))
+            call vmult(v2,u(1,1,4,ivol),rnd(1,forweo(ivol,4)+nvolh))
 c     v1 should be multiplied by eim -> a1 by eim
 c     v2 should be multiplied by eim -> a2 by emim
             do icol = 1,ncol
-               a1=a1+conjg(rnd_e(icol,ivol))*v1(icol)
-               a2=a2+conjg(v2(icol))*chi_e(icol,ivol)
+               a1=a1+conjg(rnd(icol,ivol))*v1(icol)
+               a2=a2+conjg(v2(icol))*chi(icol,ivol)
             enddo
             
-            call vmult(v1,u(1,1,4,iodd),chi_e(1,forweo(iodd,4)))
-            call vmult(v2,u(1,1,4,iodd),rnd_e(1,forweo(iodd,4)))
+            call vmult(v1,u(1,1,4,iodd),chi(1,forweo(iodd,4)))
+            call vmult(v2,u(1,1,4,iodd),rnd(1,forweo(iodd,4)))
 c     v1 should be multiplied by eim -> a1 by eim
 c     v2 should be multiplied by eim -> a2 by emim
             do icol = 1,ncol
-               a1=a1+conjg(rnd_o(icol,ivol))*v1(icol)
-               a2=a2+conjg(v2(icol))*chi_o(icol,ivol)
+               a1=a1+conjg(rnd(icol,iodd))*v1(icol)
+               a2=a2+conjg(v2(icol))*chi(icol,iodd)
             enddo
             
          enddo 
          
-         b2=emu*a1-ememu*a2  !! energy density
-         b3=emu*a1+ememu*a2  !! baryon density
+         b2=exp(potc)*a1-exp(-potc)*a2  !! energy density
+         b3=exp(potc)*a1+exp(-potc)*a2  !! baryon density
          
 !!=========COMPUTE PRESSURE DENSITY=====================================      
          do ivol=1,nvolh            
@@ -441,18 +477,20 @@ c     v2 should be multiplied by eim -> a2 by emim
             
             do idir=1,3
                
-              call vmult(v1,u(1,1,idir,ivol),chi_o(1,forweo(ivol,idir)))
-              call vmult(v2,u(1,1,idir,ivol),rnd_o(1,forweo(ivol,idir)))
+               call vmult(v1,u(1,1,idir,ivol),chi(1,forweo(ivol,idir)
+     $              +nvolh))
+               call vmult(v2,u(1,1,idir,ivol),rnd(1,forweo(ivol,idir)
+     $              +nvolh))
               do icol = 1,ncol
-                 ac1(idir)=ac1(idir)+CONJG(rnd_e(icol,ivol))*v1(icol)
-                 ac2(idir)=ac2(idir)+CONJG(v2(icol))*chi_e(icol,ivol)
+                 ac1(idir)=ac1(idir)+CONJG(rnd(icol,ivol))*v1(icol)
+                 ac2(idir)=ac2(idir)+CONJG(v2(icol))*chi(icol,ivol)
               enddo
               
-              call vmult(v1,u(1,1,idir,iodd),chi_e(1,forweo(iodd,idir)))
-              call vmult(v2,u(1,1,idir,iodd),rnd_e(1,forweo(iodd,idir)))
+              call vmult(v1,u(1,1,idir,iodd),chi(1,forweo(iodd,idir)))
+              call vmult(v2,u(1,1,idir,iodd),rnd(1,forweo(iodd,idir)))
               do icol = 1,ncol
-                 ac1(idir)=ac1(idir)+CONJG(rnd_o(icol,ivol))*v1(icol)
-                 ac2(idir)=ac2(idir)+CONJG(v2(icol))*chi_o(icol,ivol)
+                 ac1(idir)=ac1(idir)+CONJG(rnd(icol,iodd))*v1(icol)
+                 ac2(idir)=ac2(idir)+CONJG(v2(icol))*chi(icol,iodd)
               enddo
               
            enddo                !! spatial direction
@@ -465,9 +503,9 @@ c     v2 should be multiplied by eim -> a2 by emim
         enddo
 
         b1=b1*nfqv
-        b2=b2*nfqv
-        b3=b3*nfqv
-        b4=b4*nfqv
+        b2=0.5*b2*nfqv
+        b3=0.5*b3*nfqv
+        b4=0.5*b4*nfqv
 
         do iaux=1,3
            bc(iaux)=0.5*bc(iaux)/float(nvol)
@@ -477,10 +515,16 @@ c     v2 should be multiplied by eim -> a2 by emim
         c2=c2+b2
         c3=c3+b3
         c4=c4+b4
+        c5=c5+bc(1)
+        c6=c6+bc(2)
+        c7=c7+bc(3)
         cv1=cv1+cmplx(real(b1)**2,aimag(b1)**2)
         cv2=cv2+cmplx(real(b2)**2,aimag(b2)**2)
         cv3=cv3+cmplx(real(b3)**2,aimag(b3)**2)
         cv4=cv4+cmplx(real(b4)**2,aimag(b4)**2)
+        cv5=cv5+cmplx(real(bc(1))**2,aimag(bc(1))**2)
+        cv6=cv6+cmplx(real(bc(2))**2,aimag(bc(2))**2)
+        cv7=cv7+cmplx(real(bc(3))**2,aimag(bc(3))**2)
 
       enddo                     !! random vectors
       
@@ -488,10 +532,176 @@ c     v2 should be multiplied by eim -> a2 by emim
       c2=c2/float(n_rand)
       c3=c3/float(n_rand)
       c4=c4/float(n_rand)
+      c5=c5/float(n_rand)
+      c6=c6/float(n_rand)
+      c7=c7/float(n_rand)
       cv1=cv1/float(n_rand)
       cv2=cv2/float(n_rand)
       cv3=cv3/float(n_rand)
       cv4=cv4/float(n_rand)
+      cv5=cv5/float(n_rand)
+      cv6=cv6/float(n_rand)
+      cv7=cv7/float(n_rand)
+
+#ifdef mf
+      call rem_extf(ud)
+#endif
+
+      return
+      end
+#endif
+
+
+#ifdef mf
+c=========================================================
+      subroutine magnet_flav(rnd,b3,potc,ud)
+c     written by Massimo D'Elia
+c     version 1.0 - 2007/2008
+c=========================================================
+
+      implicit none
+#include "parameters.f"
+
+c     arguments
+      complex rnd(ncol,nvol)
+      integer ud
+      complex b3,potc
+
+c     variabili passate da blocchi common
+      real beta,mass,mass2,residue
+      common/param/beta,mass,mass2,residue
+      integer sindeo,sindeoh,parity,cooreo,forweo,backeo
+      common/geo/sindeo(nx,ny,nz,nt),sindeoh(nx,ny,nz,nt),parity(nx,ny
+     $     ,nz,nt),cooreo(nvol,4),forweo(nvol,4),backeo(nvol,4)
+      complex u
+      common/field/u(ncol,ncol,4,nvol)
+      real u1phase
+      common/expu1/u1phase(4,nvol)
+
+c     variabili interne
+      integer ivol,iodd,icol,idir
+      complex phi(ncol,nvol)
+      complex chi(ncol,nvol)
+      complex v1(ncol),v2(ncol)
+      complex t3
+      
+
+      call add_extf(ud)
+
+      
+#ifdef ficp
+      call D(OE_DAG,phi,rnd(1,1+nvolh),potc)
+      call D(EO_DAG,phi(1,1+nvolh),rnd,potc)
+#else
+      call D(EO,phi(1,1),rnd(1,1+nvolh),potc)
+#endif
+      
+      do ivol=1,nvol_eo
+         do icol=1,ncol
+            phi(icol,ivol)=mass*rnd(icol,ivol)+phi(icol,ivol)
+         enddo
+      enddo 
+      
+
+      call singol_inverter(chi,phi,potc,mass2)
+#ifndef ficp
+         call D(OE,phi(1,1+nvolh),chi(1,1),potc)
+#endif
+      
+!     =========================COMPUTE MAGN_SUSC=========================
+      do ivol=1,nvolh
+
+         iodd=ivol+nvolh
+         
+         do idir=1,4
+            call vmult(v1,u(1,1,idir,ivol),chi(1,forweo(ivol,idir)
+     $           +nvolh))
+            call vmult(v2,u(1,1,idir,ivol),rnd(1,forweo(ivol,idir)
+     $           +nvolh))
+
+c     v1,v2 should be multiplied by +,-u1phase -> t3 by +u1phase
+            t3=(0,0)
+            do icol=1,ncol
+               t3=t3+CONJG(rnd(icol,ivol))*v1(icol)
+               t3=t3+CONJG(v2(icol))*chi(icol,ivol)
+            enddo
+            b3=b3+t3*u1phase(idir,ivol)
+
+            call vmult(v1,u(1,1,idir,iodd),chi(1,forweo(iodd,idir)))
+            call vmult(v2,u(1,1,idir,iodd),rnd(1,forweo(iodd,idir)))
+
+c     v1,v2 should be multiplied by +,-u1phase -> t3 by +u1phase
+            t3=(0,0)
+            do icol=1,ncol
+               t3=t3+CONJG(rnd(icol,iodd))*v1(icol)
+               t3=t3+CONJG(v2(icol))*chi(icol,iodd)
+            enddo
+            b3=b3+t3*u1phase(idir,iodd)
+
+         enddo
+
+      enddo 
+      
+      call rem_extf(ud)
+
       
       return
       end
+
+c=========================================================
+      subroutine magnet(n_rand,c3)
+c     written by Massimo D'Elia
+c     version 1.0 - 2007/2008
+c     calculate the derivative of F/T=lnZ with respect to n=B/B0, where
+c     B0=2pi/Nx or 2pi/Nx^2 according to the quantization condition. The
+c     result is divided by Nvol for historical reason
+c=========================================================
+
+      implicit none
+#include "parameters.f"
+
+c     arguments
+      integer n_rand
+      complex c3
+
+c     variabili interne
+      complex c1,c2
+      integer i_rand,ivol
+      complex rnd(ncol,nvol)
+
+c     variabili passate da blocchi common
+      complex potc1,potc2
+      common/param3/potc1,potc2
+
+c     parametri
+      real nfqv
+      parameter(nfqv=n_quark_for_flavour/(4.0*nvol))
+      real sigma
+      parameter(sigma=1)
+
+
+      c1=(0,0)
+      c2=(0,0)
+
+      do i_rand=1,n_rand        !! loop over random vectors
+         
+#ifdef debug1
+         write(*,*) "Calculation of magnetic observables, vector:"
+     $        ,i_rand
+#endif
+
+         do ivol=1,nvol
+            call gauss_vector(rnd(1,ivol),sigma)
+         enddo 
+         
+         call magnet_flav(rnd,c1,potc1,1)
+         call magnet_flav(rnd,c2,potc2,2)
+         
+      enddo
+
+      c3=(2*c1-c2)*nfqv/float(n_rand)
+      
+      
+      return
+      end
+#endif

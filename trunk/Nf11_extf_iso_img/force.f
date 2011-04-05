@@ -5,11 +5,11 @@ c  version 1.0 - 2007/2008
 c  evolve all the links for a "iepsatt" MD time
 c=========================================================
       implicit none
-      include "parameters.f"
+#include "parameters.f"
 
 c     arguments
       complex iepsatt
-
+      
 c     common blocks
       complex u,p_w,ipdot
       common/field/u(ncol,ncol,4,nvol)
@@ -19,13 +19,12 @@ c     internal variables
       complex h(ncol,ncol),u1(ncol,ncol),u2(ncol,ncol)
       integer ivol,idir
 
-
       do ivol=1,nvol
          do idir=1,4
             call cmult(h,iepsatt,p_w(1,1,idir,ivol))
             call expmat(u1,h)
-            call mmult(u2(1,1),u1(1,1),u(1,1,idir,ivol))
-            call equal(u(1,1,idir,ivol),u2(1,1))
+            call mmult(u2,u1,u(1,1,idir,ivol))
+            call equal(u(1,1,idir,ivol),u2)
          enddo 
       enddo   !! end of starting step
       
@@ -41,7 +40,7 @@ c  written by Massimo D'Elia
 c  version 1.0 - 2007/2008
 c=========================================================
       implicit none
-      include "parameters.f"
+#include "parameters.f"
 
 c     arguments
       complex iepsatt
@@ -78,7 +77,7 @@ c  compute the force a(t)
 c  version 1.0 - 2007/2008
 c=========================================================
       implicit none
-      include "parameters.f"
+#include "parameters.f"
 
 c     arguments
       integer scale_expansion
@@ -99,9 +98,9 @@ c     internal variables
          call scale_rhmc
       endif
 
-      if(debug.ge.1) then
-         write(*,*) "Starting calculation of the force"
-      endif
+#ifdef debug1
+      write(*,*) "Starting calculation of the force"
+#endif
       
       call compute_gluonic_force(ipdot_g)
       call compute_quark_force(ipdot_q)
@@ -121,14 +120,13 @@ c     sum gluonic and quark force and calculate Trace Anti-hermitian part
          enddo
       enddo
 
-      if(debug.ge.1) then
-         write(*,*) "Force calculation terminated"
-      endif
-
-      if(debug.ge.2) then
-         write(*,*) "FORCE:",ipdot_g(icol1,icol2,idir,ivol),
-     $        ipdot_q(icol1,icol2,idir,ivol)
-      endif
+#ifdef debug1
+      write(*,*) "Force calculation terminated"
+#endif
+      
+#ifdef debug2
+      write(*,*) "FORCE:",ipdot_g(1,1,1,1), ipdot_q(1,1,1,1)
+#endif      
       
       return
       end
@@ -140,15 +138,14 @@ c  written by Sanfo
 c  calculte gluonic part of the force
 c=========================================================
       implicit none
-      include "parameters.f"
+#include "parameters.f"
 
 c     arguments
       complex ipdot(ncol,ncol,4,nvol)
 
 c     common blocks
-      integer nran,iad_flag
-      real beta_f,beta_a,rho,pi
-      common/param/nran,beta_f,beta_a,rho,pi,iad_flag
+      real beta,mass,mass2,residue
+      common/param/beta,mass,mass2,residue
       complex staple
       common/staple/staple(ncol,ncol,4,nvol)
 
@@ -156,16 +153,13 @@ c     internal variables
       integer ivol,idir
       real r_1
 
-
-      r_1=beta_f/float(ncol) 
+      r_1=beta/float(ncol) 
 
       call compute_staples
-      
       do ivol=1,nvol
          do idir=1,4
             call rmult(ipdot(1,1,idir,ivol),r_1,staple(1,1,idir,ivol))
          enddo
-         
       enddo   
 
       return
@@ -177,7 +171,7 @@ c  written by Sanfo
 c  calculate total quark force
 c=========================================================
       implicit none
-      include "parameters.f"
+#include "parameters.f"
 
 c     arguments
       complex ipdot(ncol,ncol,4,nvol)
@@ -187,39 +181,105 @@ c     common blocks
       common/geo/sindeo(nx,ny,nz,nt),sindeoh(nx,ny,nz,nt),
      $     parity(nx,ny,nz,nt),cooreo(nvol,4),
      $     forweo(nvol,4),backeo(nvol,4)
-      real remu
-      real emu,ememu
-      common/param4/remu,emu,ememu
-      complex phi_e,phi_o,fuf_e,fuf_o
-      common/pseudof/phi_e(ncol,nvolh),phi_o(ncol,nvolh),fuf_e(ncol
-     $     ,nvolh),fuf_o(ncol,nvolh)
+      complex potc1,potc2
+      common/param3/potc1,potc2
+      complex phi1,phi2,fuf1,fuf2
+      common/pseudof1/phi1(ncol,nvol_eo),fuf1(ncol,nvol_eo)
+      common/pseudof2/phi2(ncol,nvol_eo),fuf2(ncol,nvol_eo)
       real pole,coef,cost
       integer nterm
       common/rhmc_a/nterm,cost,pole(nmr),coef(nmr)
+#ifdef mf
+      complex ue1,ue2
+      common/fielde1/ue1(4,nvol)
+      common/fielde2/ue2(4,nvol)
+#endif
 
 c     internal variables
-      complex w1(ncol),w2(ncol),w3(ncol),w4(ncol)
-      complex v_e(ncol,nvolh,nmr),v_o(ncol,nvolh,nmr)
       integer ie,ivol,icol,idir,iterm,icol1,icol2
-      complex chi_t_e(ncol,nvolh,nmr),chi_t_o(ncol,nvolh,nmr)
-      complex c1,c3
+      complex chi1_t(ncol,nvol_eo,nmr),chi2_t(ncol,nvol_eo,nmr)
+      complex w11(ncol),w12(ncol)
+      complex w21(ncol),w22(ncol)
+      complex v1_o(ncol,nvolh,nmr),v2_o(ncol,nvolh,nmr)
+      complex c1,c2
+      complex exp_1,exp_2
+#ifdef ficp
+      complex w13(ncol),w14(ncol)
+      complex w23(ncol),w24(ncol)
+      complex v1_e(ncol,nvolh,nmr),v2_e(ncol,nvolh,nmr)
+      complex c3,c4
+      complex exp_m_c_1,exp_m_c_2
+#endif
+
+#ifdef mf
+      complex c_extf1,c_extf2
+#endif
 
       call multi_shift_inverter
-     $     (chi_t_e,chi_t_o,phi_e,phi_o,
-     $     emu,ememu,
+     $     (chi1_t,phi1,
+     $     potc1,
      $     pole,
-     $     nterm)
-      
-      
+     $     nterm,1)
+
+      call multi_shift_inverter
+     $     (chi2_t,phi2,
+     $     potc2,
+     $     pole,
+     $     nterm,2)
+
+
+#ifdef mf
+      call add_extf(1)
+#endif
+
+      exp_1=exp(+potc1)
+      exp_2=exp(+potc2)
+#ifdef ficp
+      exp_m_c_1=exp(-conjg(potc1))
+      exp_m_c_2=exp(-conjg(potc2))
+#endif
+
       do iterm=1,nterm
-         call D(OE,UNDAG,v_o(1,1,iterm),chi_t_e(1,1,iterm),emu,ememu)
-         call D(EO,UNDAG,v_e(1,1,iterm),chi_t_o(1,1,iterm),emu,ememu)
+
+
+!     calculation of force, without or with EO improvement
+         call D(OE,v1_o(1,1,iterm),chi1_t(1,1,iterm),potc1)
+#ifdef ficp
+         call D(EO,v1_e(1,1,iterm),chi1_t(1,1+nvolh,iterm),potc1)
+#endif
+
       enddo
 
-      
+
+#ifdef mf
+      call rem_extf(1)
+      call add_extf(2)
+#endif
+
+      do iterm=1,nterm
+
+
+!     calculation of force, without or with EO improvement
+         call D(OE,v2_o(1,1,iterm),chi2_t(1,1,iterm),potc2)
+#ifdef ficp
+         call D(EO,v2_e(1,1,iterm),chi2_t(1,1+nvolh,iterm),potc2)
+#endif
+
+
+      enddo
+
+#ifdef mf
+      call rem_extf(2)
+#endif
+
       do ivol=1,nvol
          ie=ivol-nvolh
          do idir=1,4
+
+#ifdef mf
+            c_extf1=ue1(idir,ivol)
+            c_extf2=ue2(idir,ivol)
+#endif
 
             do icol1=1,ncol
                do icol2=1,ncol
@@ -230,37 +290,90 @@ c     internal variables
             do iterm=1,nterm
                do icol=1,ncol
                   if(ivol.le.nvolh) then
-                     w1(icol)=v_o(icol,forweo(ivol,idir),iterm)
-                     w2(icol)=CONJG(chi_t_e(icol,ivol,iterm))
-                     w3(icol)=-chi_t_o(icol,forweo(ivol,idir),iterm) !minus sign 
-                     w4(icol)=CONJG(v_e(icol,ivol,iterm)) !! implemented here
+                     w11(icol)=v1_o(icol,forweo(ivol,idir),iterm)
+                     w21(icol)=v2_o(icol,forweo(ivol,idir),iterm)
+                     w12(icol)=CONJG(chi1_t(icol,ivol,iterm))
+                     w22(icol)=CONJG(chi2_t(icol,ivol,iterm))
+
+#ifdef ficp
+                     w13(icol)=-chi1_t(icol,forweo(ivol,idir)+nvolh
+     $                    ,iterm)
+                     w23(icol)=-chi2_t(icol,forweo(ivol,idir)+nvolh
+     $                    ,iterm)
+                     w14(icol)=CONJG(v1_e(icol,ivol,iterm))
+                     w24(icol)=CONJG(v2_e(icol,ivol,iterm))
+#endif
+
                   else
-                     w1(icol)=-chi_t_e(icol,forweo(ivol,idir),iterm)!minus sign 
-                     w2(icol)=CONJG(v_o(icol,ivol-nvolh,iterm)) !! implemented here
-                     w3(icol)=v_e(icol,forweo(ivol,idir),iterm)
-                     w4(icol)=CONJG(chi_t_e(icol,ivol-nvolh,iterm))
+                     w11(icol)=-chi1_t(icol,forweo(ivol,idir),iterm)!minus sign 
+                     w21(icol)=-chi2_t(icol,forweo(ivol,idir),iterm)
+                     w12(icol)=CONJG(v1_o(icol,ie,iterm)) !! implemented here
+                     w22(icol)=CONJG(v2_o(icol,ie,iterm))
+
+#ifdef ficp
+                     w13(icol)=v1_e(icol,forweo(ivol,idir),iterm)
+                     w23(icol)=v2_e(icol,forweo(ivol,idir),iterm)
+                     w14(icol)=CONJG(chi1_t(icol,ivol,iterm))
+                     w24(icol)=CONJG(chi2_t(icol,ivol,iterm))
+#endif
+
                   endif
+               
+#ifndef isotropic
                   if(idir.eq.4) then
+#ifdef ficp
+c     note that if re(potc)=0, -conjg(potc)=potc
                      if(ivol.le.nvolh) then
-                        w1(icol)=ememu*w1(icol)
-                        w3(icol)=emu*w3(icol)
+                        w11(icol)=exp_m_c_1*w11(icol)
+                        w21(icol)=exp_m_c_2*w21(icol)
+                        w13(icol)=exp_1*w13(icol)
+                        w23(icol)=exp_2*w23(icol)
                      else
-                        w1(icol)=emu*w1(icol)
-                        w3(icol)=ememu*w3(icol)
+#endif
+                        w11(icol)=exp_1*w11(icol)
+                        w21(icol)=exp_2*w21(icol)
+#ifdef ficp
+                        w13(icol)=exp_m_c_1*w13(icol)
+                        w23(icol)=exp_m_c_2*w23(icol)
                      endif
+#endif
                   endif
+#endif
                enddo
 
                do icol1=1,ncol
-                  c1=w1(icol1)
-                  c3=w3(icol1)
+
+#ifdef mf                  
+                  c1=w11(icol1)*c_extf1
+                  c2=w21(icol1)*c_extf2
+
+#ifdef ficp
+                  c3=w13(icol1)*c_extf1
+                  c4=w23(icol1)*c_extf2
+#endif
+
+#else
+                  c1=w11(icol1)
+                  c2=w21(icol1)
+
+#ifdef ficp
+                  c3=w13(icol1)
+                  c4=w23(icol1)
+#endif
+
+#endif
                   do icol2=1,ncol
                      ipdot(icol1,icol2,idir,ivol)=ipdot(icol1,icol2,idir
-     $                    ,ivol)+coef(iterm)*(c1*w2(icol2)+c3*w4(icol2))
+     $                   ,ivol)+coef(iterm)*(c1*w12(icol2)+c2*w22(icol2)
+#ifdef ficp
+     $                    +c3*w14(icol2)+c4*w24(icol2)
+#endif
+
+     $                    )
                   enddo
                enddo
             enddo
-
+            
          enddo
       enddo
       
