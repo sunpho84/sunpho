@@ -1,5 +1,5 @@
 c=========================================================
-      subroutine singol_inverter(chi_e,chi_o,phi_e,phi_o,emu,ememu,pole)
+      subroutine singol_inverter(chi,phi,eim,emim,pole)
 c  written by Massimo D'Elia
 c  version 1.0 - 2007/2008
 c  chi = (MM~)^-1 phi
@@ -9,9 +9,8 @@ c=========================================================
       include "parameters.f"
 
 c     argomenti
-      complex chi_e(ncol,nvolh),phi_e(ncol,nvolh)
-      complex chi_o(ncol,nvolh),phi_o(ncol,nvolh)
-      real emu,ememu
+      complex chi(ncol,nvolh),phi(ncol,nvolh)
+      complex eim,emim
       real pole
       
 c     variabili passate da common block
@@ -19,9 +18,7 @@ c     variabili passate da common block
       common/param2/mass,mass2,residue
 
 c     variabili interne
-      complex s_e(ncol,nvolh),s_o(ncol,nvolh)
-      complex p_e(ncol,nvolh),p_o(ncol,nvolh)
-      complex r_e(ncol,nvolh),r_o(ncol,nvolh)
+      complex h(ncol,nvolh),s(ncol,nvolh),r(ncol,nvolh),p(ncol,nvolh)
       complex c1
       real delta,omega,lambda,gammag
       integer iter,riter
@@ -33,28 +30,31 @@ c     parametri
 
       do ivol=1,nvolh
          do icol=1,ncol
-            chi_e(icol,ivol)=cmplx(0,0)
-            chi_o(icol,ivol)=cmplx(0,0)
+            chi(icol,ivol)=cmplx(0,0)
          enddo
       enddo   
 
       riter=0
 
  1200 continue    !! loop over congrad to verify truerest
+
+      call D(OE,h(1,1),chi(1,1),eim,emim)
+      call D(EO,s(1,1),h(1,1),eim,emim)
+c      call DOE(h(1,1),chi(1,1),eim,emim)
+c      call DEO(s(1,1),h(1,1),eim,emim)
       
-      call m2d(s_e,s_o,chi_e,chi_o,emu,ememu,pole**0.5)
+      do ivol=1,nvolh
+         do icol=1,ncol
+            s(icol,ivol)=pole*chi(icol,ivol)-one_q*s(icol,ivol)
+         enddo
+      enddo   
       
       delta=0
       do ivol=1,nvolh
          do icol=1,ncol
-            c1=phi_e(icol,ivol)-s_e(icol,ivol)
-            p_e(icol,ivol)=c1
-            r_e(icol,ivol)=c1
-            delta=delta+real(c1)**2+aimag(c1)**2
-
-            c1=phi_o(icol,ivol)-s_o(icol,ivol)
-            p_o(icol,ivol)=c1
-            r_o(icol,ivol)=c1
+            c1=phi(icol,ivol)-s(icol,ivol)
+            p(icol,ivol)=c1
+            r(icol,ivol)=c1
             delta=delta+real(c1)**2+aimag(c1)**2
          enddo
       enddo   
@@ -66,14 +66,17 @@ c     parametri
  1201 continue
 
       iter=iter+1
-      
-      call m2d(s_e,s_o,p_e,p_o,emu,ememu,pole)
+
+      call D(OE,h(1,1),p(1,1),eim,emim)
+      call D(EO,s(1,1),h(1,1),eim,emim)
+c      call DOE(h(1,1),p(1,1),eim,emim)
+c      call DEO(s(1,1),h(1,1),eim,emim)
       
       alpha=0
       do ivol=1,nvolh
          do icol=1,ncol
-            alpha=alpha+real(s_e(icol,ivol)*conjg(p_e(icol,ivol)))
-            alpha=alpha+real(s_o(icol,ivol)*conjg(p_o(icol,ivol)))
+            s(icol,ivol)=pole*p(icol,ivol)-one_q*s(icol,ivol)
+            alpha=alpha+real(s(icol,ivol)*conjg(p(icol,ivol)))
          enddo
       enddo   
       
@@ -82,16 +85,10 @@ c     parametri
 
       do ivol=1,nvolh
          do icol=1,ncol
-            chi_e(icol,ivol)=chi_e(icol,ivol)+omega*p_e(icol,ivol)
-            c1=r_e(icol,ivol)-omega*s_e(icol,ivol)
-            r_e(icol,ivol)=c1
+            chi(icol,ivol)=chi(icol,ivol)+omega*p(icol,ivol)
+            c1=r(icol,ivol)-omega*s(icol,ivol)
+            r(icol,ivol)=c1
             lambda=lambda+real(c1)**2+aimag(c1)**2
-
-            chi_o(icol,ivol)=chi_o(icol,ivol)+omega*p_o(icol,ivol)
-            c1=r_o(icol,ivol)-omega*s_o(icol,ivol)
-            r_o(icol,ivol)=c1
-            lambda=lambda+real(c1)**2+aimag(c1)**2
-
          enddo
       enddo 
       
@@ -99,23 +96,28 @@ c     parametri
       delta=lambda
       do ivol=1,nvolh
          do icol=1,ncol
-            p_e(icol,ivol)=r_e(icol,ivol)+gammag*p_e(icol,ivol)
-            p_o(icol,ivol)=r_o(icol,ivol)+gammag*p_o(icol,ivol)
+            p(icol,ivol)=r(icol,ivol)+gammag*p(icol,ivol)
          enddo
       enddo 
       
 c      write(*,*) iter,lambda
       if(lambda.gt.residue.and.iter.lt.niter) goto 1201
+
+      call D(OE,h(1,1),chi(1,1),eim,emim)
+      call D(EO,s(1,1),h(1,1),eim,emim)
+c      call DOE(h(1,1),chi(1,1),eim,emim)
+c      call DEO(s(1,1),h(1,1),eim,emim)
       
-      call m2d(s_e,s_o,chi_e,chi_o,emu,ememu,pole)
+      do ivol=1,nvolh
+         do icol=1,ncol
+            s(icol,ivol)=pole*chi(icol,ivol)-one_q*s(icol,ivol)
+         enddo
+      enddo   
       
       lambda=0
       do ivol=1,nvolh
          do icol=1,ncol
-            c1=phi_e(icol,ivol)-s_e(icol,ivol)
-            lambda=lambda+real(c1)**2+aimag(c1)**2
-
-            c1=phi_o(icol,ivol)-s_o(icol,ivol)
+            c1=phi(icol,ivol)-s(icol,ivol)
             lambda=lambda+real(c1)**2+aimag(c1)**2
          enddo
       enddo   
@@ -128,9 +130,9 @@ c      write(*,*) iter,lambda
       end
 
 
+
 c=========================================================
-      subroutine multi_shift_inverter(x_e,x_o,b_e,b_o,emu,ememu,pole
-     $     ,nterm)
+      subroutine multi_shift_inverter(x,b,eim,emim,pole,nterm,ud)
 c  written by Sanfo
 c  chiama il corretto inverter
 c=========================================================
@@ -138,29 +140,27 @@ c=========================================================
       include "parameters.f"
 
 c     argomenti
-      complex x_e(ncol,nvolh,nmr),b_e(ncol,nvolh)
-      complex x_o(ncol,nvolh,nmr),b_o(ncol,nvolh)
-      real emu,ememu
+      complex x(ncol,nvolh,nmr),b(ncol,nvolh)
+      complex eim,emim
       real pole(nmr)
       integer nterm
-      
+      integer ud
+
+     
       if(alg_inv.eq.i_singol) then
-         call multi_shift_fuffa_inverter(x_e,x_o,b_e,b_o,emu,ememu,pole
-     $        ,nterm)
+         call multi_shift_fuffa_inverter(x,b,eim,emim,pole,nterm,ud)
       endif
 
       if(alg_inv.eq.i_multi) then
-         call multi_shift_true_inverter(x_e,x_o,b_e,b_o,emu,ememu,pole
-     $        ,nterm)
+         call multi_shift_true_inverter(x,b,eim,emim,pole,nterm,ud)
       endif
       
       return
       end
-
+   
 
 c=========================================================
-      subroutine multi_shift_true_inverter(x_e,x_o,b_e,b_o,emu,ememu
-     $     ,pole,nterm)
+      subroutine multi_shift_true_inverter(x,b,eim,emim,pole,nterm,ud)
 c  written by Sanfo
 c  x_s = (m+X)^-1 b
 c  lo calcola usando il multi-shift conjugate gradient
@@ -175,21 +175,20 @@ c=========================================================
       include "parameters.f"
 
 c     argomenti
-      complex x_e(ncol,nvolh,nmr),b_e(ncol,nvolh)
-      complex x_o(ncol,nvolh,nmr),b_o(ncol,nvolh)
-      real emu,ememu
+      complex x(ncol,nvolh,nmr),b(ncol,nvolh)
+      complex eim,emim
       real pole(nmr)
       integer nterm
+      integer ud
 
 c     variabili passate da common block
       real mass,mass2,residue
       common/param2/mass,mass2,residue
 
 c     variabili interne
-      complex s_e(ncol,nvolh),s_o(ncol,nvolh)
-      complex r_e(ncol,nvolh),r_o(ncol,nvolh)
-      complex p_e(ncol,nvolh),p_o(ncol,nvolh)
-      complex ps_e(ncol,nvolh,nmr),ps_o(ncol,nvolh,nmr)
+      complex s(ncol,nvolh),r(ncol,nvolh),p(ncol,nvolh),
+     $     h(ncol,nvolh)
+      complex ps(ncol,nvolh,nmr)
       real zps(nmr),zas(nmr),zfs(nmr),betas(nmr),alphas(nmr)
       complex c1
       real rr,rfrf,pap,alpha
@@ -205,16 +204,17 @@ c     parametri
       parameter(one_q=0.25)
       parameter(niter=2000)
 
+      call add_extf(ud)
+      
       if(debug.ge.1) then 
-         write(*,*) " Use the MULTI-SHIFT inverter"
+         write(*,*) " Uso il MULTI-SHIFT inverter"
       endif
 
 !     x=0
       do iterm=1,nterm
          do ivol=1,nvolh
             do icol=1,ncol
-               x_e(icol,ivol,iterm)=0
-               x_o(icol,ivol,iterm)=0
+               x(icol,ivol,iterm)=0
             enddo
           enddo
           flag(iterm)=1
@@ -226,14 +226,9 @@ c     parametri
       rr=0
       do ivol=1,nvolh
          do icol=1,ncol
-            c1=b_e(icol,ivol)
-            p_e(icol,ivol)=c1
-            r_e(icol,ivol)=c1
-            rr=rr+real(c1)**2+aimag(c1)**2
-
-            c1=b_o(icol,ivol)
-            p_o(icol,ivol)=c1
-            r_o(icol,ivol)=c1
+            c1=b(icol,ivol)
+            p(icol,ivol)=c1
+            r(icol,ivol)=c1
             rr=rr+real(c1)**2+aimag(c1)**2
          enddo
       enddo
@@ -251,8 +246,7 @@ c      endif
       do iterm=1,nterm
          do ivol=1,nvolh
             do icol=1,ncol
-               ps_e(icol,ivol,iterm)=b_e(icol,ivol)
-               ps_o(icol,ivol,iterm)=b_o(icol,ivol)
+               ps(icol,ivol,iterm)=b(icol,ivol)
             enddo
          enddo
          zps(iterm)=1
@@ -268,20 +262,26 @@ c      endif
       do iter=1,niter
 
 !     -s=Ap
-         call m2d(s_e,s_o,p_e,p_o,emu,ememu,mass)
+         call D(OE,h(1,1),p(1,1),eim,emim)
+         call D(EO,s(1,1),h(1,1),eim,emim)
+c         call DOE(h(1,1),p(1,1),eim,emim)
+c         call DEO(s(1,1),h(1,1),eim,emim)
       
 !     -pap=(p,s)=(p,Ap)
          pap=0
          do ivol=1,nvolh
             do icol=1,ncol
-               pap=pap+real(s_e(icol,ivol)*conjg(p_e(icol,ivol)))
-               pap=pap+real(s_o(icol,ivol)*conjg(p_o(icol,ivol)))
+               s(icol,ivol)=mass2*p(icol,ivol)-one_q*s(icol,ivol)
+               pap=pap+real(s(icol,ivol)*conjg(p(icol,ivol)))
             enddo
          enddo   
          
 !     calcola betaa=rr/pap=(r,r)/(p,Ap)
          betap=betaa
          betaa=-rr/pap
+c         if(debug.ge.2) then 
+c            write(*,*) "PAP:",pap,"betaa:",betaa
+c         endif
 
 !     calcola 
 !     -zfs
@@ -300,10 +300,8 @@ c               write(*,*) "BETAS",iterm,betas(iterm)
 c            endif
             do ivol=1,nvolh
                do icol=1,ncol
-                  x_e(icol,ivol,iterm)=x_e(icol,ivol,iterm)-
-     $                 betas(iterm)*ps_e(icol,ivol,iterm)
-                  x_o(icol,ivol,iterm)=x_o(icol,ivol,iterm)-
-     $                 betas(iterm)*ps_o(icol,ivol,iterm)
+                  x(icol,ivol,iterm)=x(icol,ivol,iterm)-
+     $                 betas(iterm)*ps(icol,ivol,iterm)
                enddo
             enddo
          endif
@@ -315,12 +313,8 @@ c            endif
          rfrf=0
          do ivol=1,nvolh
             do icol=1,ncol
-               c1=r_e(icol,ivol)+betaa*s_e(icol,ivol)
-               r_e(icol,ivol)=c1
-               rfrf=rfrf+real(c1)**2+aimag(c1)**2
-
-               c1=r_o(icol,ivol)+betaa*s_o(icol,ivol)
-               r_o(icol,ivol)=c1
+               c1=r(icol,ivol)+betaa*s(icol,ivol)
+               r(icol,ivol)=c1
                rfrf=rfrf+real(c1)**2+aimag(c1)**2
             enddo
          enddo
@@ -334,8 +328,7 @@ c         endif
 !     calcola p'=r'+alpha*p
          do ivol=1,nvolh
             do icol=1,ncol
-               p_e(icol,ivol)=r_e(icol,ivol)+alpha*p_e(icol,ivol)
-               p_o(icol,ivol)=r_o(icol,ivol)+alpha*p_o(icol,ivol)
+               p(icol,ivol)=r(icol,ivol)+alpha*p(icol,ivol)
             enddo 
          enddo
 
@@ -350,10 +343,8 @@ c            endif
 !     calcola ps'=r'+alpha*p
             do icol=1,ncol
                do ivol=1,nvolh
-                  ps_e(icol,ivol,iterm)=zfs(iterm)*r_e(icol,ivol)+
-     $                 alphas(iterm)*ps_e(icol,ivol,iterm)
-                  ps_o(icol,ivol,iterm)=zfs(iterm)*r_o(icol,ivol)+
-     $                 alphas(iterm)*ps_o(icol,ivol,iterm)
+                  ps(icol,ivol,iterm)=zfs(iterm)*r(icol,ivol)+
+     $                 alphas(iterm)*ps(icol,ivol,iterm)
                enddo
             enddo
 
@@ -368,67 +359,23 @@ c            endif
          endif
          enddo         
          rr=rfrf
-         write(*,*) rfrf
+
 !     check sul residuo
          if(rfrf<residue) exit
       enddo
 
       if(debug.ge.1) then 
-         write(*,*) "Iteration to invert:",iter
+         write(*,*) "Iterazioni impiegate:",iter
       endif
+
+      call rem_extf(ud)
 
       return
       end
 
 
 c=========================================================
-      subroutine multi_shift_summed_inverter
-     $     (x_e,x_o,b_e,b_o,emu,ememu,cost,pole,coef,nterm)
-c  written by Sanfo
-c  version 1.0 - 2008
-c  somma i vari termini calcolati sopra con i loro coefficienti
-c=========================================================
-      implicit none
-      include "parameters.f"
-
-c     argomenti
-      complex x_e(ncol,nvolh),x_o(ncol,nvolh)
-      complex b_e(ncol,nvolh),b_o(ncol,nvolh)
-      real emu,ememu
-      real cost
-      real pole(nmr),coef(nmr)
-      integer nterm
-
-c     variabili interne
-      complex s_e(ncol,nvolh,nmr),s_o(ncol,nvolh,nmr)
-      integer ivol,icol,iterm
-
-      if(debug.ge.1) then 
-         write(*,*) " Use the MULTI_SHIFT_SUMMED inverter"
-      endif
-      
-      call multi_shift_inverter(s_e,s_o,b_e,b_o,emu,ememu,pole,nterm)
-
-      do ivol=1,nvolh
-         do icol=1,ncol
-            x_e(icol,ivol)=cost*b_e(icol,ivol)
-            x_o(icol,ivol)=cost*b_o(icol,ivol)
-            do iterm=1,nterm
-               x_e(icol,ivol)=x_e(icol,ivol)+coef(iterm)*s_e(icol,ivol
-     $              ,iterm)
-               x_o(icol,ivol)=x_o(icol,ivol)+coef(iterm)*s_o(icol,ivol
-     $              ,iterm)
-            enddo
-         enddo
-      enddo            
-
-      return
-      end
-
-
-c=========================================================
-      subroutine multi_shift_fuffa_inverter(x_e,x_o,b_e,b_o,emu,ememu
-     $     ,pole,nterm)
+      subroutine multi_shift_fuffa_inverter(x,b,eim,emim,pole,nterm,ud)
 c  written by Sanfo
 c     version 1.0 - 2007/2008
 c  esegue lo shift termine a termine e lo schiaffain x:
@@ -438,20 +385,67 @@ c=========================================================
       include "parameters.f"
 
 c     argomenti
-      complex x_e(ncol,nvolh,nmr),x_o(ncol,nvolh,nmr)
-      complex b_e(ncol,nvolh,nmr),b_o(ncol,nvolh,nmr)
-      real emu,ememu
+      complex x(ncol,nvolh,nmr)
+      complex b(ncol,nvolh)
+      complex eim,emim
       real pole(nmr)
       integer nterm
+      integer ud
 
 c     variabili interne
       integer iterm
-      
+
+      if(debug.ge.1) then 
+         write(*,*) " Uso il MULTI-FUFFA inverter"
+      endif
+
+      call add_extf(ud)
       do iterm=1,nterm
-         call singol_inverter(x_e(1,1,iterm),x_o(1,1,iterm),b_e,b_o,emu
-     $        ,ememu,pole(iterm))
+         call singol_inverter(x(1,1,iterm),b,eim,emim,pole(iterm))
       enddo
-      
+      call rem_extf(ud)
+
       return
       end
+
+c=========================================================
+      subroutine multi_shift_summed_inverter
+     $     (x,b,eim,emim,cost,pole,coef,nterm,ud)
+c  written by Sanfo
+c  version 1.0 - 2008
+c  somma i vari termini calcolati sopra con i loro coefficienti
+c=========================================================
+      implicit none
+      include "parameters.f"
+
+c     argomenti
+      complex x(ncol,nvolh),b(ncol,nvolh)
+      complex eim,emim
+      real cost
+      real pole(nmr),coef(nmr)
+      integer nterm
+      integer ud
+
+c     variabili interne
+      complex s(ncol,nvolh,nmr)
+      integer ivol,icol,iterm
+
+      if(debug.ge.1) then 
+         write(*,*) " Uso il MULTI_SHIFT_SUMMED inverter"
+      endif
+      
+      call multi_shift_inverter(s,b,eim,emim,pole,nterm,ud)
+
+      do ivol=1,nvolh
+         do icol=1,ncol
+            x(icol,ivol)=cost*b(icol,ivol)
+            do iterm=1,nterm
+               x(icol,ivol)=x(icol,ivol)+coef(iterm)*s(icol,ivol,iterm)
+            enddo
+         enddo
+      enddo            
+
+      return
+      end
+
 

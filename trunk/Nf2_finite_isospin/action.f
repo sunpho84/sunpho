@@ -47,7 +47,7 @@ c     common blocks
       common/rhmc_a/nterm,cost,pole(nmr),coef(nmr)
       
 c     internal variables
-      integer ivol,icol,iodd
+      integer ivol,icol
       complex chi_e(ncol,nvolh),chi_o(ncol,nvolh)
 
 
