@@ -1,138 +1,66 @@
 c=========================================================
-      subroutine load_par(init_flag,termalizza,time_to_run,n_rand
-     $     ,immu_quark,immu_iso,remu,file_rhmc,val_ext_f)
+      subroutine load_par(init_flag,termalizza,n_meas,n_rand,immu_quark,
+     $     immu_iso,file_rhmc,val_ext_f)
 c  written by Sanfo
 c  load (by standard input) simulation parameters
 c=========================================================
       implicit none
-#include "parameters.f"
+      include "parameters.f"
 
 c     arguments
       integer init_flag
       integer termalizza
-      integer time_to_run
+      integer n_meas
       integer n_rand
-      real immu_quark,immu_iso,remu
+      real immu_quark,immu_iso
       character(LEN=30) file_rhmc
       real val_ext_f
 
 c     common-block passed variables
-      real beta,mass,mass2,residue
-      common/param/beta,mass,mass2,residue
+      integer nran,iad_flag
+      real beta_f,beta_a,rho,pi
+      common/param/nran,beta_f,beta_a,rho,pi,iad_flag
+      real mass,mass2,residue
+      common/param2/mass,mass2,residue
       real dt_md
       integer nstep_md
       complex ieps,iepsq,ieps2q,ieps3q
-      common/param2/dt_md,nstep_md,ieps,iepsq,ieps2q,ieps3q
+      common/param3/dt_md,nstep_md,ieps,iepsq,ieps2q,ieps3q
 
 c     internal variables
       real dt
-      character(LEN=10) cosa
 
-!     0 -> cold; 1 -> hot; 2|3 -> stored
-      read(*,*,ERR=201,END=201) cosa,init_flag 
-      if(cosa.eq."cho") goto 102
- 201  write(*,*) "Errore riga 1 (cho)"
-      stop
 
-!     0 -> no, 1 -> yes
- 102  read(*,*,ERR=202,END=202) cosa,termalizza 
-      if(cosa.eq."term") goto 103
- 202  write(*,*) "Errore riga 2 (term)"
-      stop
-
-!     coupling in the fundamental
- 103  read(*,*,ERR=203,END=203) cosa,beta
-      if(cosa.eq."beta") goto 104
- 203  write(*,*) "Errore riga 3 (beta)"
-      stop
-
-!     fermion mass
- 104  read(*,*,ERR=204,END=204) cosa,mass
-      if(cosa.eq."mass") goto 105
- 204  write(*,*) "Errore riga 4 (mass)"
-      stop
-
-!     total running time
- 105  read(*,*,ERR=205,END=205) cosa,time_to_run
-      if(cosa.eq."time") goto 106
- 205  write(*,*) "Errore riga 5 (time)"
-      stop
-
-!     number of md steps per trajectory
- 106  read(*,*,ERR=206,END=206) cosa,nstep_md
-      if(cosa.eq."nstep") goto 107
- 206  write(*,*) "Errore riga 6 (nstep)"
-      stop
-
-!     trajectory length
- 107  read(*,*,ERR=207,END=207) cosa,dt
-      if(cosa.eq."dt") goto 108
- 207  write(*,*) "Errore riga 7 (dt)"
-      stop
-
-!     stopping criterion for inverter
- 108  read(*,*,ERR=208,END=208) cosa,residue
-      if(cosa.eq."residue") goto 109
- 208  write(*,*) "Errore riga 8 (residue)"
-      stop
-
-!     number of random vectors 
- 109  read(*,*,ERR=209,END=209) cosa,n_rand
-      if(cosa.eq."n_rand") goto 110
- 209  write(*,*) "Errore riga 9 (n_rand)"
-      stop
-
-!     imaginary isospin chemical potential/(pi T) 
- 110  read(*,*,ERR=210,END=210) cosa,immu_iso
-      if(cosa.eq."immu_iso") goto 111
- 210  write(*,*) "Errore riga 10 (immu_iso)"
-      stop
-
-!     imaginary quark chemical potential/(pi T) 
- 111  read(*,*,ERR=211,END=211) cosa,immu_quark
-      if(cosa.eq."immu_quark") goto 112
-      stop
- 211  write(*,*) "Errore riga 11 (immu_quark)"
-      stop
-
-!     finite real isospin chemical potential/(pi T)
- 112  read(*,*,ERR=212,END=212) cosa,remu
-      write(*,*) cosa
-      if(cosa.eq."remu_iso") goto 113
- 212  write(*,*) "Errore riga 12 (remu_iso)"
-      stop
-
-!     external field value
- 113  read(*,*,ERR=213,END=213) cosa,val_ext_f
-      if(cosa.eq."extf") goto 114
- 213  write(*,*) "Errore riga 13 (extf)"
-      stop
-
- 114  continue
-!! file for rhmc expansion
-#ifdef ficp
-      file_rhmc="rhmc8"
-#else
-      file_rhmc="rhmc4"
-#endif
+      beta_a=0
+      
+      read(*,*) init_flag       !! 0 -> cold; 1 -> hot; 2|3 -> stored
+      read(*,*) termalizza      !! 0 -> no, 1 -> yes
+      read(*,*) beta_f          !! coupling in the fundamental
+      read(*,*) mass      !! fermion mass
+      read(*,*) n_meas    !! number of trajectories
+      read(*,*) nstep_md  !! number of md steps per trajectory
+      read(*,*) dt        !! trajectory length
+      read(*,*) residue   !! stopping criterion for inverter
+      read(*,*) n_rand    !! number of random vectors 
+      read(*,*) immu_iso  !! imaginary isospin chemical potential/(pi T) 
+      read(*,*) immu_quark!! imaginary quark chemical potential/(pi T) 
+      read(*,*) file_rhmc !! file for rhmc expansion
+      read(*,*) val_ext_f !! external field value
 
       mass2=mass*mass
       dt_md=dt/nstep_md
-
-#ifdef chiral_meas
       if(n_rand.eq.0) then
          write(*,*) "Can't set random vector number to 0"
          n_rand=1
       endif
-#endif
 
       write(*,*)
       write(*,*) " ----Simulation parameters----"
       if(init_flag==0) then
-         write(*,*) " Cold start",init_flag
+         write(*,*) " Cold start"
       endif
       if(init_flag==1) then
-         write(*,*) " Hot start",init_flag
+         write(*,*) " Hot start"
       endif
       if(init_flag==2) then
          write(*,*) " Start from 'lattice' file"
@@ -140,51 +68,18 @@ c     internal variables
       if(init_flag==3) then
          write(*,*) " Start from 'lattice2' file"
       endif
-      write(*,*) " Coupling constant: ",beta
+      write(*,*) " Coupling constant: ",beta_f
       write(*,*) " Mass, squared mass: ",mass,mass2
-      write(*,*) " Will run for at least: ",time_to_run," seconds"
+      write(*,*) " Number of trajectories: ",n_meas
       write(*,*) " MD micro-step for each trajectory: ",nstep_md
       write(*,*) " Trajectories length: ",dt
       write(*,*) " MD micro-step length: ",dt_md
       write(*,*) " Residual for inverter: ",residue
-#ifdef chiral_meas
       write(*,*) " Random vector number: ",n_rand
-#else
-      write(*,*) " Chiral measurement switched off at compilation time"
-#endif
-
-#ifdef isotropic
-      write(*,*) " Isotropic simulation on"
-#endif
-
       write(*,*) " Isospin potential (in PI unit): ",immu_iso
       write(*,*) " Quark potential (in PI unit): ",immu_quark
-#ifdef ficp
-      write(*,*) " Real isospin potential (in PI unit): ",remu
-#else
-      write(*,*)
-     $     " Real isospin potential switched off at compilation time"
-      if(remu.ne.0) then
-         write(*,*) "Error: real isospin potential different from 0!"
-         stop
-      endif
-#endif
-#ifdef mf
-      if(relaxed.eq.0) then
-         write(*,*) " External field: ",val_ext_f," (1/L unit)"
-      elseif(relaxed.eq.1) then
-         write(*,*) " External field: ",val_ext_f," (1/L^2 unit)"
-      else
-         write(*,*) " Unkwnown quantization format!"
-      endif
-#else
-      write(*,*) " Magnetic field switched off at compilation time"
-      if(val_ext_f.ne.0) then
-         write(*,*) "Error: external field different from 0!"
-         stop
-      endif
-#endif
       write(*,*) " Rational expansion parameter file: ",file_rhmc
+      write(*,*) " External field (in 2*PI/Nx unit): ", val_ext_f
 
       write(*,*)
       write(*,*) " ----Algorithms----"
@@ -202,8 +97,6 @@ c     internal variables
          write(*,*) " MD integrator: omelyan"
       end select
 
-      call flush(6)
-
       return
       end
 
@@ -214,15 +107,16 @@ c=========================================================
 c  written by Sanfo
 c  load rhmc parameters
 c=========================================================
-      implicit none
-#include "parameters.f"
+      implicit real (a-h,o-z)
+      implicit integer (i-n)
+      include "parameters.f"
 
 c     arguments
       character(LEN=30) file_rhmc
 
 c     common-block passed variables
-      real beta,mass,mass2,residue
-      common/param/beta,mass,mass2,residue
+      real mass,mass2,residue
+      common/param2/mass,mass2,residue
 
       integer nterm_a
       real cost_a,pole_a,coef_a
@@ -239,46 +133,44 @@ c     common-block passed variables
      $     ocost_h,opole_h(nmr),ocoef_h(nmr),z_h
 
 
-c     internal variables
-      integer i
 
 
 cc-----------------------------
 c     LOAD RHMC PARAMETER 
 cc-----------------------------
-      open(u_rhmc,file=file_rhmc,status='old')
+      open(1,file=file_rhmc,status='old')
 
 !     load extremes of validity of rhmc approximation
-      read(u_rhmc,*) min_rhmc,max_rhmc
+      read(1,*) min_rhmc,max_rhmc
 
 !     load action part parameter
-      read(u_rhmc,*) nterm_a
-      read(u_rhmc,*) z_a
-      read(u_rhmc,*) ocost_a
+      read(1,*) nterm_a
+      read(1,*) z_a
+      read(1,*) ocost_a
       cost_a=ocost_a
       do i = 1,nterm_a
-         read(u_rhmc,*) opole_a(i)
-         read(u_rhmc,*) ocoef_a(i)
+         read(1,*) opole_a(i)
+         read(1,*) ocoef_a(i)
          pole_a(i)=opole_a(i)
          coef_a(i)=ocoef_a(i)
       enddo
       
 !     load heat bath part
-      read(u_rhmc,*) nterm_h
-      read(u_rhmc,*) z_h
-      read(u_rhmc,*) ocost_h
+      read(1,*) nterm_h
+      read(1,*) z_h
+      read(1,*) ocost_h
       cost_h=ocost_h
       do i = 1,nterm_h
-         read(u_rhmc,*) opole_h(i)
-         read(u_rhmc,*) ocoef_h(i)
+         read(1,*) opole_h(i)
+         read(1,*) ocoef_h(i)
          pole_h(i)=opole_h(i)
          coef_h(i)=ocoef_h(i)
       enddo
-      close(u_rhmc)
+      close(1)
 
-#ifdef debug1
-      call print_rhmc
-#endif
+      if(debug.ge.1) then
+         call print_rhmc
+      endif
       
       if((nterm_a.gt.nmr).or.(nterm_h.gt.nmr)) then
          write(*,*) "Attention, the order requested in the file"
@@ -294,8 +186,9 @@ c=========================================================
 c  written by Sanfo
 c  print rhmc parameters
 c=========================================================
-      implicit none
-#include "parameters.f"
+      implicit real (a-h,o-z)
+      implicit integer (i-n)
+      include "parameters.f"
 
 c     common-block passed variables
       integer nterm_a
@@ -312,7 +205,6 @@ c     common-block passed variables
      $     ocost_a,opole_a(nmr),ocoef_a(nmr),z_a,
      $     ocost_h,opole_h(nmr),ocoef_h(nmr),z_h
 
-      integer i
 
       write(*,*)
       write(*,*) "----Calcolo dell'azione e dinamica(-nf/4)----"
@@ -337,31 +229,35 @@ c     common-block passed variables
       end
 
 c=========================================================
-      subroutine set_const(immu_quark,immu_iso,remu)
+      subroutine set_const(immu_quark,immu_iso)
 c  written by Sanfo
 c  set various parameter regarding MD and chemical potentials
 c=========================================================
       implicit none
-#include "parameters.f"
+      include "parameters.f"
 
 c     arguments
-      real immu_quark,immu_iso,remu
+      real immu_quark,immu_iso
 
 c     common-block passed variables
-      real beta,mass,mass2,residue
-      common/param/beta,mass,mass2,residue
+      integer nran,iad_flag
+      real beta_f,beta_a,rho,pi
+      common/param/nran,beta_f,beta_a,rho,pi,iad_flag
+      real mass,mass2,residue
+      common/param2/mass,mass2,residue
       integer ncfact,perm,sign
       common/perm/ncfact,perm(nperm,ncol),sign(nperm)
-      complex potc1,potc2
-      common/param3/potc1,potc2
+      real immu1,immu2
+      complex eim1,emim1,eim2,emim2
+      common/param4/immu1,immu2,eim1,emim1,eim2,emim2
       real dt_md
       integer nstep_md
       complex ieps,iepsq,ieps2q,ieps3q
-      common/param2/dt_md,nstep_md,ieps,iepsq,ieps2q,ieps3q
+      common/param3/dt_md,nstep_md,ieps,iepsq,ieps2q,ieps3q
 
 c     internal variables
       integer i
-      real immu1,immu2,remu_fis
+
 
 cc-----------------------------
 cc compute  ncol!
@@ -377,7 +273,6 @@ cc get back to single species imaginary chemical potentials
 cc  multiply by pi and divide by nt      
       immu1=pigr*(immu_quark+immu_iso)/float(nt)
       immu2=pigr*(immu_quark-immu_iso)/float(nt)
-      remu_fis=pigr*remu/float(nt)
 cc-----------------------------
 
 cc-----------------------------
@@ -387,9 +282,10 @@ cc set dt and sub-multiples
       ieps3q=3.0*iepsq
       ieps=4.0*iepsq
       
-      potc1=complex(+remu_fis,immu1)
-      potc2=complex(-remu_fis,immu2)
-
+      eim1  = CMPLX(cos(immu1),sin(immu1))
+      emim1 = CMPLX(cos(immu1),-sin(immu1))
+      eim2  = CMPLX(cos(immu2),sin(immu2))
+      emim2 = CMPLX(cos(immu2),-sin(immu2))
 cc-----------------------------
 
 
@@ -399,7 +295,6 @@ cc print parameters
       write(*,*) "----Chemical potential in 'physical' unit----"
       write(*,*) " Chemical potential for U quark: ", immu1
       write(*,*) " Chemical potential for D quark: ", immu2
-      write(*,*) " Real isospin chemical potential: ", remu_fis
       write(*,*)
 
 cc-----------------------------
@@ -408,15 +303,15 @@ cc-----------------------------
       end
 
 c=========================================================
-      subroutine init(time_to_run,n_rand,n_traj,termalizza)
+      subroutine init(n_meas,n_rand,n_traj,termalizza)
 c  written by Sanfo
 c  initialize the simulation
 c=========================================================
       implicit none
-#include "parameters.f"
+      include "parameters.f"
 
 c     arguments
-      integer time_to_run
+      integer n_meas
       integer n_rand
       integer n_traj
 
@@ -428,7 +323,7 @@ c     common-block passed variables
 c     internal variables
       integer init_flag
       integer termalizza
-      real immu_quark,immu_iso,remu
+      real immu_quark,immu_iso
       character(LEN=30) file_rhmc
       real val_ext_f
 
@@ -443,10 +338,10 @@ cc-----------------------------
 c     READ INPUT & RHMC
 cc-----------------------------
 
-      call load_par(init_flag,termalizza,time_to_run,n_rand,immu_quark,
-     $     immu_iso,remu,file_rhmc,val_ext_f)
+      call load_par(init_flag,termalizza,n_meas,n_rand,immu_quark,
+     $     immu_iso,file_rhmc,val_ext_f)
       call load_rhmc(file_rhmc)
-      call set_const(immu_quark,immu_iso,remu)
+      call set_const(immu_quark,immu_iso)
 
 c-------------------------------------------
 
@@ -456,11 +351,10 @@ c-------------------------------------------
 
       call ranstart                 !! initialize random number generator
       call generate_permutations    !! table of ncol permutations
+      call generate_su2rhotables    !! table of random su2 for metro and hb
       call geometry                 !! set up lattice geometry
       call initialize_lattice(init_flag,n_traj)  !! initialize lattice
-#ifdef mf
-      call initialize_extf(val_ext_f) !! initialize external field
-#endif
+      call initialize_extf(val_ext_f)  !! initialize external field
       call addrem_stagphase
       call copyconf(usave,u) !! save configuration at first
 
@@ -503,27 +397,49 @@ c      5 6 7 electic current
 c      
 
 
-      open(u_meas,file='meas_out',status='unknown')
+      open(2,file='meas_out',status='unknown')
+      open(11,file='ferm11_out',status='unknown')
+      open(12,file='ferm12_out',status='unknown')
+      open(13,file='ferm13_out',status='unknown')
+      open(14,file='ferm14_out',status='unknown')
+      open(15,file='ferm15_out',status='unknown')
+      open(16,file='ferm16_out',status='unknown')
+      open(17,file='ferm17_out',status='unknown')
+      open(21,file='ferm21_out',status='unknown')
+      open(22,file='ferm22_out',status='unknown')
+      open(23,file='ferm23_out',status='unknown')
+      open(24,file='ferm24_out',status='unknown')
+      open(25,file='ferm25_out',status='unknown')
+      open(26,file='ferm26_out',status='unknown')
+      open(27,file='ferm27_out',status='unknown')
+      open(31,file='magnet_out',status='unknown')
 
-#ifdef chiral_meas
-      open(u_ferm_11,file='ferm11_out',status='unknown')
-      open(u_ferm_21,file='ferm21_out',status='unknown')
-      open(u_ferm_22,file='ferm22_out',status='unknown')
-      open(u_ferm_12,file='ferm12_out',status='unknown')
-      open(u_ferm_13,file='ferm13_out',status='unknown')
-      open(u_ferm_23,file='ferm23_out',status='unknown')
-      open(u_ferm_14,file='ferm14_out',status='unknown')
-      open(u_ferm_24,file='ferm24_out',status='unknown')
-#endif
+      return
+      end
 
-#ifdef mf
-      open(u_ferm_15,file='ferm15_out',status='unknown')
-      open(u_ferm_25,file='ferm25_out',status='unknown')
-      open(u_ferm_16,file='ferm16_out',status='unknown')
-      open(u_ferm_26,file='ferm26_out',status='unknown')
-      open(u_ferm_17,file='ferm17_out',status='unknown')
-      open(u_ferm_27,file='ferm27_out',status='unknown')
-      open(u_magnet,file='magnet_out',status='unknown')
-#endif
+c=========================================================
+      subroutine copyconf(u_out,u_in)
+c  written by Massimo D'Elia
+c  version 1.0 - 11/07/2004
+c=========================================================
+      implicit none
+      include "parameters.f"
+
+c     arguments
+      complex u_in(ncol,ncol,4,nvol),u_out(ncol,ncol,4,nvol)
+
+c     internal variables
+      integer icol1,icol2,idir,ivol
+
+      do icol1=1,ncol
+        do icol2=1,ncol
+          do idir=1,4
+            do ivol=1,nvol
+              u_out(icol1,icol2,idir,ivol)=u_in(icol1,icol2,idir,ivol)
+            enddo
+          enddo
+        enddo
+      enddo
+
       return
       end

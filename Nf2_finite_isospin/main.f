@@ -123,7 +123,6 @@ c     internal variables
       integer metro_test
       common/com_metro/metro_test
 
-      integer ivol,icol
 c-------------------------------------------
 c initialization operations
 c-------------------------------------------     
@@ -139,21 +138,6 @@ c-------------------------------------------
 c-------------------------------------------------------
 c START MONTE CARLO and MEASUREMENTS
 c-------------------------------------------------------
-      
-      phi_e=0
-      phi_o=0
-      phi_e(1,1)=cmplx(1,0)
-      emu=1
-      ememu=1
-c      call singol_inverter(chi_e,chi_o,phi_e,phi_o,emu,ememu,0.1)
-c      write(*,*) u(1,1,1,1)
-c      call D(EO,UNDAG,chi_e,phi_e,emu,ememu,0.1)
-
-      do icol=1,ncol
-         do ivol=1,nvolh
-c            write(*,*) chi_e(icol,ivol)
-         enddo
-      enddo
       
  300  n_traj=n_traj+1
       

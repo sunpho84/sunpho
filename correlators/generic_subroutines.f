@@ -4,14 +4,11 @@ c  written by Sanfo
 c============================================================================
       function imposed_close()
 
-      implicit none
-      include "parameters.f"
-
       integer imposed_close
 
-      open(u_control,file='control_file',status='unknown')
-      read(u_control,*,end=312) imposed_close
- 312  close(u_control)
+      open(7,file='control_file',status='unknown')
+      read(7,*,end=312) imposed_close
+ 312  close(7)
 
       return
       end
@@ -31,17 +28,18 @@ c     arguments
 
 
       write(*,*) "ENDING JOB ..."
+      call addrem_stagphase
 
 c     save lattice
-      call write_lattice(n_traj) !binary version
-      call write_lattice2(n_traj,lattice2) !text version, intersystem
+c      call write_lattice(n_traj) !binary version
+      call write_lattice2(n_traj) !text version, intersystem
 
 c     save random number generator status
       call ranfinish 
 
 c     create an empty file "allright"
-      open(u_allright,file='allright',status='unknown')
-      close(u_allright)
+      open(11,file='allright',status='unknown')
+      close(11)
 
       write(*,*) "JOB ENDED"
 
@@ -65,23 +63,19 @@ c     common-block passed variables
       complex u
       common/field/u(ncol,ncol,4,nvol)
 
-      call addrem_stagphase
-
-      open(u_lattice,file='lattice',status='unknown',form
-     $     ='unformatted')
-      write(u_lattice) u
-      write(u_lattice) n_traj
-      close(u_lattice)
-
-      call addrem_stagphase
+      open(2,file='lattice',status='unknown',form='unformatted')
+      write(2) u
+      write(2) n_traj
+      close(2)
 
       return
       end
 
 c============================================================================
-      subroutine write_lattice2(n_traj,file_latt)
-c  Save link-array in a binary file
-c  written by Massimo D'Elia
+      subroutine write_lattice2(n_traj)
+c  Save link-array in a text file that can be 
+c  easily opened by computer based on different architecure
+c  written by Sanfo
 c============================================================================
 
       implicit none
@@ -89,7 +83,6 @@ c============================================================================
 
 c     arguments
       integer n_traj
-      character(LEN=30) file_latt
 
 c     common-block passed variables
       complex u
@@ -99,23 +92,19 @@ c     internal variables
       integer icol1,icol2,idir,ivol
       complex c1
 
-      call addrem_stagphase
-
-      open(u_lattice,file=file_latt,status='unknown')
-      write(u_lattice,*) n_traj
+      open(8,file='lattice2',status='unknown')
+      write(8,*) n_traj
       do icol1=1,ncol
          do icol2=1,ncol
             do idir=1,4
                do ivol=1,nvol
                   c1=u(icol1,icol2,idir,ivol)
-                  write(u_lattice,*) real(c1),aimag(c1)
+                  write(8,*) real(c1),aimag(c1)
                enddo
             enddo
          enddo
       enddo
-      close(u_lattice)
-
-      call addrem_stagphase
+      close(8)
 
       return
       end
@@ -309,31 +298,197 @@ c=========================================================
       endif
       
       if(init_flag.eq.2) then
-         open(u_lattice,file='lattice',status='old',form='unformatted')
-         read(u_lattice) u
-         read(u_lattice) n_traj
-         close(u_lattice)
+         open(2,file='lattice',status='old',form='unformatted')
+         read(2) u
+         read(2) n_traj
+         close(2)
       endif
       
       if(init_flag.eq.3) then
-         open(u_lattice,file='lattice2',status='old')
-         read(u_lattice,*) n_traj
+         open(2,file='lattice2',status='old')
+         read(2,*) n_traj
          do icol1=1,ncol
             do icol2=1,ncol
                do idir=1,4
                   do ivol=1,nvol
-                     read(u_lattice,*) ur,ui
+                     read(2,*) ur,ui
                      u(icol1,icol2,idir,ivol)=cmplx(ur,ui)
                   enddo
                enddo
             enddo
          enddo
-         close(u_lattice)
+         close(2)
       endif
 
       if(init_flag.gt.3) then
          write(*,*) "BAD INIT_FLAG! use 0,1,2,3 (cold,hot,stored)"
       endif
+
+      return
+      end
+
+c=========================================================
+      subroutine initialize_extf(val_ext_f)
+c  written by Massimo D'Elia
+c  version 1.0 - 2008
+c=========================================================
+      implicit none
+      include "parameters.f"
+
+c     arguments
+      real val_ext_f
+
+c     common-block passed variables
+      complex ue1,ue2
+      real u1phase
+      common/fielde1/ue1(4,nvol)
+      common/fielde2/ue2(4,nvol)
+      common/expu1/u1phase(4,nvol)
+      integer sindeo,sindeoh,parity,cooreo,forweo,backeo
+      common/geo/sindeo(nx,ny,nz,nt),sindeoh(nx,ny,nz,nt),
+     $     parity(nx,ny,nz,nt),cooreo(nvol,4),
+     $     forweo(nvol,4),backeo(nvol,4)
+
+c     internal variables
+      integer ind,ix,iy,iz,it,idir
+      integer relaxed
+      real bphase
+      complex caux
+      
+      relaxed=1
+      
+      if(relaxed.eq.0) then
+         bphase=2*val_ext_f*pigr/float(nx)
+      else
+         bphase=2*val_ext_f*pigr/float(nx**2)
+      endif
+
+      do it=1,nt
+         do iz=1,nz
+            do iy=1,ny
+               do ix=1,nx
+                  
+                  ind=sindeo(ix,iy,iz,it)
+!     defintions of the phases relative to the x and y directions
+!     according to the appropriate quantization condition
+                  if((relaxed.eq.1).and.(ix.eq.nx)) then
+                     u1phase(1,ind)=-float(iy)*nx
+                  else
+                     u1phase(1,ind)=0
+                  endif
+                  u1phase(2,ind)=float(ix)
+!     whatever the quantization condition, the phase in the z,t
+!     directions are always 0
+                  u1phase(3,ind)=0
+                  u1phase(4,ind)=0
+                     
+                  do idir=1,4
+                     
+                     caux=cmplx(cos(u1phase(idir,ind)*bphase)
+     $                    ,sin(u1phase(idir,ind)*bphase))
+ 
+                     ue1(idir,ind)=caux**2
+                     ue2(idir,ind)=conjg(caux)
+                  enddo
+               enddo
+            enddo
+         enddo
+      enddo
+      
+      return
+      end
+
+
+
+
+c=========================================================
+      subroutine add_rem_extf(act,ud)
+c  written by Massimo D'Elia
+c  version 1.0 - 2007/2008
+c  add or remove external fields 1 or 2 according 
+c  to passed arguments
+c=========================================================
+      implicit none
+      include "parameters.f"
+      
+c     arguments
+      integer act,ud
+
+c     common-block passed variables
+      complex ue1,ue2
+      common/fielde1/ue1(4,nvol)
+      common/fielde2/ue2(4,nvol)
+      integer sindeo,sindeoh,parity,cooreo,forweo,backeo
+      common/geo/sindeo(nx,ny,nz,nt),sindeoh(nx,ny,nz,nt),
+     $     parity(nx,ny,nz,nt),cooreo(nvol,4),
+     $     forweo(nvol,4),backeo(nvol,4)
+      complex u
+      common/field/u(ncol,ncol,4,nvol)
+
+c     internal variables
+      integer eos
+      integer ix,iy,iz,it,idir,icol1,icol2
+      complex caux
+
+
+      do it=1,nt
+         do iz=1,nz
+            do iy=1,ny
+               do ix=1,nx
+
+                  eos=sindeo(ix,iy,iz,it) 
+
+                  do idir=1,4
+                     do icol2=1,ncol
+                        do icol1=1,ncol
+
+                           if(ud.eq.1) then
+                              caux=ue1(idir,eos)
+                           else
+                              caux=ue2(idir,eos)
+                           endif
+
+                           if(act.eq.2) then
+                              caux=conjg(caux)
+                           endif
+
+                           u(icol1,icol2,idir,eos)=
+     $                          caux*u(icol1,icol2,idir,eos)
+                        enddo
+                     enddo
+                  enddo
+               enddo
+            enddo
+         enddo
+      enddo
+
+      return
+      end
+
+c=========================================================
+      subroutine add_extf(ud)
+c  written by Sanfo
+c=========================================================
+      implicit none
+
+c     arguments
+      integer ud
+
+      call add_rem_extf(1,ud)
+
+      return
+      end
+
+c=========================================================
+      subroutine rem_extf(ud)
+c  written by Sanfo
+c=========================================================
+      implicit none
+
+c     arguments
+      integer ud
+
+      call add_rem_extf(2,ud)
 
       return
       end
@@ -588,21 +743,19 @@ c=============================================================================
       subroutine ranstart
       implicit real (a-h,o-z)
       implicit integer (i-n)
-      include "parameters.f"
-
       common /dasav/ idum,idum2,iv(32),iy
 
-      open(u_random, file='randomseed', status='unknown')
-      read(u_random,*) idum
-      read(u_random,*,end=117) idum2
+      open(unit=23, file='randomseed', status='unknown')
+      read(23,*) idum
+      read(23,*,end=117) idum2
       do i=1,32
-         read(u_random,*) iv(i)
+         read(23,*) iv(i)
       enddo
-      read(u_random,*) iy
-      close(u_random)
+      read(23,*) iy
+      close(23)
       goto 118                          !!takes account of the first start
  117  if(idum.ge.0) idum = -idum -1     !!
-      close(u_random)
+      close(23)
  118  continue                          !!
 
       return
@@ -612,18 +765,16 @@ c=============================================================================
       subroutine ranfinish
       implicit real (a-h,o-z)
       implicit integer (i-n)
-      include "parameters.f"
-
       common /dasav/ idum,idum2,iv(32),iy
 
-      open(u_random, file='randomseed', status='unknown')
-      write(u_random,*) idum
-      write(u_random,*) idum2
+      open(unit=23, file='randomseed', status='unknown')
+      write(23,*) idum
+      write(23,*) idum2
       do i=1,32
-         write(u_random,*) iv(i)
+         write(23,*) iv(i)
       enddo
-      write(u_random,*) iy
-      close(u_random)
+      write(23,*) iy
+      close(23)
 
       return
       end
