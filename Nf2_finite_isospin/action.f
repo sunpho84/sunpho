@@ -133,7 +133,7 @@ c     common blocks
       complex p_w,ipdot
       common/momenta/p_w(ncol,ncol,4,nvol),ipdot(ncol,ncol,4,nvol)
       complex phi_e,phi_o,chi_e,chi_o
-      common/pseudof/phi_e(ncol,nvolh),chi_e(ncol,nvolh),phi_o(ncol
+      common/pseudof/phi_e(ncol,nvolh),phi_o(ncol,nvolh),chi_e(ncol
      $     ,nvolh),chi_o(ncol,nvolh)
       real remu
       real emu,ememu
