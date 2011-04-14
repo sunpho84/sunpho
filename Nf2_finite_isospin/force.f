@@ -238,7 +238,7 @@ c     internal variables
                      w1(icol)=-chi_t_e(icol,forweo(ivol,idir),iterm)!minus sign 
                      w2(icol)=CONJG(v_o(icol,ivol-nvolh,iterm)) !! implemented here
                      w3(icol)=v_e(icol,forweo(ivol,idir),iterm)
-                     w4(icol)=CONJG(chi_t_e(icol,ivol-nvolh,iterm))
+                     w4(icol)=CONJG(chi_t_o(icol,ivol-nvolh,iterm))
                   endif
                   if(idir.eq.4) then
                      if(ivol.le.nvolh) then
