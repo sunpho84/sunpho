@@ -190,7 +190,7 @@ int main(int narg,char **arg)
   jvec c;
   //loop over heavier mass
   int ncombo=nmass*nmass*ntheta*ntheta;
-  jvec aM(ncombo,njack);
+  jvec aM(ncombo,njack),aM1(ncombo,njack);
   for(int ith1=0;ith1<ntheta;ith1++)
     for(int ith2=0;ith2<ntheta;ith2++)
       for(int im2=0;im2<nmass;im2++)
@@ -291,10 +291,14 @@ int main(int narg,char **arg)
 	  cout<<" "<<0.5/b<<" should be compatible (in the continuum) with m (se below)"<<endl;
 	  cout<<" "<<c<<" should be fixed to m="<<y[0]<<endl;
 	  out.close();
+	  
+	  static int nw=0;
+	  if((nw++)==0) (0.5/b).write_to_binfile("M1_phys");
+	  else (0.5/b).append_to_binfile("M1_phys");
 	}
-	
       }
   
+  /*
   //check AKAK
   jvec csl=load_corr(base_path,0,0,0,0,0,0,0,"AKAK");
   jvec css=load_corr(base_path,1,0,0,0,0,0,0,"AKAK");
@@ -332,6 +336,7 @@ int main(int narg,char **arg)
     out<<"@s1 symbol 2"<<endl;
     out<<effective_mass(css.simmetrized(1))<<endl;
   }
+  */
   
   return 0;
 }

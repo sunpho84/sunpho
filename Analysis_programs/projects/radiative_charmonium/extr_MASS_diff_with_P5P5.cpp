@@ -284,7 +284,6 @@ int main(int narg,char **arg)
   lmass=new double[nens];
   ibeta=new int[nens];
   F=bvec(nens,nboot,njack);
-  ofstream bare_data_table("bare_data_table");
   for(int iens=0;iens<nens;iens++)
     {
       char path[1024];
@@ -296,16 +295,14 @@ int main(int narg,char **arg)
       temp1.load(combine("../%s/M",path).c_str());
       temp2.load(combine("../../../RADIATIVE_CHARMONIUM/P5P5_MASS_FIT/%s/M",path).c_str());
       cout<<"M1: "<<temp1<<", M2: "<<temp2<<endl;
-      temp=temp1/temp2;
-      
-      //write the bare data table
-      bare_data_table<<iens<<" "<<smart_print(temp)<<endl;
+      temp=(temp1-temp2);
       
       //load iboot
       int iboot_jack[100];
       load_iboot(iboot_jack,path);
       
-      boot_from_jack(F.data[iens],temp,iboot_jack);
+      boot_from_jack(F[iens],temp,iboot_jack);
+      F[iens]/=lat[ibeta[iens]];
     }
   fclose(an_input_file);
   
@@ -346,8 +343,8 @@ int main(int narg,char **arg)
   
   //chiral and continuum
   double M_ETAC_phys=2.9803;
-  cout<<"Ratio "<<F_chir_cont<<endl;
-  cout<<"F = "<<F_chir_cont*M_ETAC_phys<<" GeV"<<endl;
+  cout<<"Diff: "<<F_chir_cont<<endl;
+  cout<<"F = "<<F_chir_cont+M_ETAC_phys<<" GeV"<<endl;
   cout<<endl;
   
   par_res_fit_F=bvec(4,nboot,njack);

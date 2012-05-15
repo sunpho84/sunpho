@@ -60,6 +60,16 @@ jvec effective_mass(jvec a)
   return b;
 }
 
+jvec numerical_derivative(jvec a)
+{
+  jvec b(a.nel-1,a.njack);
+  
+  for(int iel=0;iel<a.nel-1;iel++)
+    b[iel]=a[iel+1]-a[iel];
+  
+  return b;
+}
+
 //jack-vec
 jvec aperiodic_effective_mass(const jvec a)
 {
@@ -193,60 +203,6 @@ void two_pts_SL_fit(jack &M,jack &ZL,jack &ZS,jvec corrSL,jvec corrSS,int tminL,
   if(path2!=NULL) write_constant_fit_plot(path2,ecorrSS,M,tminS,tmaxS);
 }
 
-void linear_fit(jack &m,jack &q,double *x,jvec corr,double xmin,double xmax,const char *plot_path=NULL)
-{
-  int njack=corr.njack;
-  jack Y(njack),XY(njack),Y2(njack);
-  double X=0,W=0,X2=0;
-
-  Y=XY=0;
-  for(int iel=0;iel<corr.nel;iel++)
-    if(x[iel]>=xmin && x[iel]<=xmax)
-      {
-	double err=corr[iel].err();
-	double w=1/sqr(err);
-	
-	W+=w;
-	
-	X+=x[iel]*w;
-	X2+=x[iel]*x[iel]*w;
-      
-	Y+=corr[iel]*w;
-	Y2+=sqr(corr[iel])*w;
-	
-	XY+=x[iel]*corr[iel]*w;
-      }
-  
-  XY-=X*Y/W;
-  Y2-=Y*Y/W;
-  X2-=X*X/W;
-  
-  m=XY/X2;
-  q=(Y-m*X)/W;
-  
-  if(plot_path!=NULL)
-    {
-      ofstream plot_file(plot_path);
-      plot_file<<"@type xydy"<<endl;
-      for(int iel=0;iel<corr.nel;iel++)
-	plot_file<<x[iel]<<" "<<corr[iel]<<endl;
-      plot_file<<"&"<<endl<<"@type xy"<<endl;
-      plot_file<<xmin<<" "<<m[njack]*xmin+q[njack]<<endl;
-      plot_file<<xmax<<" "<<m[njack]*xmax+q[njack]<<endl;
-      plot_file<<"&"<<endl;
-    }
-}
-
-void linear_fit(jack &m,jack &q,jvec corr,int tmin,int tmax,const char *plot_path=NULL)
-{
-  double x[corr.nel];
-  for(int iel=0;iel<corr.nel;iel++) x[iel]=iel;
-  double xmin=max(0,tmin);
-  double xmax=min(tmax+1,corr.nel);
-  
-  linear_fit(m,q,x,corr,xmin,xmax);
-}
-
 bvec lin_solve(double *A,bvec b)
 {
   int d=b.nel;
@@ -280,7 +236,7 @@ bvec lin_solve(double *A,bvec b)
   return x;
 }
 
-bvec poly_fit(double *x,bvec y,int d)
+bvec poly_fit(double *x,bvec y,int d,double xmin,double xmax)
 {
   int np=y.nel;
   int nboot=y.nboot;
@@ -290,17 +246,18 @@ bvec poly_fit(double *x,bvec y,int d)
   bvec c(d+1,nboot,njack);c=0;
 
   for(int p=0;p<np;p++)
-    {
-      //calculate the weight
-      double w=pow(y[p].err(),-2);
-      //compute Al and c
-      for(int f=0;f<=2*d;f++)
-        {
-          Al[f]+=w;
-          if(f<=d) c[f]+=y[p]*w;
-          w*=x[p];
-        }
-    }
+    if(x[p]<=xmax &&x[p]>=xmin)
+      {
+	//calculate the weight
+	double w=pow(y[p].err(),-2);
+	//compute Al and c
+	for(int f=0;f<=2*d;f++)
+	  {
+	    Al[f]+=w;
+	    if(f<=d) c[f]+=y[p]*w;
+	    w*=x[p];
+	  }
+      }
   
   double A[(d+1)*(d+1)];
   for(int i=0;i<=d;i++)

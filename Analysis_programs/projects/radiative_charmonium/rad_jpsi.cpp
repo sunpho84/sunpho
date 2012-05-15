@@ -177,20 +177,38 @@ int main()
       out<<Dth_V_DV_sa.simmetrized(-1)<<endl;
     }
   
+  //load M1
+  jack M1_P5(njack),M1_VK(njack);
+  bool fit_M1=file_exists("M1_P5");
+  
+  if(fit_M1)
+    {
+      M1_P5.load("M1_P5",0);
+      M1_VK.load("M1_VK",0);
+      cout<<"D  M,M1 mass: "<<M_P5<<" "<<M1_P5<<endl;
+      cout<<"D* M,M1 mass: "<<M_VK<<" "<<M1_VK<<endl;
+    }
+  
   //fit matrix element
   jack R_sa=constant_fit(Dth_V_DV_sa.simmetrized(-1),tmin_f,tmax_f,"R_sa.xmg");
   jack R_nu=constant_fit(Dth_V_DV_nu.simmetrized(-1),tmin_f,tmax_f,"R_nu.xmg");
   
   //compute the form factor at 0 recoil
   jack V_sa=R_sa/qi*(M_VK+M_P5)/(2*M_VK)*Zv[ibeta];
+  jack V1_sa;if(fit_M1) V1_sa=R_sa/qi*(M1_VK+M1_P5)/(2*M1_VK)*Zv[ibeta];
   jack V_nu=R_nu/qi*(M_VK+M_P5)/(2*M_VK)*Zv[ibeta];
+  jack V1_nu;if(fit_M1) V1_nu=R_nu/qi*(M1_VK+M1_P5)/(2*M1_VK)*Zv[ibeta];
   
   cout<<"F semi-analytical: "<<V_sa<<endl;
+  if(fit_M1) cout<<"F1 semi-analytical: "<<V1_sa<<endl;
   cout<<"F numerical: "<<V_nu<<endl;
+  if(fit_M1) cout<<"F1 numerical: "<<V1_nu<<endl;
   
   M_VK.write_to_binfile("M_VK");
   M_P5.write_to_binfile("M_P5");
   V_sa.write_to_binfile("V_sa");
+  if(fit_M1) V1_sa.write_to_binfile("V1_sa");
+  if(fit_M1) V1_nu.write_to_binfile("V1_nu");
   V_nu.write_to_binfile("V_nu");
   
   return 0;

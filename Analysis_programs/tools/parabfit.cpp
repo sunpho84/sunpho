@@ -44,7 +44,7 @@ int main(int narg,char **arg)
       cout<<x[i]<<" "<<Y[i]<<endl;
     }
   
-  bvec pars_fit=poly_fit(x,Y,1,xmin,xmax);
+  bvec pars_fit=poly_fit(x,Y,2,xmin,xmax);
   cout<<pars_fit<<endl;
   
   if(narg>2)

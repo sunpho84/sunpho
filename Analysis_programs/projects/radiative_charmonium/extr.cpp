@@ -273,6 +273,7 @@ int main(int narg,char **arg)
   lmass=new double[nens];
   ibeta=new int[nens];
   F=bvec(nens,nboot,njack);
+  ofstream bare_data_table("bare_data_table");
   for(int iens=0;iens<nens;iens++)
     {
       char path[1024];
@@ -283,11 +284,15 @@ int main(int narg,char **arg)
       jack temp(njack);
       temp.load(combine("../%s/%s",path,meson_name).c_str());
 
+      //write the bare data table
+      bare_data_table<<iens<<" "<<smart_print(temp)<<endl;
+	
       //load iboot
       int iboot_jack[100];
       load_iboot(iboot_jack,path);
       
       boot_from_jack(F.data[iens],temp,iboot_jack);
+      F[iens]/=lat[ibeta[iens]];
     }
   fclose(an_input_file);
   
@@ -295,6 +300,7 @@ int main(int narg,char **arg)
   ml=bvec(nens,nboot,njack);
   for(int iens=0;iens<nens;iens++)
     {
+      
       int b=ibeta[iens],r=ref_ml_beta[b];
       //define ml
       cout<<iens<<" "<<b<<" "<<lmass[iens]<<endl;
@@ -327,7 +333,7 @@ int main(int narg,char **arg)
     }
   
   //chiral and continuum
-  cout<<"F = "<<F_chir_cont<<""<<endl;
+  cout<<"F = "<<F_chir_cont<<endl;
   cout<<endl;
   
   par_res_fit_F=bvec(4,nboot,njack);

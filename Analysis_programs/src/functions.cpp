@@ -9,6 +9,18 @@ double double_subt(const double a,const double b){return a-b;}
 double double_prod(const double a,const double b){return a*b;}
 double double_frac(const double a,const double b){return a/b;}
 
+double min(double a,double b)
+{
+  if(a>=b) return b;
+  else return a;
+}
+
+double max(double a,double b)
+{
+  if(a>=b) return a;
+  else return b;
+}
+
 /////////////////////////////////////////////////////////////
 
 double lin_fun(double const x,double*p)

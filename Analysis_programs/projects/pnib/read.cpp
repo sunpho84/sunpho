@@ -99,7 +99,7 @@ int main()
 	    
 	    jack SLOPE(njack),C(njack);
 	    cout<<tmin<<" "<<tmax<<endl;
-	    linear_fit(SLOPE,C,u,tmin,tmax);
+	    linear_fit(C,SLOPE,u,tmin,tmax);
 	    
 	    ofstream out_ratio(combine("ud_pres_%d%d%d_%d%d",r3,r2,r1,islso,islsi).c_str());
 	    int nt=101;
@@ -122,7 +122,7 @@ int main()
 	    ud.print_to_file(combine("ud%d%d%d_%d%d",r3,r2,r1,islso,islsi).c_str());
 	    cout<<"SLOPE: "<<SLOPE<<endl;
 	    cout<<"SLOPE: "<<constant_fit(ud,tmin,tmax)<<endl;
-	    linear_fit(SLOPE,C,d/a,tmin,tmax);
+	    linear_fit(C,SLOPE,d/a,tmin,tmax);
 	    cout<<"SLOPE2: "<<SLOPE<<endl;
 	    //cout<<"INTER: "<<C<<endl;
 	  }

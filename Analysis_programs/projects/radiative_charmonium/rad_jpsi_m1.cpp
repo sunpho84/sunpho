@@ -5,14 +5,14 @@
 
 int T,TH,L,tsep;
 double theta,lmass,cmass;
-int njack,nthetaS0,nthetaS1;
+int njack,ntheta=2;
 const double Zv[4]={0.5816,0.6103,0.6451,0.686};
 
 char base_path[1024];
 int ibeta;
 
-int tminL_B,tmaxL_B;
-int tminS_B,tmaxS_B;
+int tminL_V,tmaxL_V;
+int tminS_V,tmaxS_V;
 int tminL_P,tmaxL_P;
 int tminS_P,tmaxS_P;
 int tmin_f,tmax_f;
@@ -24,7 +24,7 @@ int icombo_2pts(int r1,int r2,int ith1,int reim)
 
 int icombo_3pts(int ith1,int ith2,int reim)
 {
-  return reim+2*(ith1+nthetaS1*ith2);
+  return reim+2*(ith1+ntheta*ith2);
 }
 
 jvec load_3pts(const char *name,int ith1,int ith2,int reim)
@@ -47,18 +47,10 @@ void read_data_list(const char *path)
   L=TH=T/2;
   read_formatted_from_file_expecting((char*)(&njack),input_file,"%d","njack");
   read_formatted_from_file_expecting((char*)(&ibeta),input_file,"%d","ibeta");
-  read_formatted_from_file_expecting((char*)(&nthetaS0),input_file,"%d","nthetaS0");
-  read_formatted_from_file_expecting((char*)(&nthetaS1),input_file,"%d","nthetaS1");
   read_formatted_from_file_expecting((char*)(&theta),input_file,"%lg","theta");
   read_formatted_from_file_expecting((char*)(&tsep),input_file,"%d","tsep");
   read_formatted_from_file_expecting((char*)(&lmass),input_file,"%lg","lmass");
   read_formatted_from_file_expecting((char*)(&cmass),input_file,"%lg","cmass");
-  
-  if(nthetaS0!=nthetaS1)
-    {
-      fprintf(stderr,"nthetaS0!=nthetaS1\n");
-      exit(1);
-    }
 }
 
 void read_input()
@@ -68,10 +60,10 @@ void read_input()
   
   read_formatted_from_file_expecting(data_list_path,input_file,"%s","data_list_file");
   
-  read_formatted_from_file_expecting((char*)(&tminL_B),input_file,"%d","tminL_B");
-  read_formatted_from_file_expecting((char*)(&tmaxL_B),input_file,"%d","tmaxL_B");
-  read_formatted_from_file_expecting((char*)(&tminS_B),input_file,"%d","tminS_B");
-  read_formatted_from_file_expecting((char*)(&tmaxS_B),input_file,"%d","tmaxS_B");
+  read_formatted_from_file_expecting((char*)(&tminL_V),input_file,"%d","tminL_V");
+  read_formatted_from_file_expecting((char*)(&tmaxL_V),input_file,"%d","tmaxL_V");
+  read_formatted_from_file_expecting((char*)(&tminS_V),input_file,"%d","tminS_V");
+  read_formatted_from_file_expecting((char*)(&tmaxS_V),input_file,"%d","tmaxS_V");
   
   read_formatted_from_file_expecting((char*)(&tminL_P),input_file,"%d","tminL_P");
   read_formatted_from_file_expecting((char*)(&tmaxL_P),input_file,"%d","tmaxL_P");
@@ -97,21 +89,26 @@ int main()
   //load sl P5P5 for D
   jvec P5P5_sl=load_2pts("P5P5",0, 0,0, 0, "30_00");
   
-  //load ss BKBK for D
-  jvec BKBK_ss=load_2pts("BKBK",0, 0,0, 0, "30_30");
-  //load sl BKBK for D
-  jvec BKBK_sl=load_2pts("BKBK",0, 0,0, 0, "30_00");
+  //load ss P5P5 for D
+  jvec P5P5_mov_ss=load_2pts("P5P5",1, 0,0, 0, "30_30");
+  //load sl P5P5 for D
+  jvec P5P5_mov_sl=load_2pts("P5P5",1, 0,0, 0, "30_00");
+  
+  //load ss VKVK for D
+  jvec VKVK_ss=load_2pts("VKVK",0, 0,0, 0, "30_30");
+  //load sl VKVK for D
+  jvec VKVK_sl=load_2pts("VKVK",0, 0,0, 0, "30_00");
+
   
   //////////////////////////////////// Fit masses and Z for standing D and D* ////////////////////////////////////////
   
   //compute D mass and Z
   jack M_P5,ZL_P5,ZS_P5;
   two_pts_SL_fit(M_P5,ZL_P5,ZS_P5,P5P5_sl.simmetrized(1),P5P5_ss.simmetrized(1),tminL_P,tmaxL_P,tminS_P,tmaxS_P,"MSL_P5.xmg","MSS_P5.xmg");
-  cout<<"D mass: "<<M_P5<<", Z: "<<ZL_P5<<endl;
   
   //compute D* mass and Z
-  jack M_BK,ZL_BK,ZS_BK;
-  two_pts_SL_fit(M_BK,ZL_BK,ZS_BK,BKBK_sl.simmetrized(1),BKBK_ss.simmetrized(1),tminL_B,tmaxL_B,tminS_B,tmaxS_B,"MSL_BK.xmg","MSS_BK.xmg");
+  jack M_VK,ZL_VK,ZS_VK;
+  two_pts_SL_fit(M_VK,ZL_VK,ZS_VK,VKVK_sl.simmetrized(1),VKVK_ss.simmetrized(1),tminL_V,tmaxL_V,tminS_V,tmaxS_V,"MSL_VK.xmg","MSS_VK.xmg");
   
   //reconstuct moving D mass
   double qi=M_PI*theta/L;
@@ -119,78 +116,95 @@ int main()
   jack Eth_P5=sqrt(sqr(M_P5)+q2);
   
   //reconstruct numerically and semi-analitically the time dependance of three points
-  jvec Dth_DV_td(T,njack);
+  jvec Dth_DV_td_nu(T,njack);
+  jvec Dth_DV_td_sa(T,njack);
   for(int t=0;t<T;t++)
     {
       int dtsep=abs(tsep-t);
       
-      Dth_DV_td[t]=(ZS_P5*ZS_BK)*
-	(exp((-M_BK*t)+(-Eth_P5*dtsep))
-	 +exp((-M_BK*(T-t)+(-Eth_P5*dtsep))))/
-	(2*Eth_P5*2*M_BK);
+      if(t<TH) Dth_DV_td_nu[t]=VKVK_ss[t]*P5P5_mov_ss[dtsep]/(ZS_P5*ZS_VK);
+      else     Dth_DV_td_nu[t]=VKVK_ss[T-t]*P5P5_mov_ss[dtsep]/(ZS_P5*ZS_VK);
+      
+      Dth_DV_td_sa[t]=(ZS_P5*ZS_VK)*
+	(exp((-M_VK*t)+(-Eth_P5*dtsep))
+	 +exp((-M_VK*(T-t)+(-Eth_P5*dtsep))))/
+	(2*Eth_P5*2*M_VK);
     }
   
   //compare time dependance and its simmetric
   if(tsep==T/2)
     {
-      ofstream out("Dth_DV_td_simm.xmg");
+      ofstream out("Dth_DV_td_sa_simm.xmg");
       out<<"@type xydy"<<endl;
-      out<<Dth_DV_td<<endl;
+      out<<Dth_DV_td_sa<<endl;
+      out<<"&\n@type xydy"<<endl;
+      out<<Dth_DV_td_nu<<endl;
     }
   
-  jack Q2_fit=sqr(M_BK-Eth_P5)-q2;
-  cout<<"theta optimal: "<<(M_BK*M_BK-M_P5*M_P5)/(2*M_BK)*L/sqrt(3)/M_PI<<endl;
+  jack Q2_fit=sqr(M_VK-Eth_P5)-q2;
+  cout<<"theta optimal: "<<(M_VK*M_VK-M_P5*M_P5)/(2*M_VK)*L/sqrt(3)/M_PI<<endl;
   cout<<"Q2: "<<Q2_fit<<endl;
   
   //////////////////////////////// Calculate three points ////////////////////////////////
 
-  int itheta=(nthetaS1==1 ? 0 : 1);
-  
   //load corrs
-  jvec P5thVIBJ_pt1=load_3pts("VIBJ_pt1",0,itheta,REAL);
-  jvec P5thVIBJ_pt2=load_3pts("VIBJ_pt2",0,itheta,REAL);
-  jvec P5thVIBJ_pt3=load_3pts("VIBJ_pt3",0,itheta,REAL);
-  
+  jvec P5thVIVJ_pt1= load_3pts("VIVJ_pt1",0,1,IMAG);
+  jvec P5thVIVJ_pt2=-load_3pts("VIVJ_pt2",0,1,IMAG);
+  jvec P5thVIVJ=(P5thVIVJ_pt1+P5thVIVJ_pt2)/2;
+
   //compare the different parts
   {
-    ofstream out("P5thVIBJ.xmg");
+    ofstream out("P5thVIVJ_parts.xmg");
     out<<"@type xydy"<<endl;
-    out<<P5thVIBJ_pt1<<endl;
-    out<<"&/n@type xydy"<<endl;
-    out<<P5thVIBJ_pt2<<endl;
-    out<<"&/n@type xydy"<<endl;
-    out<<P5thVIBJ_pt3<<endl;
+    out<<P5thVIVJ<<endl;
   }
-  
-  
+
   ///////////////////////////// Determine the matrix element between D(th=+-) and D* ////////////////////////////
   
-  //part 2 is 12 and ciclic
-  jvec Dth_V_DV=(P5thVIBJ_pt1-P5thVIBJ_pt2+P5thVIBJ_pt3)/Dth_DV_td;
+  jvec Dth_V_DV_sa=P5thVIVJ/Dth_DV_td_sa;
+  jvec Dth_V_DV_nu=P5thVIVJ/Dth_DV_td_nu;
   
   //compare matrix element and its simmetric
   if(tsep==T/2)
     {
-      ofstream out("Dth_V_DV_simm.xmg");
+      ofstream out("Dth_V_DV_sa_simm.xmg");
       out<<"@type xydy"<<endl;
-      out<<Dth_V_DV<<endl;
+      out<<Dth_V_DV_sa<<endl;
       out<<"&\n@type xydy"<<endl;
-      out<<-Dth_V_DV.simmetric()<<endl;
+      out<<-Dth_V_DV_sa.simmetric()<<endl;
       out<<"&\n@type xydy"<<endl;
-      out<<Dth_V_DV.simmetrized(-1)<<endl;
+      out<<Dth_V_DV_sa.simmetrized(-1)<<endl;
     }
+
+  //load M1
+  cout<<"D fitted mass: "<<M_P5<<", Z: "<<ZL_P5<<endl;
+  M_P5.load("M1_P5",0);
+  cout<<"D M1     mass: "<<M_P5<<endl;
+  cout<<"D* fitted mass: "<<M_VK<<", Z: "<<ZL_VK<<endl;
+  M_VK.load("M1_VK",0);
+  cout<<"D* M1     mass: "<<M_VK<<endl; //load M1                                                                                                                                                                                     
+  cout<<"D fitted mass: "<<M_P5<<", Z: "<<ZL_P5<<endl;
+  M_P5.load("M1_P5",0);
+  cout<<"D M1     mass: "<<M_P5<<endl;
+  cout<<"D* fitted mass: "<<M_VK<<", Z: "<<ZL_VK<<endl;
+  M_VK.load("M1_VK",0);
+  cout<<"D* M1     mass: "<<M_VK<<endl
   
   //fit matrix element
-  jack R=constant_fit(Dth_V_DV.simmetrized(-1),tmin_f,tmax_f,"R.xmg");
+  jack R_sa=constant_fit(Dth_V_DV_sa.simmetrized(-1),tmin_f,tmax_f,"R_sa.xmg");
+  jack R_nu=constant_fit(Dth_V_DV_nu.simmetrized(-1),tmin_f,tmax_f,"R_nu.xmg");
   
   //compute the form factor at 0 recoil
-  jack V=R/M_BK*Zv[ibeta];
+  jack V_sa=R_sa/qi*(M_VK+M_P5)/(2*M_VK)*Zv[ibeta];
+  jack V_nu=R_nu/qi*(M_VK+M_P5)/(2*M_VK)*Zv[ibeta];
   
-  cout<<"F semi-analytical: "<<V<<endl;
+  cout<<"F semi-analytical: "<<V_sa<<endl;
+  cout<<"F numerical: "<<V_nu<<endl;
   
-  M_BK.write_to_binfile("M_BK");
+  M_VK.write_to_binfile("M_VK");
   M_P5.write_to_binfile("M_P5");
-  V.write_to_binfile("F");
+  V_sa.write_to_binfile("V_sa");
+  V_nu.write_to_binfile("V_nu");
   
   return 0;
 }

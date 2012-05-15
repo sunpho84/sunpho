@@ -32,7 +32,7 @@ int main(int narg,char **arg)
   
   //perform the fit
   jack m,q;
-  linear_fit(m,q,X,Y);
+  linear_fit(q,m,X,Y);
   //calculate the chi2
   double C2=0;
   for(int i=0;i<nel;i++)

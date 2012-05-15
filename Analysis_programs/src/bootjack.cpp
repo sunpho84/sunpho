@@ -254,3 +254,32 @@ TYPE jack_weighted_average(TYPE &a,TYPE &b)
 
   return (a*wa+b*wb)/(wa+wb);
 }
+
+string smart_print(TYPE a)
+{
+  double m=a.med();
+  double e=a.err();
+  int s=0;
+  ostringstream o;
+  
+  while(int(e)<1)
+    {
+      e*=10;
+      m*=10;
+      s--;
+    }
+
+  while(int(e)>=30)
+    {
+      e/=10;
+      m/=10;
+      s++;
+    }
+  
+  char t[1000];
+  sprintf(t,"%.*f",(unsigned int)abs(s),a.med());
+  
+  o<<t<<"("<<int(e+0.5)<<")";
+  
+  return o.str();
+}

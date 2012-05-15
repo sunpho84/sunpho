@@ -39,7 +39,7 @@ int main()
       //cout<<f<<endl;
       
       jack m(njack),q(njack);
-      linear_fit(m,q,f,0,nel);
+      linear_fit(q,m,f,0,nel);
       em1+=m.err();
       eq1+=q.err();
       if(m.err()>fabs((m.med()-1))) nm1++;

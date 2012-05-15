@@ -9,6 +9,8 @@ void read_ensemble_pars(char *base_path,int &T,int &ibeta,int &nmass,double *&ma
   read_formatted_from_file_expecting((char*)&T,input,"%d","T");
   read_formatted_from_file_expecting((char*)&ibeta,input,"%d","njack"); //dum
   read_formatted_from_file_expecting((char*)&ibeta,input,"%d","Beta");
+  int dum;
+  read_formatted_from_file_expecting((char*)&dum,input,"%d","sour_nsmear");
   
   read_formatted_from_file_expecting((char*)&nmass,input,"%d","nmass");
 

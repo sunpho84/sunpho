@@ -5,6 +5,7 @@
 
 #include <TMinuit.h>
 #include <iostream>
+#include <sstream>
 #include <fstream>
 
 using namespace std;
@@ -22,6 +23,7 @@ using namespace std;
 #include "bvec.cpp"
 
 #include "grace.cpp"
+#include "plot.cpp"
 #include "fits.cpp"
 
 #include "rand.cpp"
