@@ -53,7 +53,7 @@ public:
   VTYPE first_half();
   VTYPE simmetric();
   VTYPE simmetrized(int parity);
-  
+  VTYPE shifted(int);
   VTYPE write_to_binfile(FILE *);
   VTYPE append_to_binfile(const char*,...);
   VTYPE write_to_binfile(const char*,...);
@@ -158,6 +158,7 @@ void VTYPE::print_to_file(const char *format,...)
   va_end(args);
 
   ofstream fout(buffer);
+  fout<<"@type xydy"<<endl;
   fout<<(*this);
   fout.close();
 }
@@ -452,6 +453,19 @@ VTYPE VTYPE::simmetrized(int parity)
   return c;
 }
 
+VTYPE VTYPE::shifted(int am)
+{
+  VTYPE a(*this);
+  
+  for(int iel=0;iel<nel;iel++)
+    {
+      int iso=(iel-am+nel)%nel;
+      a[iel]=(*this)[iso];
+    }
+  
+  return a;
+}  
+
 void write_constant_fit_plot(const char *path,VTYPE in,TYPE y,int tin,int tfin)
 {
   double ym=y.med(),dy=y.err();
@@ -507,33 +521,7 @@ TYPE constant_fit(VTYPE in,int tin,int tfin,const char *path=NULL)
   return E;
 }
 
-void linear_fit(VTYPE in,TYPE &m,TYPE &q,int tin,int tfin)
-{
-  double S,Sx,Sx2;
-  TYPE Sxy(in.data[0]),Sy(in.data[0]);
-  
-  Sx2=S=Sx=0;
-  Sxy=Sy=0;
-  for(int iel=max(tin,0);iel<=min(tfin,in.nel-1);iel++)
-    {
-      double err=in.data[iel].err();
-      double weight=1/(err*err);
-      int x=iel;
-      TYPE y=in.data[iel];
-
-      S+=weight;
-      Sx+=x*weight;
-      Sx2+=x*x*weight;
-      Sxy+=x*y*weight;
-      Sy+=y*weight;
-    }
-  
-  double delta=S*Sx2-Sx*Sx;
-  m=(S*Sxy-Sx*Sy)/delta;
-  q=(Sx2*Sy-Sxy*Sx)/delta;
-}
-
-void linear_fit(TYPE &m,TYPE &q,double *x,VTYPE &y)
+void linear_fit(TYPE &q,TYPE &m,double *x,VTYPE &y,double xmin,double xmax,const char *plot_path=NULL)
 {
   double S,Sx,Sx2;
   TYPE Sxy(y.data[0]),Sy(y.data[0]);
@@ -541,22 +529,45 @@ void linear_fit(TYPE &m,TYPE &q,double *x,VTYPE &y)
   Sx2=S=Sx=0;
   Sxy=Sy=0;
   for(int iel=0;iel<y.nel;iel++)
-    {
-      double err=y.data[iel].err();
-      double weight=1/(err*err);
-      double xi=x[iel];
-      TYPE yi=y.data[iel];
-      
-      S+=weight;
-      Sx+=xi*weight;
-      Sx2+=xi*xi*weight;
-      Sxy+=xi*yi*weight;
-      Sy+=yi*weight;
-    }
+    if(x[iel]>=xmin && x[iel]<=xmax)
+      {
+	double err=y.data[iel].err();
+	double weight=1/(err*err);
+	double xi=x[iel];
+	TYPE yi=y.data[iel];
+	
+	S+=weight;
+	Sx+=xi*weight;
+	Sx2+=xi*xi*weight;
+	Sxy+=xi*yi*weight;
+	Sy+=yi*weight;
+      }
   
   double delta=S*Sx2-Sx*Sx;
   m=(S*Sxy-Sx*Sy)/delta;
   q=(Sx2*Sy-Sxy*Sx)/delta;
+
+  if(plot_path!=NULL)
+    {
+      ofstream plot_file(plot_path);
+      plot_file<<"@type xydy"<<endl;
+      for(int iel=0;iel<y.nel;iel++)
+	plot_file<<x[iel]<<" "<<y[iel]<<endl;
+      plot_file<<"&"<<endl<<"@type xy"<<endl;
+      plot_file<<xmin<<" "<<m.med()*xmin+q.med()<<endl;
+      plot_file<<xmax<<" "<<m.med()*xmax+q.med()<<endl;
+      plot_file<<"&"<<endl;
+    }
+}
+
+void linear_fit(TYPE &q,TYPE &m,VTYPE &y,int tmin,int tmax,const char *plot_path=NULL)
+{
+  double x[y.nel];
+  for(int iel=0;iel<y.nel;iel++) x[iel]=iel;
+  double xmin=max(0,tmin);
+  double xmax=min(tmax+1,y.nel);
+  
+  linear_fit(q,m,x,y,xmin,xmax,plot_path);
 }
 
 VTYPE par_single_fun(double (*fun)(double,double*),VTYPE &x,VTYPE &par)

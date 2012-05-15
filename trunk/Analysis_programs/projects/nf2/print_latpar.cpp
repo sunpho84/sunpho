@@ -25,6 +25,8 @@ int main()
   cout<<"a420: "<<lat[3]<<endl;
   cout<<"amc_phys420: "<<amc_phys[3]<<endl;
   cout<<"1/a420: "<<1/lat[3]<<endl<<endl;
+
+  cout<<"mc: "<<mc_phys<<endl<<endl;
   
   double ghat=0.45;
   //double Amed=-1.200,Aerr=0.5;
@@ -46,6 +48,13 @@ int main()
   cout<<corr1<<endl;
   cout<<corr2<<endl;
   cout<<corr1+corr2<<endl;
+  
+  ofstream t("/tmp/data_cecilia");
+  t<<"iboot\t\t2B0\t\tf0"<<endl;
+  for(int iboot=0;iboot<nboot;iboot++)
+    t<<iboot+1<<"\t\t"<<db0[iboot]<<"\t\t"<<f0[iboot]<<endl;
+  t<<"med\t\t"<<db0.med()<<"\t\t"<<f0.med()<<endl;
+  t<<"err\t\t"<<db0.err()<<"\t"<<f0.err()<<endl;
   
   return 0;
 }

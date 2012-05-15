@@ -9,6 +9,7 @@ int T,L,TH;
 int ntheta,nmass;
 int njack=15;
 int tmin,tmax;
+double lmass;
 
 void read_ensemble_pars(char *base_path,int &T,int &nmass,int &ntheta,const char *data_list_file)
 {
@@ -23,7 +24,8 @@ void read_ensemble_pars(char *base_path,int &T,int &nmass,int &ntheta,const char
   read_formatted_from_file_expecting((char*)&nmass,input,"%d","nmass");
   expect_string_from_file(input,"mass_list");
   double mass;
-  for(int imass=0;imass<nmass;imass++) read_formatted_from_file((char*)&(mass),input,"%lg","mass");
+  read_formatted_from_file((char*)&(lmass),input,"%lg","lmass");
+  for(int imass=1;imass<nmass;imass++) read_formatted_from_file((char*)&(mass),input,"%lg","mass");
   
   read_formatted_from_file_expecting((char*)&ntheta,input,"%d","ntheta");
   expect_string_from_file(input,"theta_list");
@@ -100,6 +102,35 @@ void two_pts_fit_minuit(jack &M,jack &Z,jvec corr)
     }
 }
 
+string smart_print(jack a)
+{
+  double m=a.med();
+  double e=a.err();
+  int s=0;
+  ostringstream o;
+  
+  while(int(e)<1)
+    {
+      e*=10;
+      m*=10;
+      s--;
+    }
+
+  while(int(e)>=30)
+    {
+      e/=10;
+      m/=10;
+      s++;
+    }
+  
+  char t[1000];
+  sprintf(t,"%.*f",(unsigned int)abs(s),a.med());
+  
+  o<<t<<"("<<int(e+0.5)<<")";
+  
+  return o.str();
+}
+
 int main(int narg,char **arg)
 {
   if(narg<2) crash("use %s input",arg[0]);
@@ -111,10 +142,10 @@ int main(int narg,char **arg)
   
   jack M,Z2;
   two_pts_fit(M,Z2,corr,tmin,tmax,"M_2steps.xmg","Z2_2steps.xmg");
-  cout<<"M="<<M<<", Z2="<<Z2<<endl;
+  cout<<"EFF: M "<<smart_print(M)<<"   Z2 "<<smart_print(Z2)<<"   F "<<smart_print(2*lmass*sqrt(Z2)/sinh(M)/M)<<endl;
   
   two_pts_fit_minuit(M,Z2,corr);
-  cout<<"M="<<M<<", Z2="<<Z2<<endl;
+  cout<<"COR: M "<<smart_print(M)<<"   Z2 "<<smart_print(Z2)<<"   F "<<smart_print(2*lmass*sqrt(Z2)/sinh(M)/M)<<endl;
   
   M.write_to_binfile(out_file);
   Z2.append_to_binfile(out_file);

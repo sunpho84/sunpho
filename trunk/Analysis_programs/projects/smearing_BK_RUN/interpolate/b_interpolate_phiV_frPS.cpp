@@ -7,40 +7,6 @@ double mass[11]={0.984873,1.15836,1.36255,1.6023,1.88462,2.2165,2.60711,3.06615,
 double inv_mass[11];
 bvec phih(nm,nboot,njack);
 
-void linear_fit(boot &m,boot &q,bvec corr,double *x)
-{
-  int nel=corr.nel;
-  int nboot=corr.nboot;
-  int njack=corr.njack;
-  boot Y(nboot,njack),XY(nboot,njack),Y2(nboot,njack);
-  double X=0,W=0,X2=0;
-
-  Y=XY=0;
-  for(int i=0;i<nel;i++)
-    {
-      double err=corr[i].err();
-      double w=1/sqr(err);
-      
-      W+=w;
-      
-      X+=x[i]*w;
-      X2+=x[i]*x[i]*w;
-      
-      Y+=corr[i]*w;
-      Y2+=sqr(corr[i])*w;
-      
-      XY+=x[i]*corr[i]*w;
-    }
-
-  XY-=X*Y/W;
-  Y2-=Y*Y/W;
-  X2-=X*X/W;
-  
-  m=XY/X2;
-  q=(Y-m*X)/W;
-}
-
-
 int main()
 {
   FILE *an_input_file=open_file("analysis_pars","r");
@@ -77,7 +43,7 @@ int main()
       im[iel]=1/mass[iel];
     }
   boot m,q;
-  linear_fit(m,q,t,im);
+  linear_fit(q,m,t,im);
   cout<<"m: "<<m<<" q: "<<q<<endl;
 
   {

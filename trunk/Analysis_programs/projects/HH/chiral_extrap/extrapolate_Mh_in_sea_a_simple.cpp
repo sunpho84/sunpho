@@ -1,17 +1,17 @@
-#include "radiative_common.cpp"
+#include "../HH_common.cpp"
 
 const int nbeta=4;
 char **base_corrs_path,**ens_name;
 int nens,*T,*ibeta,*nmass;
-double *cmass,*lmass;
+double **mass,*sea_mass;
 
 //read data
-bvec F;
+bvec *Mh;
 
 bvec ml;
 int ref_ml_beta[4]={-1,-1,-1,-1};
 
-bvec par_res_fit_F;
+bvec par_res_fit_Mh;
 
 const char set_color[nbeta][1024]={"black","blue","red","green4"};
 const char set_fill_color[nbeta][1024]={"grey","turquoise","yellow","green"};
@@ -22,9 +22,9 @@ const char set_legend_fm[nbeta][1024]={"a = 0.098 fm","a = 0.085 fm","a = 0.067 
 int plot_iboot;
 int include_a4;
 int include_380;
-int include_ml_term;
+int include_ml;
 
-double fun_fit_F(double A,double B,double C,double D,double ml,double a)
+double fun_fit_Mh(double A,double B,double C,double D,double ml,double a)
 {
   double a1=a/lat[1][plot_iboot];
   return A*(1 + B*ml + C*a1*a1 + D*a1*a1*a1*a1);
@@ -96,7 +96,6 @@ bool fitting_fK;
 double *X_fit;
 double *Y_fit,*err_Y_fit;
 
-int contr_flag=0;
 //calculate the chi square
 double chi2(double A,double B,double C,double D,double *a)
 {
@@ -105,9 +104,9 @@ double chi2(double A,double B,double C,double D,double *a)
   for(int iens=0;iens<nens;iens++)
     if(include_380 || ibeta[iens]!=0)
       {
-	double contr=pow((Y_fit[iens]-fun_fit_F(A,B,C,D,X_fit[iens],a[ibeta[iens]]))/err_Y_fit[iens],2);
-	ch2+=contr;
-	if(contr_flag==1) cout<<"contr "<<iens<<": "<<contr<<" = ("<<Y_fit[iens]<<" - "<<fun_fit_F(A,B,C,D,X_fit[iens],a[ibeta[iens]])<<") / "<<err_Y_fit[iens]<<endl;
+	double c=pow((Y_fit[iens]-fun_fit_Mh(A,B,C,D,X_fit[iens],a[ibeta[iens]]))/err_Y_fit[iens],2);
+	//cout<<iens<<" ("<<Y_fit[iens]<<"-"<<fun_fit_Mh(A,B,C,D,X_fit[iens],a[ibeta[iens]])<<")/"<<err_Y_fit[iens]<<endl;
+	ch2+=c;
       }
   
   return ch2;
@@ -133,16 +132,16 @@ void fit(boot &A,boot &B,boot &C,boot &D,bvec &X,bvec &Y)
   minu.SetPrintLevel(-1);
   
   int npars=4;
-  minu.DefineParameter(0,"A",1,0.0001,0,0);
+  minu.DefineParameter(0,"A",0.0,0.0001,0,0);
   minu.DefineParameter(1,"B",0.0,0.0001,0,0);
-  minu.DefineParameter(2,"C",0.02,0.0001,0,0);
+  minu.DefineParameter(2,"C",0.0,0.0001,0,0);
   minu.DefineParameter(3,"D",0.0,0.0001,0,0);
   if(!include_a4)
     {
       minu.FixParameter(3);
       npars--;
     }
-  if(!include_ml_term)
+  if(!include_ml)
     {
       minu.FixParameter(1);
       npars--;
@@ -181,12 +180,7 @@ void fit(boot &A,boot &B,boot &C,boot &D,bvec &X,bvec &Y)
       minu.GetParameter(3,D.data[iboot],dum);
       
       double lat_med[4]={lat[0].med(),lat[1].med(),lat[2].med(),lat[3].med()};
-      if(iboot==nboot) 
-	{
-	  contr_flag=1;
-	  C2=chi2(A.data[iboot],B[iboot],C[iboot],D[iboot],lat_med);
-	  contr_flag=0;
-	}
+      if(iboot==0) C2=chi2(A.data[iboot],B[iboot],C[iboot],D[iboot],lat_med);
     }
   
   int ninc_ens=0;
@@ -248,66 +242,23 @@ void plot_funz_a2(const char *out_path,const char *title,const char *xlab,const 
   out.new_set();
 }
 
-void load_iboot(int *iboot_jack,char *ens_name)
-{
-  char path[1024];
-  sprintf(path,"../../DATA1/%s/iboot",ens_name);
-  
-  FILE *fiboot=fopen(path,"r");
-  if(fiboot==NULL)
-    {
-      perror(combine("Error opening file iboot for ensamble %s",path).c_str());
-      exit(1);
-    }
-  int nr=fread(iboot_jack,sizeof(int),100,fiboot);
-  if(nr!=100)
-    {
-      perror(combine("Error loading iboot data for ensamble %s",path).c_str());
-      exit(1);
-    }
-  fclose(fiboot);
-}
-
 int main(int narg,char **arg)
 {
   init_latpars();
   
   //read ensemble list, meson masses and meson name
   FILE *an_input_file=open_file("analysis_pars","r");
-  char meson_name[1024];
-  read_formatted_from_file_expecting((char*)&include_a4,an_input_file,"%d","include_a4");
-  read_formatted_from_file_expecting((char*)&include_380,an_input_file,"%d","include_380");
-  read_formatted_from_file_expecting((char*)&include_ml_term,an_input_file,"%d","include_ml_term");
-  read_formatted_from_file_expecting((char*)&nens,an_input_file,"%d","nens");
+  char ens_list_path[1024],meson_mass_file[1024],meson_name[1024];
+  read_formatted_from_file_expecting(ens_list_path,an_input_file,"%s","ens_list_path");
+  read_formatted_from_file_expecting(meson_mass_file,an_input_file,"%s","meson_mass_file");
   read_formatted_from_file_expecting(meson_name,an_input_file,"%s","meson_name");
-  
-  lmass=new double[nens];
-  ibeta=new int[nens];
-  F=bvec(nens,nboot,njack);
-  ofstream bare_data_table("bare_data_table");
-  for(int iens=0;iens<nens;iens++)
-    {
-      char path[1024];
-      read_formatted_from_file((char*)&(ibeta[iens]),an_input_file,"%d","ibeta");
-      read_formatted_from_file((char*)&(lmass[iens]),an_input_file,"%lg","lmass");
-      read_formatted_from_file(path,an_input_file,"%s","path");
-      
-      jack temp,temp1(njack),temp2(njack);
-      temp1.load(combine("../%s/M",path).c_str());
-      temp2.load(combine("../../../RADIATIVE_CHARMONIUM/P5P5_MASS_FIT/%s/M",path).c_str());
-      cout<<"M1: "<<temp1<<", M2: "<<temp2<<endl;
-      temp=temp1/temp2;
-      
-      //write the bare data table
-      bare_data_table<<iens<<" "<<smart_print(temp)<<endl;
-      
-      //load iboot
-      int iboot_jack[100];
-      load_iboot(iboot_jack,path);
-      
-      boot_from_jack(F.data[iens],temp,iboot_jack);
-    }
+  read_formatted_from_file_expecting((char*)&include_a4,an_input_file,"%d","include_a4");
+  read_formatted_from_file_expecting((char*)&include_ml,an_input_file,"%d","include_ml");
+  read_formatted_from_file_expecting((char*)&include_380,an_input_file,"%d","include_380");
   fclose(an_input_file);
+  
+  //load ensembles list and parameters
+  load_ensembles_list(base_corrs_path,ens_name,nens,T,ibeta,nmass,mass,sea_mass,ens_list_path);
   
   //define ml and ref ml
   ml=bvec(nens,nboot,njack);
@@ -315,8 +266,8 @@ int main(int narg,char **arg)
     {
       int b=ibeta[iens],r=ref_ml_beta[b];
       //define ml
-      cout<<iens<<" "<<b<<" "<<lmass[iens]<<endl;
-      ml[iens]=lmass[iens]/lat[b]/Zp[b];
+      cout<<iens<<" "<<b<<" "<<sea_mass[iens]<<endl;
+      ml[iens]=sea_mass[iens]/lat[b]/Zp[b];
       //set the lighter mass
       if(r==-1||fabs(ml[r].med()-0.050)>fabs(ml[iens].med()-0.050)) ref_ml_beta[b]=iens;
     }
@@ -324,47 +275,56 @@ int main(int narg,char **arg)
   for(int ib=0;ib<nbeta;ib++) if(ref_ml_beta[ib]!=-1) cout<<"Ref "<<ib<<" = "<<ref_ml_beta[ib]<<", "<<ml[ref_ml_beta[ib]]<<" MeV"<<endl;
   cout<<"---"<<endl;
 
-  //perform the fit
-  boot A(nboot,njack),B(nboot,njack),C(nboot,njack),D(nboot,njack);
-  fit(A,B,C,D,ml,F);
-  
-  //chiral extrapolation
-  bvec F_chir(nbeta,nboot,njack);
-  boot F_chir_cont(nboot,njack);
-  bvec F_estr_ml(nbeta,nboot,njack);
-  for(int iboot=0;iboot<nboot+1;iboot++)
+  //load data
+  int nm=11;
+  Mh=new bvec[nm];
+  bvec Mh_chir_cont(nm,nboot,njack);
+  for(int im=0;im<nm;im++)
     {
-      F_chir_cont.data[iboot]=fun_fit_F(A[iboot],B[iboot],C[iboot],D[iboot],ml_phys[iboot],0);
+      Mh[im]=bvec(nens,nboot,njack);
+      Mh[im].load(meson_mass_file,im);
+      
+      //perform the fit
+      boot A(nboot,njack),B(nboot,njack),C(nboot,njack),D(nboot,njack);
+      fit(A,B,C,D,ml,Mh[im]);
+      
+      //chiral extrapolation
+      boot Mh_chir[nbeta];
+      bvec Mh_estr_ml(nbeta,nboot,njack);
       for(int ib=0;ib<nbeta;ib++)
 	{
-	  int r=ref_ml_beta[ib];
-	  F_chir[ib].data[iboot]=fun_fit_F(A[iboot],B[iboot],C[iboot],D[iboot],ml_phys[iboot],lat[ib][iboot]);
-	  if(r!=-1)
-	    F_estr_ml.data[ib].data[iboot]=F[r][iboot]*fun_fit_F(A[nboot],B[nboot],C[nboot],D[nboot],ml_phys[nboot],0)/fun_fit_F(A[nboot],B[nboot],C[nboot],D[nboot],ml[r][nboot],0);
+	  Mh_chir[ib]=boot(nboot,njack);
+	  for(int iboot=0;iboot <nboot+1;iboot++)
+	    {
+	      int r=ref_ml_beta[ib];
+	      Mh_chir_cont[im].data[iboot]=fun_fit_Mh(A[iboot],B[iboot],C[iboot],D[iboot],ml_phys[iboot],0);
+	      Mh_chir[ib].data[iboot]=fun_fit_Mh(A[iboot],B[iboot],C[iboot],D[iboot],ml_phys[iboot],lat[ib][iboot]);
+	      
+	      if(r!=-1)
+		Mh_estr_ml.data[ib].data[iboot]=Mh[im][r][iboot]*fun_fit_Mh(A[nboot],B[nboot],C[nboot],D[nboot],ml_phys[nboot],0)/fun_fit_Mh(A[nboot],B[nboot],C[nboot],D[nboot],ml[r][nboot],0);
+	    }
 	}
+      
+      //chiral and continuum
+      cout<<"Mh = ("<<Mh_chir_cont[im]*1000<<") MeV"<<endl;
+      cout<<endl;
+
+      par_res_fit_Mh=bvec(4,nboot,njack);
+      
+      par_res_fit_Mh.data[0]=A;
+      par_res_fit_Mh.data[1]=B;
+      par_res_fit_Mh.data[2]=C;
+      par_res_fit_Mh.data[3]=D;
+      
+      const char tag_ml[1024]="m\\sl\\N\\SMS,2GeV\\N (GeV)";
+      const char tag_a2[1024]="a\\S2\\N (fm)";
+      double lat_med_fm[4]={lat[0].med()*hc,lat[1].med()*hc,lat[2].med()*hc,lat[3].med()*hc};
+
+      plot_funz_ml(combine("Mh_funz_ml_%d.xmg",im).c_str(),meson_name,tag_ml,meson_name,ml,Mh[im],par_res_fit_Mh,ml_phys.med(),fun_fit_Mh,Mh_chir_cont[im]);
+      plot_funz_a2(combine("Mh_funz_a2_%d.xmg",im).c_str(),meson_name,tag_a2,meson_name,lat_med_fm,Mh_estr_ml,par_res_fit_Mh,fun_fit_Mh,Mh_chir_cont[im]);
     }
   
-  //chiral and continuum
-  double M_ETAC_phys=2.9803;
-  cout<<"Ratio "<<F_chir_cont<<endl;
-  cout<<"F = "<<F_chir_cont*M_ETAC_phys<<" GeV"<<endl;
-  cout<<endl;
-  
-  par_res_fit_F=bvec(4,nboot,njack);
-  
-  par_res_fit_F.data[0]=A;
-  par_res_fit_F.data[1]=B;
-  par_res_fit_F.data[2]=C;
-  par_res_fit_F.data[3]=D;
-  
-  const char tag_ml[1024]="m\\sl\\N\\SMS,2GeV\\N (GeV)";
-  const char tag_a2[1024]="a\\S2\\N (fm)";
-  double lat_med_fm[4]={lat[0].med()*hc,lat[1].med()*hc,lat[2].med()*hc,lat[3].med()*hc};
-  
-  plot_funz_ml("F_funz_ml.xmg",meson_name,tag_ml,meson_name,ml,F,par_res_fit_F,ml_phys.med(),fun_fit_F,F_chir_cont);
-  plot_funz_a2("F_funz_a2.xmg",meson_name,tag_a2,meson_name,lat_med_fm,F_estr_ml,par_res_fit_F,fun_fit_F,F_chir_cont);
-
-  F_chir_cont.write_to_binfile("results");
+  Mh_chir_cont.write_to_binfile("results");
   
   return 0;
 }

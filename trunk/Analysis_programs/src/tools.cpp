@@ -39,3 +39,17 @@ void crash(const char *temp,...)
   cerr<<"ERROR: "<<buffer<<endl;
   exit(1);
 }
+
+int file_exists(const char *path)
+{
+  int status=0;
+  
+  FILE *f=fopen(path,"r");
+  if(f!=NULL)
+    {
+      status=1;
+      fclose(f);
+    }
+  
+  return status;
+}
