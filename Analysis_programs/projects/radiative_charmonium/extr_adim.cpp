@@ -97,13 +97,18 @@ double *X_fit;
 double *Y_fit,*err_Y_fit;
 
 //calculate the chi square
+int contr_flag=0;
 double chi2(double A,double B,double C,double D,double *a)
 {
   double ch2=0;
   
   for(int iens=0;iens<nens;iens++)
     if(include_380 || ibeta[iens]!=0)
-      ch2+=pow((Y_fit[iens]-fun_fit_F(A,B,C,D,X_fit[iens],a[ibeta[iens]]))/err_Y_fit[iens],2);
+      {
+	double contr=pow((Y_fit[iens]-fun_fit_F(A,B,C,D,X_fit[iens],a[ibeta[iens]]))/err_Y_fit[iens],2);
+	ch2+=contr;
+	if(contr_flag==1) cout<<"contr "<<iens<<": "<<contr<<" = ("<<Y_fit[iens]<<" - "<<fun_fit_F(A,B,C,D,X_fit[iens],a[ibeta[iens]])<<") / "<<err_Y_fit[iens]<<endl;
+      }
   
   return ch2;
 }
@@ -176,7 +181,12 @@ void fit(boot &A,boot &B,boot &C,boot &D,bvec &X,bvec &Y)
       minu.GetParameter(3,D.data[iboot],dum);
       
       double lat_med[4]={lat[0].med(),lat[1].med(),lat[2].med(),lat[3].med()};
-      if(iboot==0) C2=chi2(A.data[iboot],B[iboot],C[iboot],D[iboot],lat_med);
+      if(iboot==nboot)
+        {
+          contr_flag=1;
+          C2=chi2(A.data[iboot],B[iboot],C[iboot],D[iboot],lat_med);
+          contr_flag=0;
+        }
     }
   
   int ninc_ens=0;
@@ -286,7 +296,7 @@ int main(int narg,char **arg)
 
       //write the bare data table
       bare_data_table<<path<<" "<<smart_print(temp)<<endl;
-	
+      
       //load iboot
       int iboot_jack[100];
       load_iboot(iboot_jack,path);

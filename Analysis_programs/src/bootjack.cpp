@@ -262,7 +262,7 @@ string smart_print(TYPE a)
   int s=0;
   ostringstream o;
   
-  while(int(e)<1)
+  while(int(e)<=1)
     {
       e*=10;
       m*=10;
