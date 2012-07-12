@@ -22,6 +22,7 @@ const char set_legend_fm[nbeta][1024]={"a = 0.098 fm","a = 0.085 fm","a = 0.067 
 int plot_iboot;
 int include_a4;
 int include_380;
+int include_x_error=1;
 int include_ml_term;
 
 double fun_fit_F(double A,double B,double C,double D,double ml,double a)
@@ -105,9 +106,17 @@ double chi2(double A,double B,double C,double D,double *a)
   for(int iens=0;iens<nens;iens++)
     if(include_380 || ibeta[iens]!=0)
       {
-	double contr=pow((Y_fit[iens]-fun_fit_F(A,B,C,D,X_fit[iens],a[ibeta[iens]]))/err_Y_fit[iens],2);
+	double err;
+	if(include_x_error)
+	  {
+	    double e1=err_Y_fit[iens];
+	    double e2=C*sqr(lat[ibeta[iens]]).err();
+	    err=sqrt(e1*e1+e2*e2);
+	  }
+	else err=err_Y_fit[iens];
+	double contr=pow((Y_fit[iens]-fun_fit_F(A,B,C,D,X_fit[iens],a[ibeta[iens]]))/err,2);
 	ch2+=contr;
-	if(contr_flag==1) cout<<"contr "<<iens<<": "<<contr<<" = ("<<Y_fit[iens]<<" - "<<fun_fit_F(A,B,C,D,X_fit[iens],a[ibeta[iens]])<<") / "<<err_Y_fit[iens]<<endl;
+	if(contr_flag==1) cout<<"contr "<<iens<<": "<<contr<<" = ("<<Y_fit[iens]<<" - "<<fun_fit_F(A,B,C,D,X_fit[iens],a[ibeta[iens]])<<") / "<<err<<endl;
       }
   
   return ch2;
@@ -203,7 +212,7 @@ void fit(boot &A,boot &B,boot &C,boot &D,bvec &X,bvec &Y)
 }
 
 
-void plot_funz_a2(const char *out_path,const char *title,const char *xlab,const char *ylab,double *X,bvec &Y,bvec &par,double (*fun)(double,double,double,double,double,double),boot &chiral_extrap_cont)
+void plot_funz_a2(const char *out_path,const char *title,const char *xlab,const char *ylab,bvec &X,bvec &Y,bvec &par,double (*fun)(double,double,double,double,double,double),boot &chiral_extrap_cont)
 {
   //setup the plot
   grace out(out_path);
@@ -235,8 +244,16 @@ void plot_funz_a2(const char *out_path,const char *title,const char *xlab,const 
       out.set(4,"none",set_symbol[ib],set_color[ib],"filled");
       out.set_legend(set_legend_fm[ib]);
       out.set_line_size(2);
-      out.fout<<"@type xydy"<<endl;
-      out.fout<<X[ib]*X[ib]<<" "<<Y.data[ib]<<endl;
+      if(include_x_error)
+	{
+	  out.fout<<"@type xydxdy"<<endl;
+	  out.fout<<(X[ib]*X[ib]).med()<<" "<<Y.data[ib].med()<<" "<<(X[ib]*X[ib]).err()<<" "<<Y.data[ib].err()<<endl;
+	}
+      else
+	{
+	  out.fout<<"@type xydy"<<endl;
+	  out.fout<<(X[ib]*X[ib]).med()<<" "<<Y.data[ib]<<endl;
+	}
       out.new_set();
     }
   
@@ -360,9 +377,11 @@ int main(int narg,char **arg)
   const char tag_ml[1024]="m\\sl\\N\\SMS,2GeV\\N (GeV)";
   const char tag_a2[1024]="a\\S2\\N (fm)";
   double lat_med_fm[4]={lat[0].med()*hc,lat[1].med()*hc,lat[2].med()*hc,lat[3].med()*hc};
+  bvec lat_fm(4,nboot,njack);
+  for(int ib=0;ib<4;ib++) lat_fm[ib]=hc*lat[ib];
   
   plot_funz_ml("F_funz_ml.xmg",meson_name,tag_ml,meson_name,ml,F,par_res_fit_F,ml_phys.med(),fun_fit_F,F_chir_cont);
-  plot_funz_a2("F_funz_a2.xmg",meson_name,tag_a2,meson_name,lat_med_fm,F_estr_ml,par_res_fit_F,fun_fit_F,F_chir_cont);
+  plot_funz_a2("F_funz_a2.xmg",meson_name,tag_a2,meson_name,lat_fm,F_estr_ml,par_res_fit_F,fun_fit_F,F_chir_cont);
 
   F_chir_cont.write_to_binfile("results");
   

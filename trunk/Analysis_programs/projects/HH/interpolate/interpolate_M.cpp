@@ -41,6 +41,7 @@ int main()
 	    {
 	      aM[iens]/=aM2[iens];
 	      frac=1;
+	      cout<<"Frac"<<endl;
 	    }	
 	}
     }

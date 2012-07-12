@@ -6,7 +6,7 @@
 int T,TH,L,tsep;
 double th;
 int njack;
-const double Za[3]={0.746,0.746,0.772};
+const double Za[4]={0.746,0.746,0.772,0.780};
 
 int ibeta;
 
@@ -30,17 +30,6 @@ jvec load_2pts_lc_sl(const char *name,int reim)
 
 jvec load_2pts_lc_ss(const char *name,int reim)
 {return load_2pts_lc(name,reim,"ss");}
-
-jack jack_average(jack &a,jack &b)
-{
-  double ea=a.err();
-  double eb=b.err();
-  
-  double wa=1/(ea*ea);
-  double wb=1/(eb*eb);
-  
-  return (a*wa+b*wb)/(wa+wb);
-}
 
 void read_input()
 {
@@ -100,6 +89,21 @@ int main()
   
   //compute D* mass and Z
   jack M_VK,ZL_VK,ZS_VK;
+  if(file_exists("WEIRD_VK_SS"))
+    {
+      cout<<"Loading weird!"<<endl;
+      jvec a(VKVK_ss);
+      a.load("WEIRD_VK_SS",0);
+      VKVK_ss=(VKVK_ss+a)/2;
+      a.load("WEIRD_VK_SL",0);
+      VKVK_sl=(VKVK_sl+a)/2;
+    }
+  else
+    {
+      VKVK_ss.write_to_binfile("/tmp/WEIRD_VK_SS");
+      VKVK_sl.write_to_binfile("/tmp/WEIRD_VK_SL");
+    }
+
   two_pts_SL_fit(M_VK,ZL_VK,ZS_VK,VKVK_sl.simmetrized(1),VKVK_ss.simmetrized(1),tminL_V,tmaxL_V,tminS_V,tmaxS_V,"MSL_VK.xmg","MSS_VK.xmg");
   
   //reconstuct moving D mass
@@ -112,10 +116,11 @@ int main()
   for(int t=0;t<T;t++)
     {
       int dtsep=abs(tsep-t);
+
       Dth_DV_td_sa[t]=(ZS_P5*ZS_VK)*
-	(exp((-M_VK*t)+(-Eth_P5*dtsep))
-	 +exp((-M_VK*(T-t)+(-Eth_P5*dtsep))))/
-	(2*Eth_P5*2*M_VK);
+        (exp((-M_VK*t)+(-Eth_P5*dtsep))
+         +exp((-M_VK*(T-t)+(-Eth_P5*dtsep))))/
+        (2*Eth_P5*2*M_VK);
     }
   
   //compare time dependance and its simmetric
@@ -207,15 +212,23 @@ int main()
   }
   */
   
+  if(file_exists("WEIRD_R1"))
+    {
+      jvec a(Dth_AK_DV_sa);
+      a.load("WEIRD_R1",0);
+      Dth_AK_DV_sa=(a+Dth_AK_DV_sa)/2;
+    }
+  else Dth_AK_DV_sa.write_to_binfile("/tmp/WEIRD_R1");
+  
   //fit matrix element
-  jack R1_sa=constant_fit( (tsep==T/2) ? Dth_AK_DV_sa.simmetrized(1) : Dth_AK_DV_sa,tmin_g,tmax_g,"R1_sa.xmg");
+  jack R1_sa=constant_fit( (tsep==T/2) ? Dth_AK_DV_sa.simmetrized(1) : Dth_AK_DV_sa.subset(0,tsep),tmin_g,tmax_g,"R1_sa.xmg");
   //jack R1_nu=constant_fit( (tsep==T/2) ? Dth_AK_DV_nu.simmetrized(1) : Dth_AK_DV_nu,tmin_g,tmax_g,"R1_nu.xmg");
   
   //determine the form factor
   jack A1=R1_sa/(M_VK+M_P5);
   
   /////////////////////////////// Load the three points for the corrections /////////////////////////////////////
-
+  
   int TEST=REAL;
   jvec P5thA0V1=load_3pts_charm_spec("A0V1",TEST);
   jvec P5thA0V2=load_3pts_charm_spec("A0V2",TEST);
@@ -249,14 +262,16 @@ int main()
     }
   
   //determine the correction
-  jack R2_pt1=constant_fit(R2_pt1_corr.simmetrized(1),tmin_g,tmax_g,"R2_pt1.xmg");
-  jack R2_pt2=constant_fit(R2_pt2_corr.simmetrized(1),tmin_g,tmax_g,"R2_pt2.xmg");
+  jack R2_pt1=constant_fit((tsep==TH) ? R2_pt1_corr.simmetrized(1) : R2_pt1_corr.subset(0,tsep),tmin_g,tmax_g,"R2_pt1.xmg");
+  jack R2_pt2=constant_fit((tsep==TH) ? R2_pt2_corr.simmetrized(1) : R2_pt2_corr.subset(0,tsep),tmin_g,tmax_g,"R2_pt2.xmg");
   jack R2_pt2_coef=(Eth_P5-M_VK)/qi;
   cout<<"R2: \n pt1: "<<R2_pt1<<"\n pt2: "<<R2_pt2<<"\n coef2: "<<R2_pt2_coef<<endl;
   jack R2=-(R2_pt1+R2_pt2*R2_pt2_coef);
   
   jack A2frA1=R2*sqr(M_VK+M_P5)/(2*qi*M_VK);
   cout<<"A2/A1: "<<A2frA1<<endl;
+  
+  cout<<"q2="<<M_VK*M_VK+M_P5*M_P5-2*M_VK*Eth_P5<<endl;
   
   //////////////// Compute the full value of fpi*gDvDPi ////////////////
   
@@ -271,8 +286,43 @@ int main()
   
   //print gc
   cout<<"gc: \n pt1: "<<gc_pt1<<"\n pt2: "<<gc_pt2<<endl;
+  cout<<"gc tot: "<<gc_pt1<<" * ( 1 + "<<fpi_gDvDPi_corr_rel<<" ) = "<<gc_pt1+gc_pt2<<endl;
+  gc_pt1.write_to_binfile("gc_pt1");
+  gc_pt2.write_to_binfile("gc_pt2");
   
+  //////////////////////////////////////// Using WI ////////////////////////////////////
   
+  if(!file_exists("3pts_charm_spec_P5V1")) return 0;
+  
+  //load P5 insertion
+  jvec P5thP5V1=load_3pts_charm_spec("P5V1",REAL);
+  jvec P5thP5V2=load_3pts_charm_spec("P5V2",REAL);
+  jvec P5thP5V3=load_3pts_charm_spec("P5V3",REAL);
+
+  {
+    ofstream out("/tmp/test.xmg");
+    out<<"@type xydy"<<endl;
+    //out<<P5thP5V1/Dth_DV_td_sa<<endl;
+    //out<<"&"<<endl;
+    //out<<P5thP5V2/Dth_DV_td_sa<<endl;
+    //out<<"&"<<endl;
+    //out<<P5thP5V3/Dth_DV_td_sa<<endl;
+    //out<<"&"<<endl;
+    //out<<(P5thP5V1+P5thP5V2+P5thP5V3)/3/Dth_DV_td_sa*2*0.1849<<endl;
+    //out<<"&"<<endl;
+    
+    jvec A=(
+	    (M_VK-Eth_P5)*(P5thA0V1+P5thA0V2+P5thA0V3)+
+	    qi*
+	    (
+	     (P5thA1V1+P5thA2V1+P5thA3V1)+
+	     (P5thA1V2+P5thA2V2+P5thA3V2)+
+	     (P5thA1V3+P5thA2V3+P5thA3V3)
+	     )
+	    )/Dth_DV_td_sa/3;
+    out<<A/(2*M_VK*qi)<<endl;
+    cout<<"Warning, 0.0030 automatically"<<endl;
+  }  
   
   return 0;
 }

@@ -294,6 +294,9 @@ int main(int narg,char **arg)
       jack temp=P5P5;
       boot_from_jack(F.data[iens],temp,iboot_jack);
       F[iens]/=lat[ibeta[iens]];
+      
+      if(ibeta[iens]==3) cout<<"theta="<<k*48/sqrt(3)/M_PI<<endl;
+
     }
   fclose(an_input_file);
   

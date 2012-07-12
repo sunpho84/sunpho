@@ -18,15 +18,15 @@ jvec load_loop_corr(int ik1,int ik2,int ik3,int ri)
 {
   int icorr=ri+2*(ik1+nmass*(ik2+nmass*ik3));
   
-    jvec a(T,njacks);
-      
-    a.load("data/oPPoLoop-sel_conf.1.dat",icorr);
-    a/=spat_vol;
-    
-    return a;
+  jvec a(T,njacks);
+  
+  a.load("data/oPPoLoop-sel_conf.1.dat",icorr);
+  a/=spat_vol;
+  
+  return a;
 }
 
-jvec load_corr(const char *name,int ik1,int ik2,int tw,int ri)
+jvec load_corr(const char *inter,const char *name,int ik1,int ik2,int tw,int ri)
 {
   ik1=2*ik1+tw;
   ik2=2*ik2+tw;
@@ -35,24 +35,24 @@ jvec load_corr(const char *name,int ik1,int ik2,int tw,int ri)
   
   jvec a(T,njacks);
       
-    a.load(combine("data/oPPo-%s_conf.1.dat",name).c_str(),icorr);
-    a/=-spat_vol;
-    
-    return a;
+  a.load(combine("data/o%so-%s_conf.1.dat",inter,name).c_str(),icorr);
+  a/=-spat_vol;
+  
+  return a;
 }
 
-jvec load_corr_tma(const char *name,int ik1,int ik2,int ri)
-{return 0.5*(load_corr(name,ik1,ik2,0,ri)+load_corr(name,ik1,ik2,0,ri));}
+jvec load_corr_tma(const char *inter,const char *name,int ik1,int ik2,int ri)
+{return 0.5*(load_corr(inter,name,ik1,ik2,0,ri)+load_corr(inter,name,ik1,ik2,0,ri));}
 
-jvec load(const char *name,int what,int ri)
+jvec load(const char *inter,const char *name,int what,int ri)
 {
   jvec a;
   
   switch(what)
     {
-    case PION:      a=load_corr_tma(name,LI,LI,ri);break;
-    case KAON_LINS: a=load_corr_tma(name,ST,LI,ri);break;
-    case KAON_SINS: a=load_corr_tma(name,LI,ST,ri);break;
+    case PION:      a=load_corr_tma(inter,name,LI,LI,ri);break;
+    case KAON_LINS: a=load_corr_tma(inter,name,ST,LI,ri);break;
+    case KAON_SINS: a=load_corr_tma(inter,name,LI,ST,ri);break;
     }
   
   return a;
@@ -206,25 +206,26 @@ int main(int narg,char **arg)
   ////////////// load mass original pion and kaon //////////////////
   
   //pion correlator
-  jvec c_pion=load("ss",PION,0).simmetrized(1);
+  jvec c_pion=load("PP","ss",PION,0).simmetrized(1);
   jvec c_pion_effmass=effective_mass(c_pion);
+  c_pion.print_to_file("plots/pion.xmg");
   
   //kaon correlator
-  jvec c_kaon=load("ss",KAON_LINS,0).simmetrized(1);
+  jvec c_kaon=load("PP","ss",KAON_LINS,0).simmetrized(1);
   jvec c_kaon_effmass=effective_mass(c_kaon);
   
   
   ////////////// load mass ib correction to the kaon //////////////////
   
   //isospin breaking in the kaon
-  jvec c_kaon_mib=load("sd",KAON_LINS,0).simmetrized(1);
+  jvec c_kaon_mib=load("PP","sd",KAON_LINS,0).simmetrized(1);
   jvec c_kaon_mib_slope=c_kaon_mib/c_kaon;
   
   
   //////////////// load self energy of the pion and compute slopes /////////////
   
   //self energy of the pion
-  jvec c_pion_self=load("es",PION,0).simmetrized(1);
+  jvec c_pion_self=load("PP","es",PION,0).simmetrized(1);
   jvec c_pion_self_slope=c_pion_self/c_pion;
   c_pion_self_slope.print_to_file("plots/pion_self_slope.xmg");
   jack pion_self_slope=constant_fit(numerical_derivative(c_pion_self_slope),tmin,tmax,"plots/pion_self_slope_deriv.xmg");
@@ -233,18 +234,18 @@ int main(int narg,char **arg)
   //////////////// load self energy of the kaon and compute slopes /////////////
   
   //self energy of the s for the kaon
-  jvec c_kaon_s_self=load("es",KAON_SINS,0).simmetrized(1);
+  jvec c_kaon_s_self=load("PP","es",KAON_SINS,0).simmetrized(1);
   jvec c_kaon_s_self_slope=c_kaon_s_self/c_kaon;
   
   //self energy of the l for the kaon
-  jvec c_kaon_l_self=load("es",KAON_LINS,0).simmetrized(1);
+  jvec c_kaon_l_self=load("PP","es",KAON_LINS,0).simmetrized(1);
   jvec c_kaon_l_self_slope=c_kaon_l_self/c_kaon;
   
   
   //////////////// load photon exchange for the pion and compute slopes /////////////
   
   //photon exchange with A on the strange for the pion
-  jvec c_pion_exchange=load("ee",PION,0).simmetrized(1);
+  jvec c_pion_exchange=load("PP","ee",PION,0).simmetrized(1);
   jvec c_pion_exchange_slope=c_pion_exchange/c_pion;
   c_pion_exchange_slope.print_to_file("plots/pion_exchange_slope.xmg");
   
@@ -252,12 +253,12 @@ int main(int narg,char **arg)
   //////////////// load photon exchange for the kaon and compute slopes /////////////
   
   //photon exchange with A on the strange for the kaon
-  jvec c_kaon_sA_exchange=load("ee",KAON_LINS,0).simmetrized(1);
+  jvec c_kaon_sA_exchange=load("PP","ee",KAON_LINS,0).simmetrized(1);
   jvec c_kaon_sA_exchange_slope=c_kaon_sA_exchange/c_kaon;
   c_kaon_sA_exchange_slope.print_to_file("plots/kaon_sA_exchange_slope.xmg");
 
   //photon exchange with A on the strange for the kaon
-  jvec c_kaon_lA_exchange=load("ee",KAON_SINS,0).simmetrized(1);
+  jvec c_kaon_lA_exchange=load("PP","ee",KAON_SINS,0).simmetrized(1);
   jvec c_kaon_lA_exchange_slope=c_kaon_lA_exchange/c_kaon;
   c_kaon_lA_exchange_slope.print_to_file("plots/kaon_lA_exchange_slope.xmg");  
   
@@ -303,13 +304,29 @@ int main(int narg,char **arg)
   
   ///////////////////////// load the disconnected //////////////////////////
   
-  jvec loop1=load_loop_corr(0,0,0,0);//;.simmetrized(-1);
-  jvec loop2=load_loop_corr(0,0,0,1);//.simmetrized(1);
-  //loop1/=c_pion;
+  /*
+  jvec loop1=load_loop_corr(2,2,5,0);//;.simmetrized(-1);
+  jvec loop2=load_loop_corr(2,2,5,1);//.simmetrized(1);
+  loop1/=load_corr("PP","ss",1,1,0,0);
+  loop1=loop1.simmetrized(1);
   loop1.print_to_file("plots/test1.xmg");
-  //loop2/=c_pion;
+  loop2/=c_pion_unsimm;
   loop2.print_to_file("plots/test2.xmg");
   //(0.5*(loop1-loop2)).print_to_file("plots/test.xmg");
+  
+  */
+  /////////////////////////// load the vector //////////////////////////////
+  
+  jvec c_rho=load("ViVi","ss",PION,0).simmetrized(1);
+  jvec c_rho_effmass=effective_mass(c_rho);
+  c_rho.print_to_file("plots/rho.xmg");
+  c_rho_effmass.print_to_file("plots/rho_effmass.xmg");
+  
+  //kaon correlator
+  jvec c_kstar=load("ViVi","ss",KAON_LINS,0).simmetrized(1);
+  jvec c_kstar_effmass=effective_mass(c_kstar);
+  c_kstar.print_to_file("plots/kstar.xmg");
+  c_kstar_effmass.print_to_file("plots/kstar_effmass.xmg");
   
   return 0;
 }

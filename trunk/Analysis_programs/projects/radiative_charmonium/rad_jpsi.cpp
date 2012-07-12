@@ -1,12 +1,13 @@
 #include <include.h>
+#include "radiative_common.cpp"
 
 #define REAL 0
 #define IMAG 1
 
 int T,TH,L,tsep;
 double theta,lmass,cmass;
-int njack,ntheta=2;
-const double Zv[4]={0.5816,0.6103,0.6451,0.686};
+int ntheta;
+const double Zvm[4]={0.5816,0.6103,0.6451,0.686};
 
 char base_path[1024];
 int ibeta;
@@ -16,6 +17,10 @@ int tminS_V,tmaxS_V;
 int tminL_P,tmaxL_P;
 int tminS_P,tmaxS_P;
 int tmin_f,tmax_f;
+
+double Zam[4]={0.746,0.746,0.772,0.780};
+//double Za_err[4]={0.011,0.006,0.006,0.006};
+
 
 int icombo_2pts(int r1,int r2,int ith1,int reim)
 {
@@ -47,6 +52,7 @@ void read_data_list(const char *path)
   L=TH=T/2;
   read_formatted_from_file_expecting((char*)(&njack),input_file,"%d","njack");
   read_formatted_from_file_expecting((char*)(&ibeta),input_file,"%d","ibeta");
+  read_formatted_from_file_expecting((char*)(&ntheta),input_file,"%d","ntheta");
   read_formatted_from_file_expecting((char*)(&theta),input_file,"%lg","theta");
   read_formatted_from_file_expecting((char*)(&tsep),input_file,"%d","tsep");
   read_formatted_from_file_expecting((char*)(&lmass),input_file,"%lg","lmass");
@@ -90,9 +96,11 @@ int main()
   jvec P5P5_sl=load_2pts("P5P5",0, 0,0, 0, "30_00");
   
   //load ss P5P5 for D
-  jvec P5P5_mov_ss=load_2pts("P5P5",1, 0,0, 0, "30_30");
+  jvec P5P5_mov_ss;
+  if(ntheta==2) P5P5_mov_ss=load_2pts("P5P5",1, 0,0, 0, "30_30");
   //load sl P5P5 for D
-  jvec P5P5_mov_sl=load_2pts("P5P5",1, 0,0, 0, "30_00");
+  jvec P5P5_mov_sl;
+  if(ntheta==2) P5P5_mov_sl=load_2pts("P5P5",1, 0,0, 0, "30_00");
   
   //load ss VKVK for D
   jvec VKVK_ss=load_2pts("VKVK",0, 0,0, 0, "30_30");
@@ -123,8 +131,9 @@ int main()
     {
       int dtsep=abs(tsep-t);
       
-      if(t<TH) Dth_DV_td_nu[t]=VKVK_ss[t]*P5P5_mov_ss[dtsep]/(ZS_P5*ZS_VK);
-      else     Dth_DV_td_nu[t]=VKVK_ss[T-t]*P5P5_mov_ss[dtsep]/(ZS_P5*ZS_VK);
+      if(ntheta==2)
+	if(t<TH) Dth_DV_td_nu[t]=VKVK_ss[t]*P5P5_mov_ss[dtsep]/(ZS_P5*ZS_VK);
+	else     Dth_DV_td_nu[t]=VKVK_ss[T-t]*P5P5_mov_ss[dtsep]/(ZS_P5*ZS_VK);
       
       Dth_DV_td_sa[t]=(ZS_P5*ZS_VK)*
 	(exp((-M_VK*t)+(-Eth_P5*dtsep))
@@ -149,8 +158,11 @@ int main()
   //////////////////////////////// Calculate three points ////////////////////////////////
 
   //load corrs
-  jvec P5thVIVJ_pt1= load_3pts("VIVJ_pt1",0,1,IMAG);
-  jvec P5thVIVJ_pt2=-load_3pts("VIVJ_pt2",0,1,IMAG);
+  int ith;
+  if(ntheta==2) ith=1;
+  else ith=0;
+  jvec P5thVIVJ_pt1= load_3pts("VIVJ_pt1",0,ith,IMAG);
+  jvec P5thVIVJ_pt2=-load_3pts("VIVJ_pt2",0,ith,IMAG);
   jvec P5thVIVJ=(P5thVIVJ_pt1+P5thVIVJ_pt2)/2;
 
   //compare the different parts
@@ -194,10 +206,10 @@ int main()
   jack R_nu=constant_fit(Dth_V_DV_nu.simmetrized(-1),tmin_f,tmax_f,"R_nu.xmg");
   
   //compute the form factor at 0 recoil
-  jack V_sa=R_sa/qi*(M_VK+M_P5)/(2*M_VK)*Zv[ibeta];
-  jack V1_sa;if(fit_M1) V1_sa=R_sa/qi*(M1_VK+M1_P5)/(2*M1_VK)*Zv[ibeta];
-  jack V_nu=R_nu/qi*(M_VK+M_P5)/(2*M_VK)*Zv[ibeta];
-  jack V1_nu;if(fit_M1) V1_nu=R_nu/qi*(M1_VK+M1_P5)/(2*M1_VK)*Zv[ibeta];
+  jack V_sa=R_sa/qi*(M_VK+M_P5)/(2*M_VK)*Zvm[ibeta];
+  jack V1_sa;if(fit_M1) V1_sa=R_sa/qi*(M1_VK+M1_P5)/(2*M1_VK)*Zvm[ibeta];
+  jack V_nu=R_nu/qi*(M_VK+M_P5)/(2*M_VK)*Zvm[ibeta];
+  jack V1_nu;if(fit_M1) V1_nu=R_nu/qi*(M1_VK+M1_P5)/(2*M1_VK)*Zvm[ibeta];
   
   cout<<"F semi-analytical: "<<V_sa<<endl;
   if(fit_M1) cout<<"F1 semi-analytical: "<<V1_sa<<endl;
@@ -209,7 +221,10 @@ int main()
   V_sa.write_to_binfile("V_sa");
   if(fit_M1) V1_sa.write_to_binfile("V1_sa");
   if(fit_M1) V1_nu.write_to_binfile("V1_nu");
-  V_nu.write_to_binfile("V_nu");
+  if(ntheta==2) V_nu.write_to_binfile("V_nu");
+  
+  
+  (ZL_VK/M_VK*Za_med[ibeta]).write_to_binfile("ZJPSI");
   
   return 0;
 }

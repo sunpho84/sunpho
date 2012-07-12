@@ -273,6 +273,10 @@ int main(int narg,char **arg)
   lmass=new double[nens];
   ibeta=new int[nens];
   F=bvec(nens,nboot,njack);
+  
+  ofstream bare_data_table("bare_data_table");
+  ofstream dim_data_table("dim_data_table");
+  
   for(int iens=0;iens<nens;iens++)
     {
       char path[1024];
@@ -282,13 +286,19 @@ int main(int narg,char **arg)
       
       jack temp(njack);
       temp.load(combine("../%s/%s",path,meson_name).c_str());
-
+      
+      //write the bare data table
+      bare_data_table<<iens<<" "<<smart_print(temp)<<endl;
+      
       //load iboot
       int iboot_jack[100];
       load_iboot(iboot_jack,path);
       
       boot_from_jack(F.data[iens],temp,iboot_jack);
       F[iens]/=lat[ibeta[iens]];
+
+      //write the dimensional data table
+      dim_data_table<<iens<<" "<<smart_print(F[iens])<<endl;
     }
   fclose(an_input_file);
   

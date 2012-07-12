@@ -50,6 +50,7 @@ public:
     if(data==NULL){cerr<<"Error, using unallocated vector!"<<endl;exit(1);}for(int iel=0;iel<nel;iel++) data[iel]=a;return *this;}
 
   
+  VTYPE subset(int,int);
   VTYPE first_half();
   VTYPE simmetric();
   VTYPE simmetrized(int parity);
@@ -391,6 +392,26 @@ VTYPE pow(const VTYPE &a,double b){return pair_operator(a,b,pow);}
 
 //////////////
 
+VTYPE VTYPE::subset(int tmin,int tmax)
+{
+  if(tmin<0||tmin>=nel||tmax<0||tmax>=nel)
+    {
+      cerr<<"Error, required impossible interval ["<<tmin<<","<<tmax<<"] of a "<<nel<<"long vector!"<<endl;
+      exit(1);
+    }
+  int diff=tmax-tmin;
+  
+#ifdef BVEC
+  bvec c(diff,nboot,njack);
+#else
+  jvec c(diff,njack);
+#endif
+  for(int iel=0;iel<diff;iel++)
+    c.data[iel]=data[iel+tmin];
+  
+  return c;
+}
+
 VTYPE VTYPE::first_half()
 {
   if(nel%2!=0)
@@ -399,15 +420,7 @@ VTYPE VTYPE::first_half()
       exit(1);
     }
   
-#ifdef BVEC
-  bvec c(nel/2+1,nboot,njack);
-#else
-  jvec c(nel/2+1,njack);
-#endif
-  for(int iel=0;iel<=nel/2;iel++)
-    c.data[iel]=data[iel];
-  
-  return c;
+  return subset(0,nel/2+1);
 }
 
 VTYPE VTYPE::simmetric()
