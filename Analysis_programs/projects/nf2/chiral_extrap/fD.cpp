@@ -66,10 +66,17 @@ void plot_funz_ml(const char *out_path,const char *title,const char *xlab,const 
       //plot continuum curve
       for(int ipoint=0;ipoint<npoint;ipoint++)
 	for(iboot=0;iboot<nboot+1;iboot++)
-	  Y_pol.data[ipoint]=fun(par[0][iboot],par[1][iboot],par[2][iboot],X_pol[ipoint],0);
-      //out.set(1,"magenta");
-      //out.polygon(X_pol,Y_pol);
-      //out.new_set();
+	  Y_pol.data[ipoint].data[iboot]=fun(par[0][iboot],par[1][iboot],par[2][iboot],X_pol[ipoint],0);
+      
+      int ndamir=5;
+      for(int idamir=0;idamir<5;idamir++)
+	{
+	  int ip=npoint/ndamir*idamir;
+	  cout<<" DAMIR reference point: "<<X_pol[ip]<<" "<<Y_pol[ip]<<endl;
+	}
+      out.set(1,"magenta");
+      out.polygon(X_pol,Y_pol);
+      out.new_set();
       out.set(1,"magenta");
       out.set_line_size(3);
       out.ave_line(X_pol,Y_pol);
@@ -310,7 +317,7 @@ int main(int narg,char **arg)
   double lat_med_fm[4]={lat[0].med()/hc,lat[1].med()/hc,lat[2].med()/hc,lat[3].med()/hc};
   plot_funz_ml("phiD_funz_ml.xmg",meson_name,tag_ml,meson_name,ml,phiD,par_res_fit_phiD,ml_phys.med(),fun_fit_phiD,phiD_chir_cont);
   plot_funz_a2("phiD_funz_a2.xmg",meson_name,tag_a2,meson_name,lat_med_fm,phiD_estr_ml,par_res_fit_phiD,fun_fit_phiD,phiD_chir_cont);
-
+  
   cout<<lat[0]<<endl;
   cout<<lat[1]<<endl;
   cout<<lat[2]<<endl;
