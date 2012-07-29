@@ -254,7 +254,7 @@ int main(int narg,char **arg)
 
   //load data
   Mh=bvec(nens,nboot,njack);
-  bvec Mh_chir_cont(nm,nboot,njack);
+  bvec Mh_chir_cont(nref_hmass,nboot,njack);
   for(int im=0;im<nref_hmass;im++)
     {
       Mh.load(meson_mass_file,im);

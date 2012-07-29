@@ -100,6 +100,8 @@ void two_pts_fit(jack &E,jack &Z2,jvec corr,int tmin,int tmax,const char *path1=
   int TH=temp.nel-1;
   for(int t=0;t<=TH;t++) temp[t]=corr[t]/exp(-E*TH)/cosh(E*(TH-t))*E;
   Z2=constant_fit(temp,tmin,tmax,path2);
+  
+  cout<<"E: "<<E<<endl;
 }
 
 //fit the mass and the matrix element in SS and SL combo
