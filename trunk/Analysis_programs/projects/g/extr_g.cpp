@@ -1,4 +1,4 @@
-#include "radiative_common.cpp"
+#include "../radiative_charmonium/radiative_common.cpp"
 
 const int nbeta=4;
 char **base_corrs_path,**ens_name;
@@ -6,7 +6,7 @@ int nens,*T,*ibeta,*nmass;
 double *cmass,*lmass;
 
 //read data
-bvec F;
+bvec F,M_P5,M_VK;
 
 bvec ml;
 int ref_ml_beta[4]={-1,-1,-1,-1};
@@ -22,13 +22,23 @@ const char set_legend_fm[nbeta][1024]={"a = 0.098 fm","a = 0.085 fm","a = 0.067 
 int plot_iboot;
 int include_a4;
 int include_380;
-int include_x_error=1;
 int include_ml_term;
+int include_log_term;
+int tadpole_expr;
 
 double fun_fit_F(double A,double B,double C,double D,double ml,double a)
 {
   double a1=a/lat[1][plot_iboot];
-  return A*(1 + B*ml + C*a1*a1 + D*a1*a1*a1*a1);
+  
+  double f=f0[plot_iboot];
+  double db=db0[plot_iboot];
+  
+  if(include_log_term)
+    {    
+      if(tadpole_expr) return A * (1 - 2*(1+2*A*A)/sqr(4*M_PI*f)*(db*ml)*log(db*ml) + B*db*ml + C*a1*a1 + D*a1*a1*a1*a1);
+      else              return A * (1 - 4*A*A/sqr(4*M_PI*f)*(db*ml)*log(db*ml) + B*db*ml + C*a1*a1 + D*a1*a1*a1*a1);
+    }
+  else                 return A * (1 +B*db*ml + C*a1*a1 + D*a1*a1*a1*a1);
 }
 
 void plot_funz_ml(const char *out_path,const char *title,const char *xlab,const char *ylab,bvec &X,bvec &Y,bvec &par,double X_phys,double (*fun)(double,double,double,double,double,double),boot &chiral_extrap_cont)
@@ -97,8 +107,8 @@ bool fitting_fK;
 double *X_fit;
 double *Y_fit,*err_Y_fit;
 
-int contr_flag=0;
 //calculate the chi square
+int contr_flag=0;
 double chi2(double A,double B,double C,double D,double *a)
 {
   double ch2=0;
@@ -106,17 +116,9 @@ double chi2(double A,double B,double C,double D,double *a)
   for(int iens=0;iens<nens;iens++)
     if(include_380 || ibeta[iens]!=0)
       {
-	double err;
-	if(include_x_error)
-	  {
-	    double e1=err_Y_fit[iens];
-	    double e2=C*sqr(lat[ibeta[iens]]).err();
-	    err=sqrt(e1*e1+e2*e2);
-	  }
-	else err=err_Y_fit[iens];
-	double contr=pow((Y_fit[iens]-fun_fit_F(A,B,C,D,X_fit[iens],a[ibeta[iens]]))/err,2);
+	double contr=pow((Y_fit[iens]-fun_fit_F(A,B,C,D,X_fit[iens],a[ibeta[iens]]))/err_Y_fit[iens],2);
 	ch2+=contr;
-	if(contr_flag==1) cout<<"contr "<<iens<<": "<<contr<<" = ("<<Y_fit[iens]<<" - "<<fun_fit_F(A,B,C,D,X_fit[iens],a[ibeta[iens]])<<") / "<<err<<endl;
+	if(contr_flag==1) cout<<"contr "<<iens<<": "<<contr<<" = ("<<Y_fit[iens]<<" - "<<fun_fit_F(A,B,C,D,X_fit[iens],a[ibeta[iens]])<<") / "<<err_Y_fit[iens]<<endl;
       }
   
   return ch2;
@@ -142,9 +144,9 @@ void fit(boot &A,boot &B,boot &C,boot &D,bvec &X,bvec &Y)
   minu.SetPrintLevel(-1);
   
   int npars=4;
-  minu.DefineParameter(0,"A",1,0.0001,0,0);
+  minu.DefineParameter(0,"A",0.0,0.0001,0,0);
   minu.DefineParameter(1,"B",0.0,0.0001,0,0);
-  minu.DefineParameter(2,"C",0.02,0.0001,0,0);
+  minu.DefineParameter(2,"C",0.0,0.0001,0,0);
   minu.DefineParameter(3,"D",0.0,0.0001,0,0);
   if(!include_a4)
     {
@@ -190,12 +192,12 @@ void fit(boot &A,boot &B,boot &C,boot &D,bvec &X,bvec &Y)
       minu.GetParameter(3,D.data[iboot],dum);
       
       double lat_med[4]={lat[0].med(),lat[1].med(),lat[2].med(),lat[3].med()};
-      if(iboot==nboot) 
-	{
-	  contr_flag=1;
-	  C2=chi2(A.data[iboot],B[iboot],C[iboot],D[iboot],lat_med);
-	  contr_flag=0;
-	}
+      if(iboot==nboot)
+        {
+          contr_flag=1;
+          C2=chi2(A.data[iboot],B[iboot],C[iboot],D[iboot],lat_med);
+          contr_flag=0;
+        }
     }
   
   int ninc_ens=0;
@@ -212,7 +214,7 @@ void fit(boot &A,boot &B,boot &C,boot &D,bvec &X,bvec &Y)
 }
 
 
-void plot_funz_a2(const char *out_path,const char *title,const char *xlab,const char *ylab,bvec &X,bvec &Y,bvec &par,double (*fun)(double,double,double,double,double,double),boot &chiral_extrap_cont)
+void plot_funz_a2(const char *out_path,const char *title,const char *xlab,const char *ylab,double *X,bvec &Y,bvec &par,double (*fun)(double,double,double,double,double,double),boot &chiral_extrap_cont)
 {
   //setup the plot
   grace out(out_path);
@@ -244,16 +246,8 @@ void plot_funz_a2(const char *out_path,const char *title,const char *xlab,const 
       out.set(4,"none",set_symbol[ib],set_color[ib],"filled");
       out.set_legend(set_legend_fm[ib]);
       out.set_line_size(2);
-      if(include_x_error)
-	{
-	  out.fout<<"@type xydxdy"<<endl;
-	  out.fout<<(X[ib]*X[ib]).med()<<" "<<Y.data[ib].med()<<" "<<(X[ib]*X[ib]).err()<<" "<<Y.data[ib].err()<<endl;
-	}
-      else
-	{
-	  out.fout<<"@type xydy"<<endl;
-	  out.fout<<(X[ib]*X[ib]).med()<<" "<<Y.data[ib]<<endl;
-	}
+      out.fout<<"@type xydy"<<endl;
+      out.fout<<X[ib]*X[ib]<<" "<<Y.data[ib]<<endl;
       out.new_set();
     }
   
@@ -295,12 +289,15 @@ int main(int narg,char **arg)
   read_formatted_from_file_expecting((char*)&include_a4,an_input_file,"%d","include_a4");
   read_formatted_from_file_expecting((char*)&include_380,an_input_file,"%d","include_380");
   read_formatted_from_file_expecting((char*)&include_ml_term,an_input_file,"%d","include_ml_term");
+  read_formatted_from_file_expecting((char*)&include_log_term,an_input_file,"%d","include_log_term");
+  read_formatted_from_file_expecting((char*)&tadpole_expr,an_input_file,"%d","tadpole_expr");
   read_formatted_from_file_expecting((char*)&nens,an_input_file,"%d","nens");
   read_formatted_from_file_expecting(meson_name,an_input_file,"%s","meson_name");
-  
   lmass=new double[nens];
   ibeta=new int[nens];
   F=bvec(nens,nboot,njack);
+  M_P5=bvec(nens,nboot,njack);
+  M_VK=bvec(nens,nboot,njack);
   ofstream bare_data_table("bare_data_table");
   for(int iens=0;iens<nens;iens++)
     {
@@ -309,28 +306,25 @@ int main(int narg,char **arg)
       read_formatted_from_file((char*)&(lmass[iens]),an_input_file,"%lg","lmass");
       read_formatted_from_file(path,an_input_file,"%s","path");
       
-      if(iens==11)
-	{
-	  jvec vtemp1(64,njack),vtemp2(64,njack);
-	  vtemp1.load(combine("../%s/CSL",path).c_str(),0);
-	  vtemp2.load(combine("../../../RADIATIVE_CHARMONIUM/P5P5_MASS_FIT/%s/CSL",path).c_str(),0);
-	  cout<<constant_fit(effective_mass(vtemp1.simmetrized(1))/effective_mass(vtemp2.simmetrized(1)),23,30,"referee.xmg")<<endl;
-	}
-      
-      jack temp,temp1(njack),temp2(njack);
-      temp1.load(combine("../%s/M",path).c_str());
-      temp2.load(combine("../../../RADIATIVE_CHARMONIUM/P5P5_MASS_FIT/%s/M",path).c_str());
-      cout<<"M1: "<<temp1<<", M2: "<<temp2<<endl;
-      temp=temp1/temp2;
-      
+      jack temp(njack);
+      temp.load(combine("../%s/%s",path,meson_name).c_str());
+
       //write the bare data table
-      bare_data_table<<iens<<" "<<smart_print(temp)<<endl;
+      bare_data_table<<path<<" "<<smart_print(temp)<<endl;
       
       //load iboot
       int iboot_jack[100];
       load_iboot(iboot_jack,path);
       
       boot_from_jack(F.data[iens],temp,iboot_jack);
+      
+      temp.load(combine("../%s/MD",path).c_str());
+      boot_from_jack(M_P5.data[iens],temp,iboot_jack);
+      temp.load(combine("../%s/MDstar",path).c_str());
+      boot_from_jack(M_VK.data[iens],temp,iboot_jack);
+      
+      M_P5[iens]/=lat[ibeta[iens]];
+      M_VK[iens]/=lat[ibeta[iens]];
     }
   fclose(an_input_file);
   
@@ -338,6 +332,7 @@ int main(int narg,char **arg)
   ml=bvec(nens,nboot,njack);
   for(int iens=0;iens<nens;iens++)
     {
+      
       int b=ibeta[iens],r=ref_ml_beta[b];
       //define ml
       cout<<iens<<" "<<b<<" "<<lmass[iens]<<endl;
@@ -370,9 +365,7 @@ int main(int narg,char **arg)
     }
   
   //chiral and continuum
-  double M_ETAC_phys=2.9803;
-  cout<<"Ratio "<<F_chir_cont<<endl;
-  cout<<"F = "<<F_chir_cont*M_ETAC_phys<<" GeV"<<endl;
+  cout<<"F = "<<F_chir_cont<<endl;
   cout<<endl;
   
   par_res_fit_F=bvec(4,nboot,njack);
@@ -385,13 +378,13 @@ int main(int narg,char **arg)
   const char tag_ml[1024]="m\\sl\\N\\SMS,2GeV\\N (GeV)";
   const char tag_a2[1024]="a\\S2\\N (fm)";
   double lat_med_fm[4]={lat[0].med()*hc,lat[1].med()*hc,lat[2].med()*hc,lat[3].med()*hc};
-  bvec lat_fm(4,nboot,njack);
-  for(int ib=0;ib<4;ib++) lat_fm[ib]=hc*lat[ib];
   
   plot_funz_ml("F_funz_ml.xmg",meson_name,tag_ml,meson_name,ml,F,par_res_fit_F,ml_phys.med(),fun_fit_F,F_chir_cont);
-  plot_funz_a2("F_funz_a2.xmg",meson_name,tag_a2,meson_name,lat_fm,F_estr_ml,par_res_fit_F,fun_fit_F,F_chir_cont);
+  plot_funz_a2("F_funz_a2.xmg",meson_name,tag_a2,meson_name,lat_med_fm,F_estr_ml,par_res_fit_F,fun_fit_F,F_chir_cont);
 
   F_chir_cont.write_to_binfile("results");
+  
+  for(int iens=0;iens<nens;iens++) cout<<iens<<" "<<smart_print(M_VK[iens])<<endl;
   
   return 0;
 }

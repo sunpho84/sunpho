@@ -56,3 +56,37 @@ void doubles_to_doubles_changing_endianess(double *dest,double *sour,int ndouble
 
       }
 }
+void floats_to_floats_changing_endianess(float *dest,float *sour,int nfloats)
+{
+  char *cdest,*csour;
+  char temp;
+  
+  if(dest==sour)
+    for(int ifloat=0;ifloat<nfloats;ifloat++)
+      {
+        cdest=(char*)(dest+ifloat);
+        csour=(char*)(sour+ifloat);
+        
+        temp=csour[3];
+        csour[3]=cdest[0];
+        cdest[0]=temp;
+
+        temp=csour[2];
+        csour[2]=cdest[1];
+        cdest[1]=temp;
+      }
+  else
+    for(int ifloat=0;ifloat<nfloats;ifloat++)
+      {
+        cdest=(char*)(dest+ifloat);
+        csour=(char*)(sour+ifloat);
+        
+        cdest[0]=csour[3];
+        cdest[1]=csour[2];
+        cdest[2]=csour[1];
+        cdest[3]=csour[0];
+      }
+}
+
+void ints_to_ints_changing_endianess(int *dest,int *sour,int nints)
+{floats_to_floats_changing_endianess((float*)dest,(float*)sour,nints);}

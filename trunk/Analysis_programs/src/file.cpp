@@ -45,3 +45,14 @@ FILE *open_file(const char* path,const char* mod)
   return out;
 }
 
+int get_file_size(char *path)
+{
+  FILE *fin=open_file(path,"r");
+  
+  fseek(fin,0L,SEEK_END);
+  int size=ftell(fin);
+  
+  fclose(fin);
+  
+  return size;
+}

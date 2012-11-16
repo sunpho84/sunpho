@@ -107,7 +107,6 @@ int main()
   //load sl VKVK for D
   jvec VKVK_sl=load_2pts("VKVK",0, 0,0, 0, "30_00");
 
-  
   //////////////////////////////////// Fit masses and Z for standing D and D* ////////////////////////////////////////
   
   //compute D mass and Z
@@ -132,8 +131,10 @@ int main()
       int dtsep=abs(tsep-t);
       
       if(ntheta==2)
-	if(t<TH) Dth_DV_td_nu[t]=VKVK_ss[t]*P5P5_mov_ss[dtsep]/(ZS_P5*ZS_VK);
-	else     Dth_DV_td_nu[t]=VKVK_ss[T-t]*P5P5_mov_ss[dtsep]/(ZS_P5*ZS_VK);
+	{	
+	  if(t<TH) Dth_DV_td_nu[t]=VKVK_ss[t]*P5P5_mov_ss[dtsep]/(ZS_P5*ZS_VK);
+	  else     Dth_DV_td_nu[t]=VKVK_ss[T-t]*P5P5_mov_ss[dtsep]/(ZS_P5*ZS_VK);
+	}
       
       Dth_DV_td_sa[t]=(ZS_P5*ZS_VK)*
 	(exp((-M_VK*t)+(-Eth_P5*dtsep))
@@ -225,6 +226,7 @@ int main()
   
   
   (ZL_VK/M_VK*Za_med[ibeta]).write_to_binfile("ZJPSI");
+  (2*cmass*ZL_P5/M_P5/sinh(M_P5)).write_to_binfile("ZETAC");
   
   return 0;
 }

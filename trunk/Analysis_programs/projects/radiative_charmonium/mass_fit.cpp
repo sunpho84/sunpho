@@ -42,19 +42,33 @@ int main()
   
   ///////////////////////////// Load two points for standing D and D* //////////////////////////
   
-  //load sl
-  jvec C(T,njack);
+  jvec CSL(T,njack);
+  jvec CSS(T,njack);
   
+  jack M,ZL,ZS;
+  int idata_SL=0;
   for(int idata=0;idata<ndata;idata++)
     {
-      C=(C*idata+load_2pts(idata))/(idata+1);
+      CSL=(CSL*idata+load_2pts(idata))/(idata+1);
+      data_path[idata][strlen(data_path[idata])-2]='3';
+      if(file_exists(data_path[idata]))
+	{
+	  CSS=(CSS*idata_SL+load_2pts(idata))/(idata_SL+1);
+	  idata_SL++;
+	}
       
       //compute mass
-      jack M=constant_fit(effective_mass(C.simmetrized(1)),tmin,tmax,combine("M_%02d.xmg",idata).c_str());
+      two_pts_SL_fit(M,ZL,ZS,CSL.simmetrized(1),CSS.simmetrized(1),tmin,tmax,tmin,tmax,combine("M_%02d.xmg",idata).c_str());
       cout<<"nsources: "<<idata<<" mass: "<<M<<endl;
       
-      if(idata==ndata-1) M.write_to_binfile("M");
+      if(idata==ndata-1)
+	{
+	  M.write_to_binfile("M");
+	  ZL.write_to_binfile("ZL");
+	}
     }
+  
+  CSL.write_to_binfile("CSL");
   
   return 0;
 }
