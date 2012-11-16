@@ -10,6 +10,9 @@
 
 using namespace std;
 
+extern "C" { void dsyev( char* jobz, char* uplo, int* n, double* a, int* lda,
+			 double* w, double* work, int* lwork, int* info );}
+
 #include "tools.cpp"
 
 #include "endianess.cpp"
@@ -28,3 +31,6 @@ using namespace std;
 
 #include "rand.cpp"
 #include "interpolate.cpp"
+
+#include "gevp.cpp"
+

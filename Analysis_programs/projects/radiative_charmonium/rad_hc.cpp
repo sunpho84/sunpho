@@ -7,6 +7,7 @@ int T,TH,L,tsep;
 double theta,lmass,cmass;
 int njack,nthetaS0,nthetaS1;
 const double Zv[4]={0.5816,0.6103,0.6451,0.686};
+const double Zt[4]={0.73,0.74,0.78,0.82};
 
 char base_path[1024];
 int ibeta;
@@ -191,6 +192,8 @@ int main()
   M_BK.write_to_binfile("M_BK");
   M_P5.write_to_binfile("M_P5");
   V.write_to_binfile("F");
+  
+  (ZL_BK/M_BK*Zt[ibeta]).write_to_binfile("ZHC");
   
   return 0;
 }

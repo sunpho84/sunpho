@@ -1,5 +1,7 @@
 #include "include.h"
 
+#include "../nf2/common_pars.cpp"
+
 typedef char path_type[1024];
 
 //0:A, 1:B, 2:AB 
@@ -7,6 +9,7 @@ typedef char path_type[1024];
 int njacks;
 int nmass;
 int L,T,TH;
+int ibeta;
 int spat_vol;
 
 int tmin,tmax;
@@ -192,6 +195,8 @@ void fit_mass_and_ratio(jack &C,jack &M,jvec &A,jvec &SL,jvec &corr,jvec *rati,i
 
 int main(int narg,char **arg)
 {
+  init_latpars();
+  
   FILE *fin=fopen("input","r");
   read_formatted_from_file_expecting((char*)&L,fin,"%d","L");
   T=2*L;
@@ -202,6 +207,7 @@ int main(int narg,char **arg)
   read_formatted_from_file_expecting((char*)&njacks,fin,"%d","njacks");
   read_formatted_from_file_expecting((char*)&tmin,fin,"%d","tmin");
   read_formatted_from_file_expecting((char*)&tmax,fin,"%d","tmax");
+  read_formatted_from_file_expecting((char*)&ibeta,fin,"%d","ibeta");
   
   ////////////// load mass original pion and kaon //////////////////
   
@@ -242,6 +248,17 @@ int main(int narg,char **arg)
   jvec c_kaon_l_self_slope=c_kaon_l_self/c_kaon;
   
   
+  //////////////// load tadpole of the kaon and compute slopes /////////////
+  
+  //tadpole of the s for the kaon
+  jvec c_kaon_s_tad=load("PP","ts",KAON_SINS,0).simmetrized(1);
+  jvec c_kaon_s_tad_slope=c_kaon_s_tad/c_kaon;
+  
+  //self energy of the l for the kaon
+  jvec c_kaon_l_tad=load("PP","ts",KAON_LINS,0).simmetrized(1);
+  jvec c_kaon_l_tad_slope=c_kaon_l_tad/c_kaon;
+  
+  
   //////////////// load photon exchange for the pion and compute slopes /////////////
   
   //photon exchange with A on the strange for the pion
@@ -271,23 +288,29 @@ int main(int narg,char **arg)
   ///////////////////////// fit all slopes for kaon ///////////////////////////  
   
   jack kaon_Z2(njacks),kaon_M(njacks);
-  jvec kaon_A(4,njacks),kaon_SL(4,njacks);
-  jvec c_kaon_ratios[4]={c_kaon_mib_slope,c_kaon_l_self_slope,c_kaon_s_self_slope,c_kaon_exchange_slope};
-  path_type kaon_path_ratios[4];
+  jvec kaon_A(6,njacks),kaon_SL(6,njacks);
+  jvec c_kaon_ratios[6]={c_kaon_mib_slope,c_kaon_l_self_slope,c_kaon_s_self_slope,c_kaon_exchange_slope,c_kaon_l_tad_slope,c_kaon_s_tad_slope};
+  path_type kaon_path_ratios[6];
   sprintf(kaon_path_ratios[0],"plots/kaon_mib_slope.xmg");
   sprintf(kaon_path_ratios[1],"plots/kaon_l_self_slope.xmg");
   sprintf(kaon_path_ratios[2],"plots/kaon_s_self_slope.xmg");
   sprintf(kaon_path_ratios[3],"plots/kaon_exchange_slope.xmg");
-  fit_mass_and_ratio(kaon_Z2,kaon_M,kaon_A,kaon_SL,c_kaon,c_kaon_ratios,4,tmin,tmax,"plots/kaon_effmass.xmg",kaon_path_ratios);
+  sprintf(kaon_path_ratios[4],"plots/kaon_l_tad_slope.xmg");
+  sprintf(kaon_path_ratios[5],"plots/kaon_s_tad_slope.xmg");
+  fit_mass_and_ratio(kaon_Z2,kaon_M,kaon_A,kaon_SL,c_kaon,c_kaon_ratios,6,tmin,tmax,"plots/kaon_effmass.xmg",kaon_path_ratios);
   cout<<"Kaon mass: "<<kaon_M<<endl;
   cout<<"Kaon slope ib: "<<kaon_SL[0]<<endl;
   cout<<"Kaon slope l self energy: "<<kaon_SL[1]<<endl;
   cout<<"Kaon slope s self energy: "<<kaon_SL[2]<<endl;
   cout<<"Kaon slope exchange: "<<kaon_SL[3]<<endl;
+  cout<<"Kaon slope l tad: "<<kaon_SL[4]<<endl;
+  cout<<"Kaon slope s tad: "<<kaon_SL[5]<<endl;
   cout<<endl;
   
   
   ///////////////////////// fit all slopes for pion ///////////////////////////  
+  
+  double e2=4*M_PI/137;
   
   jack pion_Z2(njacks),pion_M(njacks);
   jvec pion_A(2,njacks),pion_SL(2,njacks);
@@ -299,34 +322,14 @@ int main(int narg,char **arg)
   cout<<"Pion mass: "<<pion_M<<endl;
   cout<<"Pion slope self energy: "<<pion_SL[0]<<endl;
   cout<<"Pion slope exchange: "<<pion_SL[1]<<endl;
+  jack delta=-pion_SL[1]*2*pion_M*e2/2;
+  cout<<"Squared pion mass difference: "<<delta<<endl;
   cout<<endl;
   
+  delta.write_to_binfile("DeltaM2pi");
+  (pion_M*pion_M).write_to_binfile("M2pi");
   
   ///////////////////////// load the disconnected //////////////////////////
-  
-  /*
-  jvec loop1=load_loop_corr(2,2,5,0);//;.simmetrized(-1);
-  jvec loop2=load_loop_corr(2,2,5,1);//.simmetrized(1);
-  loop1/=load_corr("PP","ss",1,1,0,0);
-  loop1=loop1.simmetrized(1);
-  loop1.print_to_file("plots/test1.xmg");
-  loop2/=c_pion_unsimm;
-  loop2.print_to_file("plots/test2.xmg");
-  //(0.5*(loop1-loop2)).print_to_file("plots/test.xmg");
-  
-  */
-  /////////////////////////// load the vector //////////////////////////////
-  
-  jvec c_rho=load("ViVi","ss",PION,0).simmetrized(1);
-  jvec c_rho_effmass=effective_mass(c_rho);
-  c_rho.print_to_file("plots/rho.xmg");
-  c_rho_effmass.print_to_file("plots/rho_effmass.xmg");
-  
-  //kaon correlator
-  jvec c_kstar=load("ViVi","ss",KAON_LINS,0).simmetrized(1);
-  jvec c_kstar_effmass=effective_mass(c_kstar);
-  c_kstar.print_to_file("plots/kstar.xmg");
-  c_kstar_effmass.print_to_file("plots/kstar_effmass.xmg");
   
   return 0;
 }

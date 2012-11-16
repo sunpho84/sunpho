@@ -123,7 +123,7 @@ int main()
         (2*Eth_P5*2*M_VK);
     }
   
-  //compare time dependance and its simmetric
+  //compare time dependance and its symmetric
   if(tsep==T/2)
     {
       ofstream out("Dth_DV_td_sa_simm.xmg");
@@ -168,7 +168,7 @@ int main()
   jvec P5thA2V3=load_3pts_charm_spec("A2V3",REAL);
   jvec P5thA3V1=load_3pts_charm_spec("A3V1",REAL);
   jvec P5thA3V2=load_3pts_charm_spec("A3V2",REAL);
-  jvec P5thAKVJ=(P5thA1V2+P5thA1V3+P5thA2V1+P5thA2V3+P5thA3V1+P5thA3V2)/6;
+  jvec P5thAKVJ=(P5thA1V2+P5thA2V3+P5thA3V1+P5thA1V3+P5thA2V1+P5thA3V2)/6;
   
   //put together the equation (16)
   jvec P5thAKVJK=P5thAKVK-P5thAKVJ;
@@ -229,7 +229,7 @@ int main()
   
   /////////////////////////////// Load the three points for the corrections /////////////////////////////////////
   
-  int TEST=REAL;
+  int TEST=IMAG;
   jvec P5thA0V1=load_3pts_charm_spec("A0V1",TEST);
   jvec P5thA0V2=load_3pts_charm_spec("A0V2",TEST);
   jvec P5thA0V3=load_3pts_charm_spec("A0V3",TEST);
@@ -268,10 +268,22 @@ int main()
   cout<<"R2: \n pt1: "<<R2_pt1<<"\n pt2: "<<R2_pt2<<"\n coef2: "<<R2_pt2_coef<<endl;
   jack R2=-(R2_pt1+R2_pt2*R2_pt2_coef);
   
+  {
+    cout<<"R2_pt2_coef: "<<R2_pt2_coef<<endl;
+    ofstream out("R2_tot.xmg");
+   
+    out<<"@type xydy"<<endl;
+    out<<(R2_pt1_corr+R2_pt2_coef*R2_pt2_corr).simmetrized(1);
+  }
+  
   jack A2frA1=R2*sqr(M_VK+M_P5)/(2*qi*M_VK);
   cout<<"A2/A1: "<<A2frA1<<endl;
   
+  cout<<"q2_max="<<M_VK*M_VK-M_P5*M_P5<<endl;
   cout<<"q2="<<M_VK*M_VK+M_P5*M_P5-2*M_VK*Eth_P5<<endl;
+  cout<<"q2_suppression: ";
+  printf("%.3f ",100-fabs((100*(M_VK*M_VK+M_P5*M_P5-2*M_VK*Eth_P5)/(M_VK*M_VK-M_P5*M_P5)).med()));
+  cout<<" %"<<endl;
   
   //////////////// Compute the full value of fpi*gDvDPi ////////////////
   
@@ -289,6 +301,55 @@ int main()
   cout<<"gc tot: "<<gc_pt1<<" * ( 1 + "<<fpi_gDvDPi_corr_rel<<" ) = "<<gc_pt1+gc_pt2<<endl;
   gc_pt1.write_to_binfile("gc_pt1");
   gc_pt2.write_to_binfile("gc_pt2");
+  (gc_pt1+gc_pt2).write_to_binfile("gc_tot");
+  
+  //write MD and MD*
+  M_P5.write_to_binfile("MD");
+  M_VK.write_to_binfile("MDstar");
+  
+  
+  /////////////////////////////////// vector form factor ////////////////////////////////
+  
+  int TEST2=IMAG;
+  
+  jvec P5thV1V1_cs=load_3pts_charm_spec("V1P5",TEST2);
+  jvec P5thV2V2_cs=load_3pts_charm_spec("V2V2",TEST2);
+  jvec P5thV3V3_cs=load_3pts_charm_spec("V3V3",TEST2);
+
+  jvec P5thV1V2_cs=load_3pts_charm_spec("V1V2",TEST2);
+  jvec P5thV2V3_cs=load_3pts_charm_spec("V2V3",TEST2);
+  jvec P5thV3V1_cs=load_3pts_charm_spec("V3V1",TEST2);
+
+  jvec P5thV1V3_cs=load_3pts_charm_spec("V1V3",TEST2);
+  jvec P5thV3V2_cs=load_3pts_charm_spec("V3V2",TEST2);
+  jvec P5thV2V1_cs=load_3pts_charm_spec("V2V1",TEST2);
+  
+  jvec P5thVJVK_cs=P5thV1V1_cs;//(P5thV1V2_cs+P5thV2V3_cs+P5thV3V1_cs-P5thV1V3_cs-P5thV3V2_cs-P5thV2V1_cs)/6;
+  
+  
+  jvec P5thV1V2_ls=load_3pts_light_spec("V1V2",TEST2);
+  jvec P5thV2V3_ls=load_3pts_light_spec("V2V3",TEST2);
+  jvec P5thV3V1_ls=load_3pts_light_spec("V3V1",TEST2);
+
+  jvec P5thV1V3_ls=load_3pts_light_spec("V1V3",TEST2);
+  jvec P5thV3V2_ls=load_3pts_light_spec("V3V2",TEST2);
+  jvec P5thV2V1_ls=load_3pts_light_spec("V2V1",TEST2);
+  
+  jvec P5thVJVK_ls=P5thV1V2_ls;//(P5thV1V2_ls+P5thV2V3_ls+P5thV3V1_ls-P5thV1V3_ls-P5thV3V2_ls-P5thV2V1_ls)/6;
+  
+  {
+    ofstream out("P5thVJVK_cs.xmg");
+    out<<"@type xydy"<<endl;
+    
+    out<<P5thVJVK_cs<<endl;
+  }
+  
+  {
+    ofstream out("P5thVJVK_ls.xmg");
+    out<<"@type xydy"<<endl;
+    
+    out<<P5thVJVK_ls<<endl;
+  }
   
   //////////////////////////////////////// Using WI ////////////////////////////////////
   

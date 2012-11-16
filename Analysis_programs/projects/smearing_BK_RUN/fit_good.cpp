@@ -223,7 +223,7 @@ int main(int narg,char **arg)
 	  }
 	af=Zl[ic]*(mass[im1]+mass[im2])/aM[ic]/sinh(aM[ic]);
 	f=af/a;
-	cout<<"im1:"<<im1<<" im2:"<<im2<<" ic:"<<ic<<"/"<<ncombo<<" M: "<<aM[ic]<<", f:"<<f<<" Zl:"<<Zl[ic]<<" Zs:"<<Zs[ic]<<" Zest:"<<Z_estim[0]<<", "<<Z_estim[1]<<endl;
+	cout<<"im1:"<<im1<<" im2:"<<im2<<" ic:"<<ic<<"/"<<ncombo<<" aM: "<<aM[ic]<<", f:"<<f<<" Zl:"<<Zl[ic]<<" Zs:"<<Zs[ic]<<" Zest:"<<Z_estim[0]<<", "<<Z_estim[1]<<endl;
 	for(int sm_lev=0;sm_lev<2;sm_lev++)
 	  {
 	    ofstream fout(combine("out_%02d_%02d_%d.xmg",im1,im2,sm_lev).c_str());

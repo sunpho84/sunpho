@@ -1,19 +1,20 @@
 #pragma once
 
 //jack-vec version
-jvec effective_mass(jvec a)
+jvec effective_mass(jvec a,int TH=-1)
 {
-  int TH=a.nel-1;
+  if(TH==-1) TH=a.nel-1;
 
   int njack=a.njack;
   
-  jvec b(TH,a.njack);
+  jvec b(a.nel-1,a.njack);
   
-  for(int t=0;t<TH;t++)
+  for(int t=0;t<a.nel-1;t++)
     {
       jack temp=-log(a[t+1]/a[t]);
       double miniz=temp.med();
       double einiz=temp.err();
+      if(einiz==0) einiz=1.e-10;
       
       for(int ijack=0;ijack<=njack;ijack++)
 	{
@@ -47,7 +48,7 @@ jvec effective_mass(jvec a)
 	    {
 	      m=(xl+xr)/2;
 	      ym=cosh(m*(TH-(t+1)))/cosh(m*(TH-t))-targ;
-	      if(yl<0 && ym<0 || yl>0 && ym>0)
+	      if((yl<0 && ym<0) || (yl>0 && ym>0))
 		xl=m;
 	      else
 		xr=m;
@@ -122,11 +123,13 @@ void ch2_two_pts_SL_fit(int &npar,double *fuf,double &ch,double *p,int flag)
   
   for(int t=tmin_two_pts_SL_fit[0];t<=min(tmax_two_pts_SL_fit[0],TH_two_pts_SL_fit);t++)
     {
-      double diff=c_two_pts_SL_fit[0][t]-fun_two_pts_SL_fit(ZL,ZS,M,t);
+      double num=c_two_pts_SL_fit[0][t];
+      double teo=fun_two_pts_SL_fit(ZL,ZS,M,t);
+      double diff=num-teo;
       double err=e_two_pts_SL_fit[0][t];
       double cont=sqr(diff/err);
       ch+=cont;
-      if(flag==3) cout<<"SL, t="<<t<<", diff="<<diff<<" err="<<err<<" cont="<<cont<<endl;
+      if(flag==3) cout<<"SL, t="<<t<<", diff=("<<num<<"-"<<teo<<")="<<diff<<" err="<<err<<" cont="<<cont<<endl;
     }
   
   for(int t=tmin_two_pts_SL_fit[1];t<=min(tmax_two_pts_SL_fit[1],TH_two_pts_SL_fit);t++)
@@ -154,6 +157,7 @@ void two_pts_SL_fit(jack &M,jack &ZL,jack &ZS,jvec corrSL,jvec corrSS,int tminL,
       tempSL[t]=corrSL[t]/exp(-M*TH)/cosh(M*(TH-t))*M;
       tempSS[t]=corrSS[t]/exp(-M*TH)/cosh(M*(TH-t))*M;
     }
+  
   ZS=sqrt(constant_fit(tempSS,tminS,tmaxS,NULL));
   ZL=constant_fit(tempSL,tminL,tmaxL,NULL)/ZS;
   
