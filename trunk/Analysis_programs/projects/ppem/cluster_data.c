@@ -65,6 +65,7 @@ int main(int narg,char **arg)
       read_formatted_from_file(pathout,flist,"%s","pathout");
       
       FILE *fin=open_file(pathin,"r");
+      int sta=ftell(fin);
       
       int twist=get_int(fin);
       printf("twist: %d\n",twist);
@@ -99,8 +100,9 @@ int main(int narg,char **arg)
       double ksea=get_double(fin);
       printf("ksea: %lg\n",ksea);
       
+      int pos=ftell(fin);
       double musea=get_double(fin);
-      printf("musea: %lg\n",musea);
+      printf("musea: %lg, ad position: %d, sta: %d\n",musea,pos-sta,sta);
       
       double csw=get_double(fin);
       printf("csw: %lg\n\n",csw);

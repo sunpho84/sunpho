@@ -8,8 +8,7 @@ const int L=24;
 double glbl_coeff;
 int parity;
 int nlevls;
-int nml;
-int nr;
+int nml=2,iml=0,imc=1;
 int nlevls_sto;
 jvec *data;
 char corr_file_path[100];
@@ -22,7 +21,7 @@ jvec load(const char *path,int itheta,int ism_so_lv,int ism_si_lv)
   int ri=0;
   
   jvec a(T,njacks);
-  a.load(path,ri+2*(iml+nml*(ism_si_lv+nlevls_sto*ism_so_lv)));
+  a.load(path,ri+2*(iml+nml*(imc+nml*(ism_si_lv+nlevls_sto*ism_so_lv))));
   
   return glbl_coeff*a;
 }
@@ -80,12 +79,6 @@ int main(int narg,char **arg)
   //read global coeff and parity
   read_formatted_from_file_expecting((char*)&glbl_coeff,fin,"%lg","glbl_coeff");
   read_formatted_from_file_expecting((char*)&parity,fin,"%d","parity");
-  
-  //read ntheta
-  read_formatted_from_file_expecting((char*)&ntheta,fin,"%d","ntheta");
-  
-  //read nr
-  read_formatted_from_file_expecting((char*)&nr,fin,"%d","nr");
   
   //allocate nlevls-depending stuff
   read_formatted_from_file_expecting((char*)&nlevls_sto,fin,"%d","nlevls_sto");

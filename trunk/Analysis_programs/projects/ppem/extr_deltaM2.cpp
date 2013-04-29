@@ -3,15 +3,19 @@
 const int nbeta=4;
 char **base_corrs_path,**ens_name;
 int nens,*L,*ibeta,*nmass;
-double *cmass,*lmass,*H1corr,*H2corr;
+double *cmass,*lmass;
+double *FSE_K_corr,*H1_corr,*H2_corr;
+int approx_Pi_FSE,approx_K_FSE;
+
+const double kappa=2.8373;
 
 //read data
-bvec F;
+bvec dM2K,dM2Pi,MPi,MK,eps_gam;
 
 bvec ml;
 int ref_ml_beta[4]={-1,-1,-1,-1};
 
-bvec par_res_fit_F;
+bvec par_res_fit;
 
 double aem=1.0/137;
 
@@ -21,79 +25,117 @@ const char set_symbol[nbeta][1024]={"square","circle","triangle up","triangle le
 const char set_legend[nbeta][1024]={"\\xb\\0=3.80","\\xb\\0=3.90","\\xb\\0=4.05","\\xb\\0=4.20"};
 const char set_legend_fm[nbeta][1024]={"a = 0.098 fm","a = 0.085 fm","a = 0.067 fm","a = 0.054 fm"};
 
-char meson_label[1024];
-
 int plot_iboot;
-int include_a4;
-int include_ml_term;
-int include_380;
-int include_FSE;
-double f0_MeV=f0_med;
+double ms=ms_phys_med;
 
-double fun_fit_F(double A,double B,double C,double D,double ml,double a)
+double fun_fit(double A,double B,double C,double D,double ml,double ms,double a)
 {
   double a1=a/lat[1][plot_iboot];
   
-  double db0=5.35229;
-  double qpif=4*M_PI*f0_MeV;
-  double chi=db0*ml/qpif;
+  double db0=db0_med;
+  double qpif=4*M_PI*f0_med;
+  double chi_ll=db0*ml/qpif;
+  double chi_ls=db0*(ml+ms)/2/qpif;
   
-  return 4*M_PI*aem*sqr(f0_MeV)*(
-				 4*A/pow(f0_MeV,4)-(3+16*A/pow(f0_MeV,4))*
-				 chi*log(db0*ml)+
-				 B*chi+
-				 C*a1*a1+
-				 D*a1*a1*a1*a1);
+  return 4*M_PI*aem*sqr(f0_med)*(
+				 4*A/pow(f0_med,4)+
+				 -8*A/pow(f0_med,4)*chi_ll*log(db0*ml)+
+				 -(3+8*A/pow(f0_med,4))*chi_ls*log(db0*(ml+ms)/2)+
+				 B*chi_ll+
+				 C*chi_ls+
+				 D*a1*a1
+				 );
 }
 
-double fin_inf_diff(double C,int iens,double a)
+double fin_inf_diff(double C,int iens,double M,double dM2L,int PiK)
 {
-  if(include_FSE) return aem/sqr(L[iens]*a)*(-16*C/pow(f0_MeV,4)*H1corr[iens]+H2corr[iens]);
-  else return 0;
+  double pref=aem/sqr(L[iens]*lat[ibeta[iens]][plot_iboot]);
+  
+  double app=-pref*(2+M*L[iens]*lat[ibeta[iens]][plot_iboot]);
+  double full=pref*(-16*C/pow(f0_med,4)*H1_corr[iens]+H2_corr[iens]);
+  
+  if(PiK==0)
+    if(approx_Pi_FSE) return app;
+    else return full;
+  else
+    switch(approx_K_FSE)
+      {
+      case 0:
+	return -FSE_K_corr[iens]; //Silvano put a -
+	break;
+      case 1:
+	return app;
+	break;
+      case 2:
+	return -FSE_K_corr[iens]/(1+FSE_K_corr[iens]/dM2L);
+	break;
+      case 3:
+	return app/(1-app/dM2L);
+	break;
+      default:
+	crash("unknown approx: %d",approx_K_FSE);
+	return 0;
+	break;
+      }
 }
 
-void plot_funz_ml(const char *out_path,const char *title,const char *xlab,const char *ylab,bvec &X,bvec &Y,bvec &par,double X_phys,double (*fun)(double,double,double,double,double,double),boot &chiral_extrap_cont)
+void plot_funz_ml(const char *out_path,const char *title,const char *xlab,const char *ylab,bvec &X,bvec Y,bvec Z,bvec &par,double X_phys,boot &chiral_extrap_cont,int plot_PiK)
 {
   //setup the plot
   grace out(out_path);
+  out.fout<<"@    legend 0.25, 0.8"<<endl;
   out.plot_size(800,600);
   out.plot_title(combine("Chiral extrapolation of %s",title).c_str());
   out.axis_label(xlab,ylab);
   
-  if(fun!=NULL)
+  //plot the function with error
+  int npoint=100;
+  double X_pol[npoint];
+  bvec Y_pol(npoint,nboot,njack);
+  for(int ipoint=0;ipoint<npoint;ipoint++) X_pol[ipoint]=0.0599/(npoint-1)*ipoint+0.0001;
+  for(int ib=0;ib<nbeta;ib++)
     {
-      //plot the function with error
-      int npoint=100;
-      double X_pol[npoint];
       bvec Y_pol(npoint,nboot,njack);
-      for(int ipoint=0;ipoint<npoint;ipoint++) X_pol[ipoint]=0.0599/(npoint-1)*ipoint+0.0001;
-      for(int ib=0;ib<nbeta;ib++)
-	{
-	  bvec Y_pol(npoint,nboot,njack);
-	  for(int ipoint=0;ipoint<npoint;ipoint++)
-	    for(int iboot=plot_iboot=0;iboot<nboot+1;plot_iboot=iboot++)
-	      Y_pol.data[ipoint].data[iboot]=fun(par[0][iboot],par[1][iboot],par[2][iboot],par[3][iboot],X_pol[ipoint],lat[ib][iboot]);
-	  
-	  out.set(1,set_fill_color[ib]);
-	  out.polygon(X_pol,Y_pol);
-	  out.new_set();
-	  out.set(1,set_color[ib]);
-	  out.set_line_size(2);
-	  out.ave_line(X_pol,Y_pol);
-	  out.new_set();
-	}
-      //plot continuum curve
       for(int ipoint=0;ipoint<npoint;ipoint++)
 	for(int iboot=plot_iboot=0;iboot<nboot+1;plot_iboot=iboot++)
-	  Y_pol.data[ipoint]=fun(par[0][iboot],par[1][iboot],par[2][iboot],par[3][iboot],X_pol[ipoint],0);
-      //out.set(1,"magenta");
+	  {
+	    double Pi=fun_fit(par[0][iboot],par[1][iboot],par[2][iboot],par[3][iboot],X_pol[ipoint],X_pol[ipoint],lat[ib][iboot]);
+	    double K=fun_fit(par[0][iboot],par[1][iboot],par[2][iboot],par[3][iboot],X_pol[ipoint],ms_phys.med(),lat[ib][iboot]);
+	    double eps_gam=K/Pi-1;
+	    switch(plot_PiK)
+	      {
+	      case 0:Y_pol.data[ipoint].data[iboot]=Pi;break;
+	      case 1:Y_pol.data[ipoint].data[iboot]=K;break;
+	      case 2:Y_pol.data[ipoint].data[iboot]=eps_gam;break;
+	      }
+	  }
+      
+      //out.set(1,set_fill_color[ib]);
       //out.polygon(X_pol,Y_pol);
       //out.new_set();
-      out.set(1,"magenta");
-      out.set_line_size(3);
+      out.set(1,set_color[ib]);
+      out.set_line_size(2);
       out.ave_line(X_pol,Y_pol);
       out.new_set();
     }
+  //plot continuum curve
+  for(int ipoint=0;ipoint<npoint;ipoint++)
+    for(int iboot=plot_iboot=0;iboot<nboot+1;plot_iboot=iboot++)
+      {
+	double Pi=fun_fit(par[0][iboot],par[1][iboot],par[2][iboot],par[3][iboot],X_pol[ipoint],X_pol[ipoint],0);
+	double K=fun_fit(par[0][iboot],par[1][iboot],par[2][iboot],par[3][iboot],X_pol[ipoint],ms_phys.med(),0);
+	double eps_gam=K/Pi-1;
+	switch(plot_PiK)
+	  {
+	  case 0:Y_pol.data[ipoint].data[iboot]=Pi;break;
+	  case 1:Y_pol.data[ipoint].data[iboot]=K;break;
+	  case 2:Y_pol.data[ipoint].data[iboot]=eps_gam;break;
+	  }
+      }
+  out.set(1,"magenta");
+  out.set_line_size(3);
+  out.ave_line(X_pol,Y_pol);
+  out.new_set();
   
   //plot the original data with error  
   for(int ib=0;ib<nbeta;ib++)
@@ -102,7 +144,17 @@ void plot_funz_ml(const char *out_path,const char *title,const char *xlab,const 
       out.set_legend(set_legend_fm[ib]);
       out.set_line_size(2);
       out.fout<<"@type xydy"<<endl;
-      for(int iens=0;iens<nens;iens++) if(ibeta[iens]==ib) out.fout<<X[iens].med()<<" "<<Y.data[iens]<<endl;
+      for(int iens=0;iens<nens;iens++) if(ibeta[iens]==ib) out.fout<<X[iens].med()<<" "<<(Y-Z).data[iens]<<endl;
+      out.new_set();
+    }
+  
+  //plot the corrected data with error  
+  for(int ib=0;ib<nbeta;ib++)
+    {
+      out.set(4,"none",set_symbol[ib],set_color[ib],"unfilled");
+      out.set_line_size(1);
+      out.fout<<"@type xydy"<<endl;
+      for(int iens=0;iens<nens;iens++) if(ibeta[iens]==ib) out.fout<<X[iens].med()<<" "<<(Y).data[iens]<<endl;
       out.new_set();
     }
   
@@ -114,9 +166,9 @@ void plot_funz_ml(const char *out_path,const char *title,const char *xlab,const 
   out.new_set();
 }
 
-bool fitting_fK;
-double *X_fit;
-double *Y_fit,*err_Y_fit;
+double *ml_fit;
+double *dM2Pi_fit,*err_dM2Pi_fit;
+double *dM2K_fit,*err_dM2K_fit;
 
 //calculate the chi square
 double chi2(double A,double B,double C,double D,double *a,bool verb=false)
@@ -124,16 +176,27 @@ double chi2(double A,double B,double C,double D,double *a,bool verb=false)
   double ch2=0;
   
   for(int iens=0;iens<nens;iens++)
-    if(include_380 || ibeta[iens]!=0)
-      {
-	double uncorr=Y_fit[iens];
-	double correction=fin_inf_diff(A,iens,a[ibeta[iens]]);
-	double corr=uncorr-correction;
-	double ch2_contr=pow((corr-fun_fit_F(A,B,C,D,X_fit[iens],a[ibeta[iens]]))/err_Y_fit[iens],2);
-	ch2+=ch2_contr;
-	
-	if(verb) cout<<ibeta[iens]<<" "<<ch2_contr<<endl;
-      }
+    {
+      double teo_dM2Pi=fun_fit(A,B,C,D,ml_fit[iens],ml_fit[iens],a[ibeta[iens]]);
+      double teo_dM2K=fun_fit(A,B,C,D,ml_fit[iens],ms,a[ibeta[iens]]);
+      
+      double uncorr_dM2Pi=dM2Pi_fit[iens];
+      double uncorr_dM2K=dM2K_fit[iens];
+      
+      double correction_dM2Pi=fin_inf_diff(A,iens,MPi[iens][plot_iboot],teo_dM2Pi,0);
+      double correction_dM2K=fin_inf_diff(A,iens,MK[iens][plot_iboot],teo_dM2K,1);
+      
+      double corr_dM2Pi=uncorr_dM2Pi-correction_dM2Pi;
+      double corr_dM2K=uncorr_dM2K-correction_dM2K;
+      
+      double ch2_contr_dM2Pi=pow((corr_dM2Pi-teo_dM2Pi)/err_dM2Pi_fit[iens],2);
+      double ch2_contr_dM2K=pow((corr_dM2K-teo_dM2K)/err_dM2K_fit[iens],2);
+
+      ch2+=ch2_contr_dM2Pi+ch2_contr_dM2K;
+      
+      if(verb) cout<<"Ens: "<<iens<<", contr_Pi: "<<ch2_contr_dM2Pi<<", contr_K: "<<ch2_contr_dM2K<<endl;
+    }
+  
   return ch2;
 }
 
@@ -145,13 +208,17 @@ void chi2_wr(int &npar,double *fuf,double &ch,double *p,int flag)
   ch=chi2(A,B,C,D,a);
 }
 
-void fit(boot &A,boot &B,boot &C,boot &D,bvec &X,bvec &Y)
+void fit(boot &A,boot &B,boot &C,boot &D)
 {
-  //copy X
-  X_fit=new double[nens];
-  for(int iens=0;iens<nens;iens++) X_fit[iens]=X[iens].med();
-  Y_fit=new double[nens];
-  err_Y_fit=new double[nens];
+  //copy ml
+  ml_fit=new double[nens];
+  for(int iens=0;iens<nens;iens++) ml_fit[iens]=ml[iens].med();
+  
+  //alloc dM2Pi and dM2K
+  dM2Pi_fit=new double[nens];
+  err_dM2Pi_fit=new double[nens];
+  dM2K_fit=new double[nens];
+  err_dM2K_fit=new double[nens];
   
   TMinuit minu;
   minu.SetPrintLevel(-1);
@@ -161,23 +228,12 @@ void fit(boot &A,boot &B,boot &C,boot &D,bvec &X,bvec &Y)
   minu.DefineParameter(1,"B",0.0,0.0001,0,0);
   minu.DefineParameter(2,"C",0.0,0.0001,0,0);
   minu.DefineParameter(3,"D",0.0,0.0001,0,0);
-  if(!include_a4)
-    {
-      minu.FixParameter(3);
-      npars--;
-    }
-  if(!include_ml_term)
-    {
-      minu.FixParameter(1);
-      npars--;
-    }
   minu.SetFCN(chi2_wr);
   
   double C2;
   for(int iboot=0;iboot<nboot+1;iboot++)
     {
-      if(iboot>0)
-        minu.SetPrintLevel(-1);
+      if(iboot>0) minu.SetPrintLevel(-1);
       
       minu.DefineParameter(4,"a380",lat[0][iboot],0.0001,0,0);
       minu.DefineParameter(5,"a390",lat[1][iboot],0.0001,0,0);
@@ -190,8 +246,10 @@ void fit(boot &A,boot &B,boot &C,boot &D,bvec &X,bvec &Y)
       
       for(int iens=0;iens<nens;iens++)
         {
-          Y_fit[iens]=Y.data[iens].data[iboot];
-          err_Y_fit[iens]=Y.data[iens].err();
+          dM2Pi_fit[iens]=dM2Pi.data[iens].data[iboot];
+          err_dM2Pi_fit[iens]=dM2Pi.data[iens].err();
+          dM2K_fit[iens]=dM2K.data[iens].data[iboot];
+          err_dM2K_fit[iens]=dM2K.data[iens].err();
         }
       
       //minimize
@@ -208,21 +266,19 @@ void fit(boot &A,boot &B,boot &C,boot &D,bvec &X,bvec &Y)
       if(iboot==nboot) C2=chi2(A.data[iboot],B[iboot],C[iboot],D[iboot],lat_med,true);
     }
   
-  int ninc_ens=0;
-  for(int iens=0;iens<nens;iens++)
-    if(ibeta[iens]!=0 || include_380) ninc_ens++;
-  
   //calculate the chi2
   cout<<"A=("<<A<<"), B=("<<B<<"), C=("<<C<<"), D=("<<D<<")"<<endl;
-  cout<<"Chi2 = "<<C2<<" / "<<ninc_ens-npars<<" = "<<C2/(ninc_ens-npars)<<endl;
+  cout<<"Chi2 = "<<C2<<" / "<<2*nens-npars<<" = "<<C2/(2*nens-npars)<<endl;
   
-  delete[] X_fit;
-  delete[] Y_fit;
-  delete[] err_Y_fit;
+  delete[] ml_fit;
+  delete[] dM2Pi_fit;
+  delete[] err_dM2Pi_fit;
+  delete[] dM2K_fit;
+  delete[] err_dM2K_fit;
 }
 
 
-void plot_funz_a2(const char *out_path,const char *title,const char *xlab,const char *ylab,double *X,bvec &Y,bvec &par,double (*fun)(double,double,double,double,double,double),boot &chiral_extrap_cont)
+void plot_funz_a2(const char *out_path,const char *title,const char *xlab,const char *ylab,double *X,bvec &Y,bvec &par,boot &chiral_extrap_cont,int plot_PiK)
 {
   //setup the plot
   grace out(out_path);
@@ -238,7 +294,12 @@ void plot_funz_a2(const char *out_path,const char *title,const char *xlab,const 
       X_pol[iens]=0.1/99*iens;
       X2_pol[iens]=X_pol[iens]*X_pol[iens];
 	for(int iboot=plot_iboot=0;iboot<nboot+1;plot_iboot=iboot++)
-	  Y_pol.data[iens].data[iboot]=fun(par[0][iboot],par[1][iboot],par[2][iboot],par[3][iboot],ml_phys[iboot],X_pol[iens]/hc);
+	  {
+	    double W;
+	    if(plot_PiK) W=ms_phys.med();
+	    else W=ml_phys.med();
+	    Y_pol.data[iens].data[iboot]=fun_fit(par[0][iboot],par[1][iboot],par[2][iboot],par[3][iboot],ml_phys[iboot],W,X_pol[iens]/hc);
+	  }
     }
   out.set(1,"yellow");
   out.polygon(X2_pol,Y_pol);
@@ -293,24 +354,23 @@ int main(int narg,char **arg)
   
   //read ensemble list, meson masses and meson name
   FILE *an_input_file=open_file("analysis_pars","r");
-  char meson_name[1024];
-  read_formatted_from_file_expecting((char*)&include_a4,an_input_file,"%d","include_a4");
-  read_formatted_from_file_expecting((char*)&include_380,an_input_file,"%d","include_380");
-  read_formatted_from_file_expecting((char*)&include_ml_term,an_input_file,"%d","include_ml_term");
-  read_formatted_from_file_expecting((char*)&include_FSE,an_input_file,"%d","include_FSE");
+  read_formatted_from_file_expecting((char*)&approx_Pi_FSE,an_input_file,"%d","approx_Pi_FSE");
+  read_formatted_from_file_expecting((char*)&approx_K_FSE,an_input_file,"%d","approx_K_FSE");
   read_formatted_from_file_expecting((char*)&nens,an_input_file,"%d","nens");
-  read_formatted_from_file_expecting(meson_name,an_input_file,"%s","meson_name");
-  read_formatted_from_file_expecting(meson_label,an_input_file,"%s","meson_label");
   lmass=new double[nens];
   L=new int[nens];
   ibeta=new int[nens];
-  H1corr=new double[nens];
-  H2corr=new double[nens];
-  F=bvec(nens,nboot,njack);
+  FSE_K_corr=new double[nens];
+  H1_corr=new double[nens];
+  H2_corr=new double[nens];
+  dM2Pi=bvec(nens,nboot,njack);
+  dM2K=bvec(nens,nboot,njack);
+  MPi=bvec(nens,nboot,njack);
+  MK=bvec(nens,nboot,njack);
+  eps_gam=bvec(nens,nboot,njack);
   
   ofstream bare_data_table("bare_data_table");
   ofstream dim_data_table("dim_data_table");
-  ofstream silvano_data_table("silvano_data_table");
   
   for(int iens=0;iens<nens;iens++)
     {
@@ -318,30 +378,40 @@ int main(int narg,char **arg)
       read_formatted_from_file((char*)&(ibeta[iens]),an_input_file,"%d","ibeta");
       read_formatted_from_file((char*)&(lmass[iens]),an_input_file,"%lg","lmass");
       read_formatted_from_file((char*)&(L[iens]),an_input_file,"%d","L");
-      read_formatted_from_file((char*)&(H1corr[iens]),an_input_file,"%lg","H1corr");
-      read_formatted_from_file((char*)&(H2corr[iens]),an_input_file,"%lg","H2corr");
+      read_formatted_from_file((char*)&(H1_corr[iens]),an_input_file,"%lg","H1_corr");
+      read_formatted_from_file((char*)&(H2_corr[iens]),an_input_file,"%lg","H2_corr");
+      read_formatted_from_file((char*)&(FSE_K_corr[iens]),an_input_file,"%lg","FSE_K_corr");
       read_formatted_from_file(path,an_input_file,"%s","path");
       
-      jack temp(njack);
-      temp.load(combine("../%s/%s",path,meson_name).c_str());
+      //load bare data
+      jack aMPi(njack),aMK(njack);
+      jack a2dM2Pi(njack),a2dM2K(njack);
+      aMPi.load(combine("../%s/MPi",path).c_str());
+      a2dM2Pi.load(combine("../%s/DeltaM2Pi",path).c_str());
+      aMK.load(combine("../%s/MK",path).c_str());
+      a2dM2K.load(combine("../%s/DeltaM2K",path).c_str());
       
       //write the bare data table
-      bare_data_table<<iens<<" "<<smart_print(temp)<<endl;
+      bare_data_table<<iens<<" "<<smart_print(aMPi)<<" "<<smart_print(aMK)<<" "<<smart_print(a2dM2Pi)<<" "<<smart_print(a2dM2K)<<endl;
       
-      jack temp2(njack);
-      temp2.load(combine("../%s/M2pi",path,meson_name).c_str());
-      for(int ijack=0;ijack<=njack;ijack++) silvano_data_table<<path<<" "<<ijack<<" "<<temp2[ijack]<<" "<<temp[ijack]<<endl;
-      silvano_data_table<<endl;
-
       //load iboot
       int iboot_jack[100];
       load_iboot(iboot_jack,path);
       
-      boot_from_jack(F.data[iens],temp,iboot_jack);
-      F[iens]/=lat[ibeta[iens]]*lat[ibeta[iens]];
+      //convert jack from boot
+      boot_from_jack(MPi.data[iens],aMPi,iboot_jack);
+      boot_from_jack(MK.data[iens],aMK,iboot_jack);
+      boot_from_jack(dM2Pi.data[iens],a2dM2Pi,iboot_jack);
+      boot_from_jack(dM2K.data[iens],a2dM2K,iboot_jack);
+      MPi[iens]/=lat[ibeta[iens]];
+      MK[iens]/=lat[ibeta[iens]];
+      dM2Pi[iens]/=-sqr(lat[ibeta[iens]]);
+      dM2K[iens]/=sqr(lat[ibeta[iens]]);
+      eps_gam[iens]=dM2K[iens]/dM2Pi[iens]-1;
       
       //write the dimensional data table
-      dim_data_table<<iens<<" "<<smart_print(F[iens])<<endl;
+      dim_data_table<<iens<<" "<<smart_print(MPi[iens])<<" "<<smart_print(MK[iens])<<" "
+		    <<smart_print(dM2Pi[iens])<<" "<<smart_print(dM2K[iens])<<endl;
     }
   fclose(an_input_file);
   
@@ -357,58 +427,90 @@ int main(int narg,char **arg)
       if(r==-1||fabs(ml[r].med()-0.050)>fabs(ml[iens].med()-0.050)) ref_ml_beta[b]=iens;
     }
   cout<<"---"<<endl;
-  for(int ib=0;ib<nbeta;ib++) if(ref_ml_beta[ib]!=-1) cout<<"Ref "<<ib<<" = "<<ref_ml_beta[ib]<<", "<<ml[ref_ml_beta[ib]]<<" MeV"<<endl;
+  for(int ib=0;ib<nbeta;ib++)
+    if(ref_ml_beta[ib]!=-1)
+      cout<<"Ref "<<ib<<" = "<<ref_ml_beta[ib]<<", "<<smart_print(ml[ref_ml_beta[ib]]*1e3)<<" MeV"<<endl;
   cout<<"---"<<endl;
 
   //perform the fit
   boot A(nboot,njack),B(nboot,njack),C(nboot,njack),D(nboot,njack);
-  fit(A,B,C,D,ml,F);
+  fit(A,B,C,D);
   
   //chiral extrapolation
-  bvec F_chir(nbeta,nboot,njack);
-  boot F_chir_cont(nboot,njack);
-  bvec F_estr_ml(nbeta,nboot,njack);
+  bvec dM2Pi_chir(nbeta,nboot,njack),dM2K_chir(nbeta,nboot,njack);
+  boot dM2Pi_chir_cont(nboot,njack),dM2K_chir_cont(nboot,njack);
+  bvec dM2Pi_estr_ml(nbeta,nboot,njack),dM2K_estr_ml(nbeta,nboot,njack);
+  boot eps_gam_chir_cont(nboot,njack);
+  
+  //take extrapolation
   for(int iboot=0;iboot<nboot+1;iboot++)
     {
-      F_chir_cont.data[iboot]=fun_fit_F(A[iboot],B[iboot],C[iboot],D[iboot],ml_phys[iboot],0);
+      dM2Pi_chir_cont.data[iboot]=fun_fit(A[iboot],B[iboot],C[iboot],D[iboot],ml_phys[iboot],ml_phys[iboot],0);
+      dM2K_chir_cont.data[iboot]=fun_fit(A[iboot],B[iboot],C[iboot],D[iboot],ml_phys[iboot],ms_phys[iboot],0);
+      eps_gam_chir_cont.data[iboot]=dM2K_chir_cont.data[iboot]/dM2Pi_chir_cont.data[iboot]-1;
       for(int ib=0;ib<nbeta;ib++)
 	{
 	  int r=ref_ml_beta[ib];
-	  F_chir[ib].data[iboot]=fun_fit_F(A[iboot],B[iboot],C[iboot],D[iboot],ml_phys[iboot],lat[ib][iboot]);
+	  dM2Pi_chir[ib].data[iboot]=fun_fit(A[iboot],B[iboot],C[iboot],D[iboot],ml_phys[iboot],ml_phys[iboot],lat[ib][iboot]);
+	  dM2K_chir[ib].data[iboot]=fun_fit(A[iboot],B[iboot],C[iboot],D[iboot],ml_phys[iboot],ms_phys[iboot],lat[ib][iboot]);
 	  if(r!=-1)
-	    F_estr_ml.data[ib].data[iboot]=F[r][iboot]*fun_fit_F(A[nboot],B[nboot],C[nboot],D[nboot],ml_phys[nboot],0)/fun_fit_F(A[nboot],B[nboot],C[nboot],D[nboot],ml[r][nboot],0);
+	    {
+	      dM2Pi_estr_ml.data[ib].data[iboot]=dM2Pi[r][iboot]*
+		fun_fit(A[nboot],B[nboot],C[nboot],D[nboot],ml_phys[nboot],ml_phys[nboot],0)/
+		fun_fit(A[nboot],B[nboot],C[nboot],D[nboot],ml[r][nboot],ml[r][nboot],0);
+	      dM2K_estr_ml.data[ib].data[iboot]=dM2Pi[r][iboot]*
+		fun_fit(A[nboot],B[nboot],C[nboot],D[nboot],ml_phys[nboot],ms_phys[nboot],0)/
+		fun_fit(A[nboot],B[nboot],C[nboot],D[nboot],ml[r][nboot],ms_phys[nboot],0);
+	    }
 	}
     }
   
   //chiral and continuum
-  cout<<"F = "<<F_chir_cont<<" GeV"<<endl;
+  cout<<"dM2Pi = "<<smart_print(dM2Pi_chir_cont*1e6)<<" MeV^2, physical: 1261 MeV^2"<<endl;
+  cout<<"dM2K = "<<smart_print(dM2K_chir_cont*1e6)<<" MeV^2, \"physical(eps=0.7)\": 2000 MeV^2"<<endl;
   cout<<endl;
   
-  par_res_fit_F=bvec(4,nboot,njack);
+  //plots
+  par_res_fit=bvec(4,nboot,njack);
   
-  par_res_fit_F.data[0]=A;
-  par_res_fit_F.data[1]=B;
-  par_res_fit_F.data[2]=C;
-  par_res_fit_F.data[3]=D;
+  par_res_fit.data[0]=A;
+  par_res_fit.data[1]=B;
+  par_res_fit.data[2]=C;
+  par_res_fit.data[3]=D;
   
   const char tag_ml[1024]="m\\sl\\N\\S\\oMS\\O,2GeV\\N (GeV)";
   const char tag_a2[1024]="a\\S2\\N (fm)";
   double lat_med_fm[4]={lat[0].med()*hc,lat[1].med()*hc,lat[2].med()*hc,lat[3].med()*hc};
 
-  bvec corr(nens,nboot,njack);
+  char dM2Pi_label[]={"\\xD\\0M\\S2\\N\\s\\xp\\N\\0 (GeV\\S2\\N)"};
+  char dM2K_label[]={"\\xD\\0M\\S2\\N\\sK\\N (GeV\\S2\\N)"};
+  char eps_gam_label[]={"\\xe\\0\\s\\xg"};
+  
+  //compute the corrections
+  bvec corr_dM2Pi(nens,nboot,njack),corr_dM2K(nens,nboot,njack);
   for(int iens=0;iens<nens;iens++)
     {
       for(int iboot=0;iboot<nboot+1;iboot++)
-	corr[iens].data[iboot]=fin_inf_diff(A[iboot],iens,lat[ibeta[iens]][iboot]);
+	{
+	  corr_dM2Pi[iens].data[iboot]=fin_inf_diff(A[iboot],iens,MPi[iens][iboot],fun_fit(A[iboot],B[iboot],C[iboot],D[iboot],ml[iens][iboot],ml[iens][iboot],lat[ibeta[iens]][iboot]),0);
+	  corr_dM2K[iens].data[iboot]=fin_inf_diff(A[iboot],iens,MK[iens][iboot],fun_fit(A[iboot],B[iboot],C[iboot],D[iboot],ml[iens][iboot],ms_phys[iboot],lat[ibeta[iens]][iboot]),1);
+	}
       
-      F[iens]-=corr[iens];
-      cout<<iens<<" "<<corr[iens]<<endl;
+      cout<<iens<<" corr_Pi: "<<smart_print(corr_dM2Pi[iens])<<", corr_K: "<<smart_print(corr_dM2K[iens])<<endl;
     }
   
-  plot_funz_ml("F_funz_ml.xmg",meson_label,tag_ml,meson_label,ml,F,par_res_fit_F,ml_phys.med(),fun_fit_F,F_chir_cont);
-  plot_funz_a2("F_funz_a2.xmg",meson_label,tag_a2,meson_label,lat_med_fm,F_estr_ml,par_res_fit_F,fun_fit_F,F_chir_cont);
+  plot_funz_ml("dM2Pi_funz_ml.xmg",dM2Pi_label,tag_ml,dM2Pi_label,ml,dM2Pi,corr_dM2Pi,par_res_fit,ml_phys.med(),dM2Pi_chir_cont,0);
+  plot_funz_a2("dM2Pi_funz_a2.xmg",dM2Pi_label,tag_a2,dM2Pi_label,lat_med_fm,dM2Pi_estr_ml,par_res_fit,dM2Pi_chir_cont,0);
+    
+  plot_funz_ml("dM2K_funz_ml.xmg",dM2K_label,tag_ml,dM2K_label,ml,dM2K,corr_dM2K,par_res_fit,ml_phys.med(),dM2K_chir_cont,1);
+  plot_funz_a2("dM2K_funz_a2.xmg",dM2K_label,tag_a2,dM2K_label,lat_med_fm,dM2K_estr_ml,par_res_fit,dM2K_chir_cont,1);
 
-  F_chir_cont.write_to_binfile("results");
+  plot_funz_ml("eps_gam.xmg",eps_gam_label,tag_ml,"",ml,eps_gam,corr_dM2Pi*0,par_res_fit,ml_phys.med(),eps_gam_chir_cont,2);
+
+  //write results  
+  dM2Pi_chir_cont.write_to_binfile("result_dM2Pi");
+  dM2K_chir_cont.write_to_binfile("result_dM2K");
+
   
   return 0;
 }

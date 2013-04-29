@@ -479,34 +479,41 @@ VTYPE VTYPE::shifted(int am)
   return a;
 }  
 
-void write_constant_fit_plot(const char *path,VTYPE in,TYPE y,int tin,int tfin)
+string write_constant_fit_plot(VTYPE in,TYPE y,int tin,int tfin,int iset=0)
 {
+  ostringstream out;
   double ym=y.med(),dy=y.err();
-  ofstream out(path);
-  out<<"@page size 800,600"<<endl;
   //error of the line
-  out<<"@s0 line type 1"<<endl;      
-  out<<"@s0 line color 7"<<endl;
-  out<<"@s0 fill color 7"<<endl;
-  out<<"@s0 fill type 1"<<endl;
+  out<<"@s"<<iset+0<<" line type 1"<<endl;      
+  out<<"@s"<<iset+0<<" line color "<<iset+1<<endl;
+  out<<"@s"<<iset+0<<" fill color "<<iset+7<<endl;
+  out<<"@s"<<iset+0<<" fill type 1"<<endl;
   out<<"@type xy"<<endl;      
   out<<tin<<" "<<ym-dy<<endl<<tfin<<" "<<ym-dy<<endl;
   out<<tfin<<" "<<ym+dy<<endl<<tin<<" "<<ym+dy<<endl;
   out<<tin<<" "<<ym-dy<<endl;
   out<<"&"<<endl;
   //central line
-  out<<"@s1 line color 1"<<endl;
+  out<<"@s"<<iset+1<<" line color "<<iset+1<<endl;
   out<<"@type xy"<<endl;      
   out<<tin<<" "<<ym<<endl<<tfin<<" "<<ym<<endl;
   //plot the original data with error  
   out<<"&"<<endl;
   out<<"@type xydy"<<endl;      
-  out<<"@s2 line type 0"<<endl;      
-  out<<"@s2 symbol color 1"<<endl;
-  out<<"@s2 errorbar color 1"<<endl;
-  out<<"@s2 symbol 1"<<endl;
+  out<<"@s"<<iset+2<<" line type 0"<<endl;      
+  out<<"@s"<<iset+2<<" symbol color "<<iset+1<<endl;
+  out<<"@s"<<iset+2<<" errorbar color "<<iset+1<<endl;
+  out<<"@s"<<iset+2<<" symbol "<<iset+1<<endl;
   out<<in;
   out<<"&"<<endl;
+  
+  return out.str();
+}
+void write_constant_fit_plot(const char *path,VTYPE in,TYPE y,int tin,int tfin,int iset=0)
+{
+  ofstream out(path);
+  out<<"@page size 800,600"<<endl;
+  out<<write_constant_fit_plot(in,y,tin,tfin,iset);
   out.close();
 }
 
