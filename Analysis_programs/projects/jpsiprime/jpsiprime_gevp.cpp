@@ -3,12 +3,12 @@
 const int deb=0;
 
 const int njacks=16;
-int T;
-int L;
+int T,TH,L;
 double glbl_coeff;
-int parity;
+int sign[100];
+int parity[100];
 int nlevls;
-int nr;
+int nr,only_charged;
 int nmass1,nmass2;
 int ntheta1,ntheta2;
 int im1,im2;
@@ -21,7 +21,10 @@ template<class to> to two(to Z1,to Z2,to M,int t)
 {return Z1*Z2*exp(-M*L)*cosh(M*(L-t))/M;}
 
 int icombo(int ri,int r1,int im1,int itheta1,int r2,int im2,int itheta2,int ism_so_lv,int ism_si_lv)
-{return ri+2*(r1+nr*(im1+nmass1*(itheta1+ntheta1*(r2+nr*(im2+nmass2*(itheta2+ntheta2*(ism_si_lv+nlevls_sto*ism_so_lv)))))));}
+{
+  if(!only_charged) return ri+2*(r1+nr*(im1+nmass1*(itheta1+ntheta1*(r2+nr*(im2+nmass2*(itheta2+ntheta2*(ism_si_lv+nlevls_sto*ism_so_lv)))))));
+  else return ri+2*(r1+nr*(im1+nmass1*(itheta1+ntheta1*(im2+nmass2*(itheta2+ntheta2*(ism_si_lv+nlevls_sto*ism_so_lv))))));
+}
 
 jvec load(const char *path,int im1,int itheta1,int im2,int itheta2,int ism_so_lv,int ism_si_lv)
 {
@@ -65,14 +68,13 @@ void load_raw_data(int im1,int itheta1,int im2,int itheta2,int *map,const char *
       {
 	cout<<ism_so<<" "<<ism_si<<endl;
 	jvec temp=load(corr_file_path,im1,itheta1,im2,itheta2,map[ism_so],map[ism_si]);
-	data[ism_so*nlevls+ism_si]=temp.simmetrized(parity);
+	data[ism_so*nlevls+ism_si]=sign[ism_so*nlevls+ism_si]*temp.simmetrized(parity[ism_so*nlevls+ism_si]);
 	
 	//write raw data
 	if(raw_data_path!=NULL)
 	  {
-	    raw_data<<temp<<"&"<<endl;
-	    if(parity==1) eff_mass_raw_data<<effective_mass(data[ism_so*nlevls+ism_si])<<"&"<<endl;
-	    else          eff_mass_raw_data<<aperiodic_effective_mass(data[ism_so*nlevls+ism_si])<<"&"<<endl;
+	    raw_data<<data[ism_so*nlevls+ism_si]<<"&"<<endl;
+	    eff_mass_raw_data<<effective_mass(data[ism_so*nlevls+ism_si],TH,parity[ism_so*nlevls+ism_si]==1)<<"&"<<endl;
 	  }
       }
   
@@ -96,14 +98,13 @@ int main(int narg,char **arg)
   
   //size
   read_formatted_from_file_expecting((char*)&T,fin,"%d","T");
-  L=T/2;
+  L=TH=T/2;
   
   //file path
   read_formatted_from_file_expecting(corr_file_path,fin,"%s","corr_file_path");
   
-  //read global coeff and parity
+  //read global coeff
   read_formatted_from_file_expecting((char*)&glbl_coeff,fin,"%lg","glbl_coeff");
-  read_formatted_from_file_expecting((char*)&parity,fin,"%d","parity");
   
   //read ntheta,nmass
   read_formatted_from_file_expecting((char*)&ntheta1,fin,"%d","ntheta1");
@@ -117,6 +118,7 @@ int main(int narg,char **arg)
   
   //read nr
   read_formatted_from_file_expecting((char*)&nr,fin,"%d","nr");
+  read_formatted_from_file_expecting((char*)&only_charged,fin,"%d","only_charged");
   
   //allocate nlevls-depending stuff
   read_formatted_from_file_expecting((char*)&nlevls_sto,fin,"%d","nlevls_sto");
@@ -127,6 +129,14 @@ int main(int narg,char **arg)
   //read levels to be used
   for(int ilev=0;ilev<nlevls;ilev++)
     read_formatted_from_file((char*)&(map[ilev]),fin,"%d","ilevl");
+
+  expect_string_from_file(fin,"sign_parity");
+  for(int ism_so=0;ism_so<nlevls;ism_so++)
+    for(int ism_si=0;ism_si<nlevls;ism_si++)
+      {
+	read_formatted_from_file((char*)&sign[ism_so*nlevls+ism_si],fin,"%d","sign");
+	read_formatted_from_file((char*)&parity[ism_so*nlevls+ism_si],fin,"%d","parity");
+      }
     
   //timeslice for normalization
   int tinv;
@@ -135,6 +145,11 @@ int main(int narg,char **arg)
   //timeslice for fit
   int tfit;
   read_formatted_from_file_expecting((char*)&tfit,fin,"%d","tfit");
+  
+  //interval to fit ground state
+  int tfit_ground_min,tfit_ground_max;
+  read_formatted_from_file_expecting((char*)&tfit_ground_min,fin,"%d","tfit_ground");
+  read_formatted_from_file((char*)&tfit_ground_max,fin,"%d","tfit_ground");
   
   //interval to fit first state
   int tfit_first_min,tfit_first_max;
@@ -186,32 +201,65 @@ int main(int narg,char **arg)
       cout<<endl;
     }
   
-  //write ground state
-  ofstream ground_GEVP("ground_GEVP.xmg");
-  ground_GEVP<<"@type xydy"<<endl;
-  //ground_GEVP<<effective_mass(eig[0])<<"&"<<endl;
-  ground_GEVP<<effective_mass(corr_d[0])<<"&"<<endl;
-  
   //fit first excited mass
+  jack M0=constant_fit(effective_mass(corr_d[0]),tfit_ground_min,tfit_ground_max,"ground_GEVP.xmg");
   cout<<endl<<"Ground state mass: ";
   for(int ilev=0;ilev<nlevls;ilev++) cout<<map[ilev]<<" ";
-  cout<<"\t"<<constant_fit(effective_mass(corr_d[0]),11,20)<<endl;
+  cout<<"\t"<<M0<<endl;
   
   //fit first excited mass
   if(nlevls>1)
     {
+      jack M1=constant_fit(effective_mass(corr_d[1]),tfit_first_min,tfit_first_max,"first_GEVP.xmg");
       cout<<endl<<"First excited mass: ";
       for(int ilev=0;ilev<nlevls;ilev++) cout<<map[ilev]<<" ";
-      cout<<"\t"<<constant_fit(effective_mass(corr_d[1]),tfit_first_min,tfit_first_max,"first_GEVP.xmg")<<endl;
+      cout<<"\t"<<M1<<endl;
+
+      cout<<"M1/M0: "<<M1/M0<<endl;
     }
   
   //second excited mass
   if(nlevls>2)
     {
+      jack M1=constant_fit(effective_mass(corr_d[2]),4,6,"second_GEVP.xmg");
       cout<<endl<<"Second excited mass: ";
       for(int ilev=0;ilev<nlevls;ilev++) cout<<map[ilev]<<" ";
-      cout<<"\t"<<constant_fit(effective_mass(corr_d[2]),4,6,"second_GEVP.xmg")<<endl;
+      cout<<"\t"<<M1<<endl;
     }
-
+  
+  ////////////////////////////////// benoit way //////////////////////////////
+  {
+    for(int t=0;t<=L;t++)
+      {
+	//find eigenvectors and eigenstates for time t
+	double diag_m[nlevls*nlevls];
+	find_diagonalizing_matrix(diag_m,tinv,t,data,nlevls);
+	
+	//left mult with transposed
+	jvec temp(nlevls*nlevls,njacks);
+	for(int ilev=0;ilev<nlevls;ilev++)
+	  for(int jlev=0;jlev<nlevls;jlev++)
+	    {
+	      temp[ilev*nlevls+jlev]=0;
+	      for(int klev=0;klev<nlevls;klev++)
+		temp[ilev*nlevls+jlev]+=diag_m[klev*nlevls+ilev]*data[klev*nlevls+jlev][t];
+	    }
+	
+	//right mult
+	for(int ilev=0;ilev<nlevls;ilev++)
+	  {
+	    corr_d[ilev][t]=0;
+	    for(int klev=0;klev<nlevls;klev++)
+	      corr_d[ilev][t]+=temp[ilev*nlevls+klev]*diag_m[klev*nlevls+ilev];
+	  }
+      }
+  
+    //write ground and excited state
+    ofstream benoit_GEVP("GEVP_benoit.xmg");
+    benoit_GEVP<<"@type xydy"<<endl;
+    benoit_GEVP<<effective_mass(corr_d[0])<<"&"<<endl;
+    benoit_GEVP<<effective_mass(corr_d[1])<<"&"<<endl;
+  }
+    
   return 0;
 }

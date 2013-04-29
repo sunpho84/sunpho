@@ -1,5 +1,111 @@
 #include <include.h>
 
+
+//fit the mass and the matrix element in SS and SL combo
+double *c_two_pts_aSL_fit[2],*e_two_pts_aSL_fit[2];
+int TH_two_pts_aSL_fit;
+int tmin_two_pts_aSL_fit[2];
+int tmax_two_pts_aSL_fit[2];
+
+double fun_two_pts_aSL_fit(double Z1,double Z2,double M,double t)
+{return Z1*Z2*exp(-M*t)/(2*M);}
+
+void ch2_two_pts_aSL_fit(int &npar,double *fuf,double &ch,double *p,int flag)
+{
+  ch=0;
+  double M=p[0];
+  double ZL=p[1];
+  double ZS=p[2];
+  
+  for(int t=tmin_two_pts_aSL_fit[0];t<=min(tmax_two_pts_aSL_fit[0],TH_two_pts_aSL_fit);t++)
+    {
+      double num=c_two_pts_aSL_fit[0][t];
+      double teo=fun_two_pts_aSL_fit(ZL,ZS,M,t);
+      double diff=num-teo;
+      double err=e_two_pts_aSL_fit[0][t];
+      double cont=sqr(diff/err);
+      ch+=cont;
+      if(flag==3) cout<<"SL, t="<<t<<", diff=("<<num<<"-"<<teo<<")="<<diff<<" err="<<err<<" cont="<<cont<<endl;
+    }
+  
+  for(int t=tmin_two_pts_aSL_fit[1];t<=min(tmax_two_pts_aSL_fit[1],TH_two_pts_aSL_fit);t++)
+    {
+      double diff=c_two_pts_aSL_fit[1][t]-fun_two_pts_aSL_fit(ZS,ZS,M,t);
+      double err=e_two_pts_aSL_fit[1][t];
+      double cont=sqr(diff/err);
+      ch+=cont;
+      if(flag==3) cout<<"SS, t="<<t<<", diff="<<diff<<" err="<<err<<" cont="<<cont<<endl;
+    }
+}
+
+void two_pts_aSL_fit(jack &M,jack &ZL,jack &ZS,jvec corrSL,jvec corrSS,int tminL,int tmaxL,int tminS,int tmaxS,const char *path1=NULL,const char *path2=NULL)
+{
+  jvec ecorrSL=aperiodic_effective_mass(corrSL);
+  jvec ecorrSS=aperiodic_effective_mass(corrSS);
+  
+  jack ML=constant_fit(ecorrSL,tminL,tmaxL,NULL);
+  //jack MS=constant_fit(ecorrSS,tminS,tmaxS,NULL);
+  M=ML;//jack_weighted_average(ML,MS);
+  jvec tempSL(corrSS.nel,corrSS.njack),tempSS(corrSS.nel,corrSS.njack);
+  int TH=tempSS.nel-1;
+  for(int t=0;t<=TH;t++)
+    {
+      tempSL[t]=corrSL[t]/exp(-M*t)/2;
+      tempSS[t]=corrSS[t]/exp(-M*t)/2;
+    }
+  
+  ZS=sqrt(constant_fit(tempSS,tminS,tmaxS,NULL));
+  ZL=constant_fit(tempSL,tminL,tmaxL,NULL)/ZS;
+  
+  TMinuit minu;
+  minu.SetPrintLevel(-1);
+  minu.SetFCN(ch2_two_pts_aSL_fit);
+  minu.DefineParameter(1,"ZL",ZL.med(),0.001,0,0);
+  minu.DefineParameter(2,"ZS",ZS.med(),0.001,0,0);
+  
+  int njack=ML.njack;
+  c_two_pts_aSL_fit[0]=new double[TH+1];
+  c_two_pts_aSL_fit[1]=new double[TH+1];
+  e_two_pts_aSL_fit[0]=new double[TH+1];
+  e_two_pts_aSL_fit[1]=new double[TH+1];
+  
+  TH_two_pts_aSL_fit=TH;
+  tmin_two_pts_aSL_fit[0]=tminL;
+  tmin_two_pts_aSL_fit[1]=tminS;
+  tmax_two_pts_aSL_fit[0]=tmaxL;
+  tmax_two_pts_aSL_fit[1]=tmaxS;
+  
+  for(int iel=0;iel<=TH;iel++)
+    {
+      e_two_pts_aSL_fit[0][iel]=corrSL[iel].err();
+      e_two_pts_aSL_fit[1][iel]=corrSS[iel].err();
+    }
+  
+  for(int ijack_fit=0;ijack_fit<=njack;ijack_fit++)
+    {
+      minu.DefineParameter(0,"M",M[ijack_fit],0.001,0,0);
+      minu.FixParameter(0);
+      for(int iel=0;iel<=TH;iel++)
+	{
+	  c_two_pts_aSL_fit[0][iel]=corrSL[iel][ijack_fit];
+	  c_two_pts_aSL_fit[1][iel]=corrSS[iel][ijack_fit];
+	}
+      minu.Migrad();
+      double dum;
+      minu.GetParameter(0,M.data[ijack_fit],dum);
+      minu.GetParameter(1,ZL.data[ijack_fit],dum);
+      minu.GetParameter(2,ZS.data[ijack_fit],dum);
+    }
+  
+  double ch2,grad[3],par[3]={M[njack],ZL[njack],ZS[njack]};
+  minu.Eval(3,grad,ch2,par,3);
+  cout<<"ML: "<<ML<<", ch2: "<<ch2<<endl;
+  
+  if(path1!=NULL) write_constant_fit_plot(path1,ecorrSL,M,tminL,tmaxL);
+  if(path2!=NULL) write_constant_fit_plot(path2,ecorrSS,M,tminS,tmaxS);
+}
+
+
 #define REAL 0
 #define IMAG 1
 
@@ -60,29 +166,34 @@ int main()
   read_input();
   
   //load
-  jvec C_05_00=load_2pts_LR(corr_name, ispec,imass, "05_00",0).simmetrized(1);
-  jvec C_05_05=load_2pts_LR(corr_name, ispec,imass, "05_05",0).simmetrized(1);
+  jvec C_25_00=load_2pts_LR(corr_name, ispec,imass, "25_00",0).simmetrized(1);
+  jvec C_25_25=load_2pts_LR(corr_name, ispec,imass, "25_25",0).simmetrized(1);
 
   {
     ofstream corr("corr.xmg");
     corr<<"@type xydy"<<endl;
-    corr<<C_05_00<<endl;
+    corr<<C_25_00<<endl;
     corr<<"&"<<endl;
-    corr<<C_05_05<<endl;
+    corr<<C_25_25<<endl;
     corr<<"&"<<endl;
   }
   
   {
     ofstream eff_mass("eff_mass.xmg");
     eff_mass<<"@type xydy"<<endl;
-    eff_mass<<aperiodic_effective_mass(C_05_00).subset(1,20)<<endl;
+    eff_mass<<aperiodic_effective_mass(C_25_00).subset(1,20)<<endl;
     eff_mass<<"&"<<endl;
-    eff_mass<<aperiodic_effective_mass(C_05_05).subset(1,20)<<endl;
+    eff_mass<<aperiodic_effective_mass(C_25_25).subset(1,20)<<endl;
     eff_mass<<"&"<<endl;
   }
   
-  cout<<constant_fit(aperiodic_effective_mass(C_05_00).subset(1,20),8,12,"temp_05_00.xmg")<<endl;
-  cout<<constant_fit(aperiodic_effective_mass(C_05_05).subset(1,20),8,12,"temp_05_05.xmg")<<endl;
+  int tmin=9,tmax=12;
+  jack M,ZL,ZS;
+  two_pts_aSL_fit(M,ZL,ZS,C_25_00,C_25_25,tmin,tmax,tmin,tmax,"temp_25_00.xmg","temp_25_25.xmg");
+  
+  cout<<"M: "<<smart_print(M)<<endl;
+  cout<<"ZS: "<<smart_print(ZS)<<endl;
+  cout<<"ZL: "<<smart_print(ZL)<<endl;
   
   return 0;
 }

@@ -4,7 +4,7 @@ const int njacks=16;
 const int T=48;
 const int L=24;
 const int nlevls=2;
-const int nlevls_sto=7;
+const int nlevls_sto=2;
 jvec data[nlevls][nlevls];
 
 template<class to> to two(to Z1,to Z2,to M,int t)
@@ -15,6 +15,7 @@ jvec load(const char *path,int ism_so_lv,int ism_si_lv)
   jvec a(T,njacks);
   jvec b(T,njacks);
   
+  //load the charged corrs
   a.load(path,0+2*(0+4*(ism_si_lv+nlevls_sto*ism_so_lv)));
   b.load(path,0+2*(3+4*(ism_si_lv+nlevls_sto*ism_so_lv)));
   
@@ -34,7 +35,7 @@ jack find_tmin(int *tmin,jvec *buf)
 	  {
 	    jvec corr=effective_mass(buf[ism_so*nlevls+ism_si],L);
 
-	    Mcho[ism_so*nlevls+ism_si]=constant_fit(corr,ttest,L,combine("fit_choose_%02d_%02d.xmg",ism_so,ism_si).c_str());
+	    Mcho[ism_so*nlevls+ism_si]=constant_fit(corr,ttest,L,combine("plots/fit_choose_%02d_%02d.xmg",ism_so,ism_si).c_str());
 	    int n=-1;
 	    ch=0;
 	    for(int t=ttest;t<corr.nel-1;t+=2)
@@ -151,7 +152,7 @@ void fit_single_stat(jvec &Z,jack &M,jvec *buf,int *tmin)
 	int i=ism_so*nlevls+ism_si;
 	buf[i]=buf[i].subset(0,tmin[i]);
 	for(int t=0;t<tmin[i];t++)
-	buf[i][t]-=two(Z[ism_so],Z[ism_si],M,t);
+	  buf[i][t]-=two(Z[ism_so],Z[ism_si],M,t);
       }
 }
 
@@ -160,11 +161,13 @@ void estimate_M_and_Z(jack &M0,jack &M1,jvec &Z0,jvec &Z1,int *tmin1,jvec *buf)
   //first of all finds for all the combo the plateaux region for ground state
   int tmin0[nlevls*nlevls];
   M0=find_tmin(tmin0,buf);
+  cout<<"tmin first state: "<<tmin0[0]<<endl;
   //fit all
   fit_single_stat(Z0,M0,buf,tmin0);
   
   //redo
   M1=find_tmin(tmin1,buf);
+  cout<<"tmin second state: "<<tmin1[0]<<endl;
   //redo again
   jvec Zfit1(nlevls,njacks);
   fit_single_stat(Z1,M1,buf,tmin1);
@@ -255,17 +258,14 @@ void fit_M_and_Z(jvec &Z0,jvec &Z1,jack &M0,jack &M1,jvec *buf,int *tmin)
 
 int main()
 {
-  ofstream out("eff.xmg");
-  out<<"@type xydy"<<endl;
-
   //buffer where to copy the data
   jvec buf[nlevls*nlevls];
   
   //load data
   for(int ism_so=0;ism_so<nlevls;ism_so++)
     for(int ism_si=0;ism_si<nlevls;ism_si++)
-      buf[ism_so*nlevls+ism_si]=data[ism_so][ism_si]=load("2pts_P5P5",ism_so,ism_si).simmetrized(1);
-  
+      buf[ism_so*nlevls+ism_si]=data[ism_so][ism_si]=load("correlators/2pts_P5P5",ism_so,ism_si).simmetrized(1);
+
   //perform the estimate of Z,M and tmin
   int tmin[nlevls*nlevls];
   jvec Z0(nlevls,njacks),Z1(nlevls,njacks);

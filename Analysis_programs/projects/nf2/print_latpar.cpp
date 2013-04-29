@@ -36,6 +36,7 @@ int main()
   
   cout<<A<<endl;
   cout<<"db0: "<<db0<<endl;
+  //cout<<"r0: "<<r0<<endl;
   cout<<"f0:"<<f0<<endl;
   
   boot arg=4*M_PI*f0;
@@ -55,6 +56,10 @@ int main()
     t<<iboot+1<<"\t\t"<<db0[iboot]<<"\t\t"<<f0[iboot]<<endl;
   t<<"med\t\t"<<db0.med()<<"\t\t"<<f0.med()<<endl;
   t<<"err\t\t"<<db0.err()<<"\t"<<f0.err()<<endl;
+  
+  cout<<db0<<endl;
+  cout<<f0<<endl;
+  cout<<"ccond: ["<<smart_print(pow(db0*f0*f0/4,1.0/3)*1000)<<" MeV]^3"<<endl;
   
   return 0;
 }

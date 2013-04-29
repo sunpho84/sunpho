@@ -111,14 +111,17 @@ int main()
   
   //compute D mass and Z
   jack M_P5,ZL_P5,ZS_P5;
-  two_pts_SL_fit(M_P5,ZL_P5,ZS_P5,P5P5_sl.simmetrized(1),P5P5_ss.simmetrized(1),tminL_P,tmaxL_P,tminS_P,tmaxS_P,"MSL_P5.xmg","MSS_P5.xmg");
-  cout<<"D mass: "<<M_P5<<", Z: "<<ZL_P5<<endl;
+  two_pts_SL_fit(M_P5,ZL_P5,ZS_P5,P5P5_sl.simmetrized(1),P5P5_ss.simmetrized(1),tminL_P,tmaxL_P,tminS_P,tmaxS_P,
+		 "MSL_P5.xmg","MSS_P5.xmg");
+  cout<<"PSEUDO D mass: "<<M_P5<<", Z: "<<ZL_P5<<endl;
   
   //compute D* mass and Z
   jack M_VK,ZL_VK,ZS_VK;
-  two_pts_SL_fit(M_VK,ZL_VK,ZS_VK,VKVK_sl.simmetrized(1),VKVK_ss.simmetrized(1),tminL_V,tmaxL_V,tminS_V,tmaxS_V,"MSL_VK.xmg","MSS_VK.xmg");
+  two_pts_SL_fit(M_VK,ZL_VK,ZS_VK,VKVK_sl.simmetrized(1),VKVK_ss.simmetrized(1),tminL_V,tmaxL_V,tminS_V,tmaxS_V,
+		 "MSL_VK.xmg","MSS_VK.xmg");
+  cout<<"VECT D mass: "<<M_VK<<", Z: "<<ZL_VK<<endl;
   
-  //reconstuct moving D mass
+  //reconstruct moving D mass
   double qi=M_PI*theta/L;
   double q2=3*sqr(qi);
   jack Eth_P5=sqrt(sqr(M_P5)+q2);

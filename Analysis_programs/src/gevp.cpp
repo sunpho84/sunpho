@@ -11,8 +11,6 @@ jvec invert_square_root(int t,jvec *data,int nlevls)
   for(int ijack=0;ijack<=njacks;ijack++)
     if(t>=0&&t<=L)
       {
-	if(ijack==0) cout<<"Inverting C at time: "<<t<<endl;
-
 	TMatrixD toi(nlevls,nlevls);
 	
 	//upload
@@ -123,7 +121,7 @@ void find_eigens(int t,jvec &eig_va,jvec &eig_ve,jvec &inv,jvec *data,int nlevls
     }
 }
 //find the matrix that diagonalize the corr
-void find_diagonalizing_matrix(double *diag_m,int tinv,int tfit,jvec *data,int nlevls)
+void find_diagonalizing_matrix(double *diag_m,int tinv,int t,jvec *data,int nlevls)
 {
   int njacks=data[0].njack;
   
@@ -135,7 +133,7 @@ void find_diagonalizing_matrix(double *diag_m,int tinv,int tfit,jvec *data,int n
   
   //allocate eigenvectors for each slice and diagonalize
   jvec eig_ve(nlevls*nlevls,njacks);
-  find_eigens(tfit,eig_va,eig_ve,inv,data,nlevls);
+  find_eigens(t,eig_va,eig_ve,inv,data,nlevls);
   
   //take the product of inv*eig_ve, which is the matrix 
   //which diagonalize the original corr matrix
