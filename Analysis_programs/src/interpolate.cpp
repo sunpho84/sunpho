@@ -3,7 +3,7 @@
 #define debug 1
 
 //return the three coefficient of the parabola passing for the three passed points
-void parabolic_spline(double &a,double &b,double &c,double *xin,double *yd)
+template <class T> void parabolic_spline(T &a,T &b,T &c,double *xin,T *yd)
 {
   double ya[3],yb[3],yc[3];
   for(int i=0;i<3;i++)
@@ -14,9 +14,9 @@ void parabolic_spline(double &a,double &b,double &c,double *xin,double *yd)
     }
   
   double D=det3(ya,yb,yc);
-  double Da=det3(yd,yb,yc);
-  double Db=det3(ya,yd,yc);
-  double Dc=det3(ya,yb,yd);
+  T Da=det3(yd,yb,yc);
+  T Db=det3(ya,yd,yc);
+  T Dc=det3(ya,yb,yd);
   
   a=Da/D;
   b=Db/D;

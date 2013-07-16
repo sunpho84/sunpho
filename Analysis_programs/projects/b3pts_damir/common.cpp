@@ -121,7 +121,8 @@ void compute_momentums(jack &P2,jack &P0,double &PK,jack &Q2,jack &Q0,double &QK
   
   //we are describing the process B->D
   double PB=0;
-  double PD=momentum(th);
+  double PD=momentum(th); //we do not need to put a minus
+  //because B->D(th) = D(th)->B
   
   PK=PB+PD;
   QK=PB-PD;
@@ -135,7 +136,8 @@ void read_set_pars(const char *path)
   FILE *set_pars_file=open_file(path,"r");
   
   read_formatted_from_file_expecting((char*)&T,set_pars_file,"%d","T");
-  TH=tsep=T/2;
+  TH=T/2;
+  read_formatted_from_file_expecting((char*)&tsep,set_pars_file,"%d","TSep");
   
   //beta
   read_formatted_from_file_expecting((char*)&ibeta,set_pars_file,"%d","ibeta");

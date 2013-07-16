@@ -25,9 +25,8 @@ jvec load_3pts(info_3pts &info,combo_3pts combo)
   
   //correlators do not need to be changed, even if we are looking at mirror process
   //we checked performed explicitely another computation  
-  if(info.pa!=UNC) return a.simmetrized(map_pa[info.pa]);
-  
-  else return a;
+  if(info.pa!=UNC && tsep==TH) return a.simmetrized(map_pa[info.pa]);
+  else return a.subset(0,tsep+1);
 }
 
 void read_input(const char *path)
@@ -62,6 +61,7 @@ int main()
   read_set_pars("../data_pars");
   read_input("analysis_pars");
   
+  
   ////////////////////////// P5 Kaon /////////////////////
   
   jack M_K_P5,ZL_K_P5,ZS_K_P5;
@@ -79,8 +79,8 @@ int main()
     ZL_K_P5.write_to_binfile("masses_Z/Z_K_P5");
 
     cout<<"MK "<<M_K_P5<<endl;
-    cout<<"ZL2K "<<sqr(ZL_K_P5)<<endl;
-    cout<<"ZS2K "<<sqr(ZS_K_P5)<<endl;
+    cout<<"ZL2K "<<sqr(ZL_K_P5)<<", ZLK "<<ZL_K_P5<<endl;
+    cout<<"ZS2K "<<sqr(ZS_K_P5)<<", ZSK "<<ZS_K_P5<<endl;
   }
     
   /////////////////////////// VK Kaon /////////////////////
@@ -114,7 +114,8 @@ int main()
     jvec H_P5_corr_SS=load_2pts("../CORRELATORS/2pts_P5P5_30_30",RE,H_S_2PTS[im_S1],L_S_2PTS[im_spec]).simmetrized(1);
     
     //fit H
-    two_pts_SL_fit(M_H_P5,ZL_H_P5,ZS_H_P5,H_P5_corr_SL,H_P5_corr_SS,tmin_H,tmax_H,tmin_H,tmax_H,"masses_Z/plots/M_H_P5_fit.xmg");
+    two_pts_SL_fit(M_H_P5,ZL_H_P5,ZS_H_P5,H_P5_corr_SL,H_P5_corr_SS,tmin_H,tmax_H,tmin_H,tmax_H,
+		   "masses_Z/plots/M_H_P5_fit_SL.xmg","masses_Z/plots/M_H_P5_fit_SS.xmg");
     
     //write the mass and Z
     M_H_P5.write_to_binfile("masses_Z/M_H_P5");
@@ -126,7 +127,7 @@ int main()
   }
   
   //////////////////////////////////// P5 {AK,BK,P5,VJ,TJ} VK ////////////////////////////////
-
+  
   //compute matrix elements
   for(int i_ME=0;i_ME<n_ME;i_ME++)
     {
@@ -144,7 +145,7 @@ int main()
       
       //loop over theta
       jvec ME(nth_S0,njack);
-      for(int ith=0;ith<5/*nth_S0*/;ith++)
+      for(int ith=0;ith<nth_S0;ith++)
 	{
 	  //find the combo
 	  combo_3pts combo(SPEC[im_spec],L_S0_3PTS[im_S0],H_S1_3PTS[im_S1],ith);
@@ -152,29 +153,30 @@ int main()
 	  //define the temporal dependance
 	  //jack E_K_PV=latt_en((info.name[2]=='P')?M_K_P5:M_K_VK,th_S0[ith]);
 	  jack E_K_PV=latt_en(M_K_P5,th_S0[ith]);
-	  jvec dT(TH+1,njack),dT_doub(T,njack);
-	  for(int t=0;t<=TH;t++)
-	    //dT[t]=dT_doub[t]=((info.name[2]=='P')?ZS_K_P5:ZS_K_VK)*ZS_H_P5/(2*E_K_PV*2*M_H_P5)*exp(-E_K_PV*t)*exp(-M_H_P5*(tsep-t));
-	    dT[t]=dT_doub[t]=(ZS_K_P5*ZS_H_P5)/(2*E_K_PV*2*M_H_P5)*exp(-E_K_PV*t)*exp(-M_H_P5*(tsep-t));
-	  
-	  //simmetrize
-	  for(int t=TH;t<T;t++) dT_doub[t]=dT_doub[T-t];
+	  jvec dT(tsep+1,njack);
+	  for(int t=0;t<=tsep;t++)
+	    dT[t]=(ZS_K_P5*ZS_H_P5)/(2*E_K_PV*2*M_H_P5)*exp(-E_K_PV*t)*exp(-M_H_P5*(tsep-t));
 	  
 	  //load the corr and divide it by dT
 	  jvec H_P5_ME_K_PV_corr=load_3pts(info,combo);
 	  
-	  if(info.pa==UNC) H_P5_ME_K_PV_corr/=dT_doub;
-	  else H_P5_ME_K_PV_corr/=dT;
-	  
+	  H_P5_ME_K_PV_corr/=dT;
+
 	  //store "0" for TK
 	  if(i_ME==3)
-	    if(ith==0) null_TKP5=H_P5_ME_K_PV_corr;
-	    else H_P5_ME_K_PV_corr-=null_TKP5;
-
+	    {
+	      if(ith==0) null_TKP5=H_P5_ME_K_PV_corr;
+	      else H_P5_ME_K_PV_corr-=null_TKP5;
+	    }
+	  
 	  //same for VK
 	  if(i_ME==1)
-	    if(ith==0) null_VKP5=H_P5_ME_K_PV_corr;
-	    else H_P5_ME_K_PV_corr-=null_VKP5;
+	    {
+	      H_P5_ME_K_PV_corr.print_to_file(combine("matrix_elements/plots/raw_VK%d.xmg",ith).c_str());
+	      
+	      if(ith==0) null_VKP5=H_P5_ME_K_PV_corr;
+	      else H_P5_ME_K_PV_corr-=null_VKP5;
+	    }
 	  
 	  //fit ///WARNING the interval 2 is used only for TK larger than theta_lim
 	  int tE,TE;
@@ -190,6 +192,43 @@ int main()
       //write 
       ME.write_to_binfile(combine("matrix_elements/%s",spaced_name).c_str());
     }
+  
+  //divita ratios
+  {
+    ofstream out_1("matrix_elements/plots/divita_ratio1.xmg");
+    ofstream out_2("matrix_elements/plots/divita_ratio2.xmg");
+    out_1<<"@type xydy"<<endl;
+    out_2<<"@type xydy"<<endl;
+    jvec rat_1(nth_S0,njack);
+    jvec rat_2(nth_S0,njack);
+    for(int ith=0;ith<nth_S0;ith++)
+	{
+	  //find the combo
+	  int iVK=1,iV0=2;
+	  combo_3pts combo_th(SPEC[im_spec],L_S0_3PTS[im_S0],H_S1_3PTS[im_S1],ith);
+	  combo_3pts combo_0(SPEC[im_spec],L_S0_3PTS[im_S0],H_S1_3PTS[im_S1],0);
+	  
+	  //compute deltaE
+	  jack E_K_P5=latt_en(M_K_P5,th_S0[ith]);
+	  jack D_K_P5=E_K_P5-M_K_P5;
+
+	  //load and take note
+	  jvec rat_1_corr=load_3pts(info_ME[iV0],combo_th)/load_3pts(info_ME[iV0],combo_0);
+	  for(int t=0;t<=tsep;t++) rat_1_corr[t]*=exp(D_K_P5*t)*E_K_P5/M_K_P5;
+	  rat_1[ith]=constant_fit(rat_1_corr,tmin_ME,tmax_ME);
+	  
+	  //load and take note
+	  jvec rat_2_corr=load_3pts(info_ME[iVK],combo_th)/load_3pts(info_ME[iV0],combo_th)-
+	    load_3pts(info_ME[iVK],combo_0)/load_3pts(info_ME[iV0],combo_0);
+	  rat_2[ith]=constant_fit(rat_2_corr,tmin_ME,tmax_ME);
+
+          out_1<<"@type xydy\n"<<rat_1_corr<<"&\n@type xy\n"<<write_constant_with_error(rat_1[ith],tmin_ME,tmax_ME)<<"&\n";
+          out_2<<"@type xydy\n"<<rat_2_corr<<"&\n@type xy\n"<<write_constant_with_error(rat_2[ith],tmin_ME,tmax_ME)<<"&\n";
+	}
+    
+    rat_1.write_to_binfile("matrix_elements/divita_ratio_1");
+    rat_2.write_to_binfile("matrix_elements/divita_ratio_2");
+  }
   
   return 0;
 }

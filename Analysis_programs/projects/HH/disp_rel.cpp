@@ -5,6 +5,7 @@
 using namespace std;
 
 int nmass,ntheta;
+  int ibeta;
 int njack;
 double *mass;
 double *theta;
@@ -21,6 +22,8 @@ int nc_fit;
 jack fixed_A;
 
 int *use;
+
+double lat_med[4]={0.486508,0.422773,0.335339,0.268402};
 
 double parab(double a,double b,double c,double x)
 {
@@ -140,7 +143,6 @@ void read_ensemble_pars(const char *data_list_file)
   read_formatted_from_file_expecting(base_path,input,"%s","base_path");
   read_formatted_from_file_expecting((char*)&T,input,"%d","T");
   read_formatted_from_file_expecting((char*)&njack,input,"%d","njack");
-  int ibeta;
   read_formatted_from_file_expecting((char*)&ibeta,input,"%d","Beta");
   read_formatted_from_file_expecting((char*)&nmass,input,"%d","nmass");
   expect_string_from_file(input,"mass_list");
@@ -295,6 +297,110 @@ int main(int narg,char **arg)
 	  static int nw=0;
 	  if((nw++)==0) (0.5/b).write_to_binfile("M1_phys");
 	  else (0.5/b).append_to_binfile("M1_phys");
+	}
+	
+	////////////////////// check continuum //////////////////////////////////
+	{
+	  double a2=sqr(lat_med[ibeta]);
+	  
+	  ofstream out(combine("continuum_disp_rel_%02d_%02d.xmg",im1,im2).c_str());
+	  out<<"@type xydy"<<endl;
+	  out<<"@s0 line type 0"<<endl;      
+	  out<<"@s0 symbol color 2"<<endl;
+	  out<<"@s0 errorbar color 2"<<endl;
+	  out<<"@s0 symbol 1"<<endl;
+	  
+	  double x[ntheta*ntheta];
+	  jvec y(ntheta*ntheta,njack);
+	  int ic=0;
+	  for(int ith1=0;ith1<ntheta;ith1++)
+	    for(int ith2=0;ith2<ntheta;ith2++)
+	      {
+		double qi=(theta[ith1]-theta[ith2])*M_PI/L;
+		double q2=3*qi*qi;
+		
+		cout<<"th1:"<<theta[ith1]<<" th2:"<<theta[ith2]<<endl;
+		
+		x[ic]=q2;
+		y[ic]=(sqr(aM[icombo_int(ith1,ith2,im1,im2)])-sqr(aM[icombo_int(0,0,im1,im2)]));
+		
+		out<<x[ic]/a2<<" "<<y[ic]/a2<<endl;
+		
+		ic++;
+	      }
+	  
+	  out<<"&"<<endl<<"@type xy"<<endl;
+	  for(double q2=0;q2<1.2;q2+=0.01)
+	    {
+	      double a2q2=q2*a2;
+	      double qi=sqrt(a2q2/3),lq=4*3*sqr(sin(qi/2));
+	      double m=aM[icombo_int(0,0,im1,im2)].med();
+	      double lm=4*sqr(sinh(m/2));
+	      double le=lm+lq;
+	      double e=2*asinh(sqrt(le/4));
+	      out<<q2<<" "<<(e*e-m*m)/a2<<endl;
+	    }
+	  
+	  out<<"&"<<endl<<"@type xy"<<endl;
+	  for(double q2=0;q2<1.2;q2+=0.01)
+	    {
+	      double a2q2=q2*a2;
+	      double m2=sqr(aM[icombo_int(0,0,im1,im2)].med());
+	      double e2=m2+a2q2;
+	      out<<q2<<" "<<(e2-m2)/a2<<endl;
+	    }
+	  
+	  out.close();
+	}
+
+	{
+	  ofstream out(combine("speed_of_light_%02d_%02d.xmg",im1,im2).c_str());
+	  out<<"@type xy"<<endl;
+	  out<<"0 1"<<endl;
+	  out<<"0.2 1"<<endl;
+	  out<<"&"<<endl;
+	  
+	  out<<"@type xydy"<<endl;
+	  double x[ntheta*ntheta];
+	  jvec y(ntheta*ntheta,njack);
+	  int ic=0;
+	  for(int ith1=0;ith1<ntheta;ith1++)
+	    for(int ith2=0;ith2<ntheta;ith2++)
+	      {
+		double qi=(theta[ith1]-theta[ith2])*M_PI/L;
+		double q2=3*qi*qi;
+		
+		cout<<"th1:"<<theta[ith1]<<" th2:"<<theta[ith2]<<endl;
+		
+		x[ic]=q2;
+		y[ic]=(sqr(aM[icombo_int(ith1,ith2,im1,im2)])-sqr(aM[icombo_int(0,0,im1,im2)]));
+		
+		if(q2)
+		  out<<x[ic]<<" "<<y[ic]/q2<<endl;
+		
+		ic++;
+	      }
+	  out<<"&"<<endl;
+	  out<<"@type xydy"<<endl;
+	  ic=0;
+	  for(int ith1=0;ith1<ntheta;ith1++)
+	    for(int ith2=0;ith2<ntheta;ith2++)
+	      {
+		double qi=(theta[ith1]-theta[ith2])*M_PI/L;
+		double q2=3*qi*qi;
+		
+		cout<<"th1:"<<theta[ith1]<<" th2:"<<theta[ith2]<<endl;
+		
+		x[ic]=4*3*sqr(sin(qi/2));
+		y[ic]=4*sqr(sinh(aM[icombo_int(ith1,ith2,im1,im2)]/2));
+		
+		if(q2)
+		  out<<x[ic]<<" "<<(y[ic]-y[0])/x[ic]<<endl;
+		
+		ic++;
+	      }
+	  
+	  out.close();
 	}
       }
   

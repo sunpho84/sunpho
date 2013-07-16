@@ -17,9 +17,9 @@ string combine(const char *format,...)
   return string(buffer);
 }
 
-double det3(double *a,double *b,double *c)
+template<class T> T det3(T *a,T *b,T *c)
 {
-  double d;
+  T d;
   d= a[0]*(b[1]*c[2]-b[2]*c[1]);
   d+=b[0]*(c[1]*a[2]-c[2]*a[1]);
   d+=c[0]*(a[1]*b[2]-a[2]*b[1]);
