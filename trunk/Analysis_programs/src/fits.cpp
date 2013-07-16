@@ -94,21 +94,22 @@ jvec aperiodic_effective_mass(const jvec a)
 }
 
 //fit the mass
-jack mass_fit(jvec corr,int tmin,int tmax,const char *path=NULL)
+jack mass_fit(jvec corr,int tmin,int tmax,const char *path=NULL,int TH=-1,int parity=1)
 {
-  jvec effe=effective_mass(corr);
+  jvec effe=effective_mass(corr,TH,parity);
   jack mass=constant_fit(effe,tmin,tmax,path);
   
   return mass;
 }
 
 //fit the mass and the matrix element
-void two_pts_fit(jack &E,jack &Z2,jvec corr,int tmin,int tmax,const char *path1=NULL,const char *path2=NULL)
+void two_pts_fit(jack &E,jack &Z2,jvec corr,int tmin,int tmax,const char *path1=NULL,const char *path2=NULL,int TH=-1,int parity=1)
 {
-  E=mass_fit(corr,tmin,tmax,path1);
+  E=mass_fit(corr,tmin,tmax,path1,TH,parity);
   jvec temp(corr.nel,corr.njack);
-  int TH=temp.nel-1;
-  for(int t=0;t<=TH;t++) temp[t]=corr[t]/exp(-E*TH)/cosh(E*(TH-t))*E;
+  if(TH==-1) TH=temp.nel-1;
+  if(parity==1) for(int t=0;t<=TH;t++) temp[t]=corr[t]/exp(-E*TH)/cosh(E*(TH-t))*E;
+  else          for(int t=0;t<=TH;t++) temp[t]=corr[t]/exp(-E*TH)/sinh(E*(TH-t))*E;
   Z2=constant_fit(temp,tmin,tmax,path2);
   
   cout<<"E: "<<E<<endl;

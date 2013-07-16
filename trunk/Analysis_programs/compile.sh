@@ -13,5 +13,5 @@ else
     fi
 fi
 
-#g++-fsf-4.6 -o $1 $a -I /Users/francesco/Prace/sunpho/Analysis_programs/src  $suff -Wall `rootlib` -I $(dirname $1) -O0 -ggdb3 -llapack
-g++ -o $1 $a -I /Users/francesco/Prace/sunpho/Analysis_programs/src  $suff -Wall `rootlib` -I $(dirname $1) -O0 -ggdb3
+g++-fsf-4.6 -o $1 $a -I /Users/francesco/Prace/sunpho/Analysis_programs/src  $suff -Wall `rootlib` -I $(dirname $1) -O0 -ggdb3 -llapack
+#g++ -o $1 $a -I /Users/francesco/Prace/sunpho/Analysis_programs/src  $suff -Wall `rootlib` -I $(dirname $1) -O0 -ggdb3

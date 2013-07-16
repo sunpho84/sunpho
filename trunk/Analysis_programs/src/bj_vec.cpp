@@ -432,7 +432,7 @@ VTYPE VTYPE::simmetric()
 #endif
   
   for(int iel=0;iel<nel;iel++)
-    c.data[iel]=data[(nel-iel)%nel];
+    c.data[iel]=data[nel-iel-1];
 
   return c;
 }
@@ -523,17 +523,29 @@ TYPE constant_fit(VTYPE in,int tin,int tfin,const char *path=NULL)
 
   E=0;
   double norm=0;
+  
+  //take weighted average
   for(int iel=max(tin,0);iel<=min(tfin,in.nel-1);iel++)
     {
       TYPE ele=in.data[iel];
       double err=in.data[iel].err();
       double weight=1/(err*err);
-      if(!isnan(err))
+      if(!isnan(err)&&err!=0)
 	{
 	  E+=ele*weight;
 	  norm+=weight;
 	}
     }
+  
+  //take simply average
+  if(norm==0)
+    for(int iel=max(tin,0);iel<=min(tfin,in.nel-1);iel++)
+      {
+	norm=norm+1;
+	E+=in.data[iel];
+      }
+  
+  //normalize
   E/=norm;
   
   if(path!=NULL) write_constant_fit_plot(path,in,E,tin,tfin);
