@@ -18,13 +18,13 @@ const char set_symbol[nbeta][1024]={"square","circle","triangle up","triangle le
 const char set_legend[nbeta][1024]={"\\xb\\0=3.80","\\xb\\0=3.90","\\xb\\0=4.05","\\xb\\0=4.20"};
 const char set_legend_fm[nbeta][1024]={"a = 0.098 fm","a = 0.085 fm","a = 0.067 fm","a = 0.054 fm"};
 
-double MDSTAR=2.01,MD0STAR=2.32;
+double MDSTAR=2.01,MD0STAR=2.32; //add D to make diff in the case D->Pi
 double MDSSTAR=2.112,MD0SSTAR=2.32;
 int plot_iboot;
 double DeltaVP=0.137; //V-P 
 int include_log=0,include_f0s=1,nff=2+include_f0s;
 int Z_expansion=0;
-int parametrization=3,npars_poss_non_Z[]={8,9,10,11,13,12,13},npars_poss_Z[]={8};
+int parametrization=7,npars_poss_non_Z[]={8,9,10,11,13,12,13,8},npars_poss_Z[]={8};
 
 int icombo(int iens,int ith)
 {return iens*nth+ith;}
@@ -126,6 +126,11 @@ template <class T1,class T2,class T3> T1 fun_fit_F(int iff,T1 *p,T2 *x,T3 a)
 	  if(iff==0) return p[0]/(EP+DeltaVP)*(1+logP+p[1]*MP*MP+p[2]*EP+p[3]*a1*a1+p[4]*EP*EP);
 	  else       return p[5]*(1+logV+p[6]*MP*MP+p[7]*EP+p[8]*a1*a1+p[9]*EP*EP+p[10]*EP*MP*MP+(p[11]*MP*MP+p[12]*EP)*EP*EP);
 	  break;
+	case 7: //testing
+	  if(iff==0) return p[0]*(1+p[1]*MP*MP+p[2]*EP+p[3]*a1*a1);
+	  else       return p[4]*(1+p[5]*MP*MP+p[6]*EP+p[7]*a1*a1);
+	  break;
+	  /////
 	  /////
 	  ///// default case
 	default:
@@ -418,7 +423,8 @@ int main(int narg,char **arg)
   double p2_ref[nth],EP_ref[nth],Q2_ref[nth],Z_ref[nth],x_ref[3][nth];
   bvec FPE_ph_ref(nth,nboot,njack),FNU_ph_ref(nth,nboot,njack);
   bvec FP_ph_ref(nth,nboot,njack),F0_ph_ref(nth,nboot,njack);
-  bvec F_ph_ref[4];
+  bvec FP_WP_ph_ref(nth,nboot,njack),F0_WP_ph_ref(nth,nboot,njack);
+  bvec F_ph_ref[6];
   for(int ith=0;ith<nth;ith++)
     {
       //compute ref points
@@ -429,33 +435,70 @@ int main(int narg,char **arg)
       x_ref[2][ith]=Z_ref[ith]=fun_Z(MP_ph,MD_ph,Q2_ref[ith]);
       
       //compute y
-      double x_ref[2]={MP_ph,EP_ref[ith]};
-      FPE_ph_ref[ith]=fun_fit_F(0,pars.data,x_ref,0);
-      FNU_ph_ref[ith]=fun_fit_F(1,pars.data,x_ref,0);
-      FPENU_to_FP0(FP_ph_ref,F0_ph_ref,FPE_ph_ref,FNU_ph_ref,MD_ph,MP_ph,EP_ref[ith]);
+      if(!Z_expansion)
+	{
+	  double x_ref[2]={MP_ph,EP_ref[ith]};
+	  FPE_ph_ref[ith]=fun_fit_F(0,pars.data,x_ref,0);
+	  FNU_ph_ref[ith]=fun_fit_F(1,pars.data,x_ref,0);
+	  FPENU_to_FP0(FP_ph_ref[ith],F0_ph_ref[ith],FPE_ph_ref[ith],FNU_ph_ref[ith],MD_ph,MP_ph,EP_ref[ith]);
+	  FP_WP_ph_ref[ith]=FP_ph_ref[ith]*(1-Q2_ref[ith]/sqr(MDSTAR));
+	  F0_WP_ph_ref[ith]=F0_ph_ref[ith]*(1-Q2_ref[ith]/sqr(MDSTAR));
+	}
+      else
+	{
+	  /*
+	    double x_ph[]={MP_ph,Z_ref[ith]};
+	    FIX
+	    FP_WP_ph_ref[ith]=fun_fit_F(0,pars.data,x_ref,0);
+	    F0_WP_ph_ref[ith]=fun_fit_F(1,pars.data,x_ref,0);
+	    FP_ph_ref[ith]=FP_WP_ph_ref[ith]/(1-Q2_ref[ith]/sqr(MDSTAR));
+	    F0_ph_ref[ith]=F0_WP_ph_ref[ith]/(1-Q2_ref[ith]/sqr(MDSTAR));
+	    FP0_to_FPENU(FPE_ph_ref[ith],FNU_ph_ref[ith],FP_ph_ref[ith],F0_ph_ref[ith],MD_ph,MP_ph,EP_ref[ith]);
+	  */
+	}
       
       cout<<"ref ith "<<ith<<": "<<EP_ref[ith]<<": "<<FP_ph_ref[ith]<<endl;
       F_ph_ref[0]=FPE_ph_ref;
       F_ph_ref[1]=FNU_ph_ref;
       F_ph_ref[2]=FP_ph_ref;
       F_ph_ref[3]=F0_ph_ref;
+      F_ph_ref[4]=FP_WP_ph_ref;
+      F_ph_ref[5]=F0_WP_ph_ref;
     }
   
   //extrapolate to the continuum, physical PI and Q2=0
-  double x_ph[]={MP_ph,EP_ph};
-  boot FPE_ph_cont=fun_fit_F(0,pars.data,x_ph,0);
-  boot FNU_ph_cont=fun_fit_F(1,pars.data,x_ph,0);
   boot FP_ph_cont,F0_ph_cont;
-  FPENU_to_FP0(FP_ph_cont,F0_ph_cont,FPE_ph_cont,FNU_ph_cont,MD_ph,MP_ph,EP_ph);
+  boot FP_WP_ph_cont,F0_WP_ph_cont;
+  boot FPE_ph_cont,FNU_ph_cont;
+  if(!Z_expansion)
+    {
+      double x_ph[]={MP_ph,EP_ph};
+      FPE_ph_cont=fun_fit_F(0,pars.data,x_ph,0);
+      FNU_ph_cont=fun_fit_F(1,pars.data,x_ph,0);
+      FPENU_to_FP0(FP_ph_cont,F0_ph_cont,FPE_ph_cont,FNU_ph_cont,MD_ph,MP_ph,EP_ph);
+      FP_WP_ph_cont=FP_ph_cont;
+      F0_WP_ph_cont=F0_ph_cont;
+    }
+  else
+    {
+      /* fix
+      double x_ph[]={MP_ph,Z_ph};
+      FP_WP_ph_cont=fun_fit_F(0,pars.data,x_ph,0);
+      F0_WP_ph_cont=fun_fit_F(1,pars.data,x_ph,0);
+      FP_ph_cont=FP_WP_ph_cont;
+      F0_ph_cont=F0_WP_ph_cont;
+      FP0_to_FPENU(FPE_ph_cont,FNU_ph_cont,FP_ph_cont,F0_ph_cont,MD_ph,MP_ph,EP_ph);
+      */
+    }
   cout<<"phys point in the continuum: "<<EP_ph<<": "<<FP_ph_cont<<endl;
-  boot F_ph_cont[4]={FPE_ph_cont,FNU_ph_cont,FP_ph_cont,F0_ph_cont};
+  boot F_ph_cont[6]={FPE_ph_cont,FNU_ph_cont,FP_ph_cont,F0_ph_cont,FP_WP_ph_cont,F0_WP_ph_cont};
   
   //////////////////////////////// plot fpe and fnu as a function of energy ///////////////
     
-  char tag_ff[4][4]={"pe","nu","p","0"};
+  char tag_ff[6][4]={"pe","nu","p","0","pwp","0wp"};
   char tag_EQ2Z[3][4]={"E","Q2","Z"};
   for(int flag_EQ2Z=0;flag_EQ2Z<3;flag_EQ2Z++)
-    for(int iff=0;iff<4;iff++)
+    for(int iff=0;iff<6;iff++)
       for(int iens=0;iens<=nens;iens++)
 	{
 	  //open appropriate file
@@ -478,13 +521,12 @@ int main(int narg,char **arg)
 		  
 		  switch(iff)
 		    {
-		    case 0:
-		      if(flag_EQ2Z!=0) out<<FPE[ic];
-		      else out<<FPE[ic]*(EP[ic]+DeltaVP);
-		      break;
+		    case 0: out<<FPE[ic];break;
 		    case 1: out<<FNU[ic];break;
 		    case 2: out<<FP[ic];break;
 		    case 3: out<<F0[ic];break;
+		    case 4: out<<FP_WP[ic];break;
+		    case 5: out<<F0_WP[ic];break;
 		    }
 		  out<<endl;
 		}
@@ -521,11 +563,7 @@ int main(int narg,char **arg)
 	      if(cont_latt_flag==0) a=0.0;else a=lat[ibeta[iens]];
 	      
 	      //compute y
-	      if(iff<nff)
-		{
-		  Y[ip]=fun_fit_F(iff,pars.data,x,a);
-		  if(flag_EQ2Z==0 && iff==0) Y[ip]*=x[1]+DeltaVP;
-		}
+	      if(iff<2||iff>=4) Y[ip]=fun_fit_F(iff,pars.data,x,a);
 	      else
 		{
 		  boot t[2],o[2];

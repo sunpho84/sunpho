@@ -193,6 +193,7 @@ int main(int narg,char **arg)
   //loop over heavier mass
   int ncombo=nmass*nmass*ntheta*ntheta;
   jvec aM(ncombo,njack),aM1(ncombo,njack);
+  jvec ZL(ncombo,njack),ZS(ncombo,njack);
   for(int ith1=0;ith1<ntheta;ith1++)
     for(int ith2=0;ith2<ntheta;ith2++)
       for(int im2=0;im2<nmass;im2++)
@@ -206,12 +207,34 @@ int main(int narg,char **arg)
 	    c=load_corr(base_path,0,ith1,ith2,im1,im2,0,0,corr_name); //TM
 	    aM.data[ic]=constant_fit(effective_mass(c.simmetrized(1)),tmin[0],tmax[0],combine("eff_plot_%02d_%02d_%02d_%02d.xmg",ith1,ith2,im1,im2).c_str());
 	    
+	    jack dum(njack);
+	    two_pts_SL_fit(dum,ZL[ic],ZS[ic],load_corr(base_path,0,ith1,ith2,im1,im2,0,0,corr_name).simmetrized(1),load_corr(base_path,1,ith1,ith2,im1,im2,0,0,corr_name).simmetrized(1),tmin[0],tmax[0],tmin[0],tmax[0],"/tmp/fit.xmg");
+	   
 	    ofstream out(combine("plot_%02d_%02d_%02d_%02d.xmg",ith1,ith2,im1,im2).c_str());
 	    out<<c<<endl;
 	    cout<<"ith1:"<<ith1<<" ith2:"<<ith2<<" im1:"<<im1<<" im2:"<<im2<<" ic:"<<ic<<"/"<<ncombo<<" aM:"<<aM[ic]<<
 	      " c[0]/c["<<TH<<"]="<<c[0]/c[TH]<<
 	      endl;
 	  }
+  
+  //check Zl and Zs for charm
+  {
+    ofstream out("ZlZs.xmg");
+    out<<"@type xydy"<<endl;
+    for(int iter=0;iter<2;iter++)
+      {
+	for(int ith1=0;ith1<ntheta;ith1++)
+	  for(int ith2=0;ith2<1;ith2++)
+	    {
+	      int ic=icombo_int(ith1,ith2,0,0);
+	      double qi=(theta[ith1]-theta[ith2])*M_PI/L;
+	      double q2=3*qi*qi/sqr(lat_med[ibeta]);
+	      if(iter==0) out<<q2<<" "<<ZL[ic]/ZL[0]<<endl;
+	      else out<<q2<<" "<<ZS[ic]/ZS[0]<<endl;
+	    }
+	out<<"&"<<endl;
+      }
+  }
   
   aM.write_to_binfile("M");
   

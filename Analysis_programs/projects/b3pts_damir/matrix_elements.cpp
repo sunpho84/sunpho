@@ -2,11 +2,11 @@
 
 int tmin_K,tmax_K;
 int tmin_H,tmax_H;
-int tmin_ME,tmax_ME;
-int tminTK_ME,tmaxTK_ME;
+int tmin_V0,tmax_V0;
+int tmin_VK,tmax_VK;
+int tmin_TK,tmax_TK;
 
 int im_spec,im_S0,im_S1;
-int theta_lim_TK;
 
 ///////////////////////////////////////////////////////////////////////////////////
 
@@ -45,13 +45,14 @@ void read_input(const char *path)
   read_formatted_from_file_expecting((char*)&tmin_H,input_file,"%d","tint_H");
   read_formatted_from_file((char*)&tmax_H,input_file,"%d","tint_K");
   
-  read_formatted_from_file_expecting((char*)&tmin_ME,input_file,"%d","tint_ME");
-  read_formatted_from_file((char*)&tmax_ME,input_file,"%d","tint_ME");
+  read_formatted_from_file_expecting((char*)&tmin_V0,input_file,"%d","tint_V0");
+  read_formatted_from_file((char*)&tmax_V0,input_file,"%d","tint_V0");
   
-  read_formatted_from_file_expecting((char*)&tminTK_ME,input_file,"%d","tintTK_ME");
-  read_formatted_from_file((char*)&tmaxTK_ME,input_file,"%d","tintTK_ME");
+  read_formatted_from_file_expecting((char*)&tmin_VK,input_file,"%d","tint_VK");
+  read_formatted_from_file((char*)&tmax_VK,input_file,"%d","tint_VK");
   
-  read_formatted_from_file_expecting((char*)&theta_lim_TK,input_file,"%d","theta_lim_TK");
+  read_formatted_from_file_expecting((char*)&tmin_TK,input_file,"%d","tint_TK");
+  read_formatted_from_file((char*)&tmax_TK,input_file,"%d","tint_TK");
   
   fclose(input_file);
 }
@@ -75,6 +76,11 @@ int main()
     two_pts_SL_fit(M_K_P5,ZL_K_P5,ZS_K_P5,K_P5_corr_SL,K_P5_corr_SS,tmin_K,tmax_K,tmin_K,tmax_K,"masses_Z/plots/M_K_P5_fit.xmg");
     
     //write the mass and Z
+    {
+      ofstream raw("masses_Z/plots/raw_K.xmg");
+      raw<<"@type xydy"<<endl;
+      raw<<K_P5_corr_SL<<"&"<<endl<<K_P5_corr_SS<<endl;
+    }
     M_K_P5.write_to_binfile("masses_Z/M_K_P5");
     ZL_K_P5.write_to_binfile("masses_Z/Z_K_P5");
 
@@ -118,6 +124,11 @@ int main()
 		   "masses_Z/plots/M_H_P5_fit_SL.xmg","masses_Z/plots/M_H_P5_fit_SS.xmg");
     
     //write the mass and Z
+    {
+      ofstream raw("masses_Z/plots/raw_H.xmg");
+      raw<<"@type xydy"<<endl;
+      raw<<H_P5_corr_SL<<"&"<<endl<<H_P5_corr_SS<<endl;
+    }
     M_H_P5.write_to_binfile("masses_Z/M_H_P5");
     ZL_H_P5.write_to_binfile("masses_Z/Z_H_P5");
     
@@ -169,6 +180,9 @@ int main()
 	      else H_P5_ME_K_PV_corr-=null_TKP5;
 	    }
 	  
+	  //print raw for V0
+	  if(i_ME==2) H_P5_ME_K_PV_corr.print_to_file(combine("matrix_elements/plots/raw_V0%d.xmg",ith).c_str());
+
 	  //same for VK
 	  if(i_ME==1)
 	    {
@@ -178,15 +192,14 @@ int main()
 	      else H_P5_ME_K_PV_corr-=null_VKP5;
 	    }
 	  
-	  //fit ///WARNING the interval 2 is used only for TK larger than theta_lim
-	  int tE,TE;
-	  if(ith<theta_lim_TK||i_ME!=3) { tE=tmin_ME;TE=tmax_ME;}
-	  else                       { tE=tminTK_ME;TE=tmaxTK_ME;}
-
-	  ME[ith]=constant_fit(H_P5_ME_K_PV_corr,tE,TE);
+	  int tmin_ME=tmin_VK,tmax_ME=tmax_VK;
+	  if(i_ME==1){tmin_ME=tmin_VK;tmax_ME=tmax_VK;}
+	  if(i_ME==2){tmin_ME=tmin_V0;tmax_ME=tmax_V0;}
+	  if(i_ME==3){tmin_ME=tmin_TK;tmax_ME=tmax_TK;}
+	  ME[ith]=constant_fit(H_P5_ME_K_PV_corr,tmin_ME,tmax_ME);
 
 	  //output
-	  out_ME<<"@type xydy\n"<<H_P5_ME_K_PV_corr<<"&\n@type xy\n"<<write_constant_with_error(ME[ith],tE,TE)<<"&\n";
+	  if(ith<5) out_ME<<"@type xydy\n"<<H_P5_ME_K_PV_corr<<"&\n@type xy\n"<<write_constant_with_error(ME[ith],tmin_ME,tmax_ME)<<"&\n";
 	}
       
       //write 
@@ -197,14 +210,17 @@ int main()
   {
     ofstream out_1("matrix_elements/plots/divita_ratio1.xmg");
     ofstream out_2("matrix_elements/plots/divita_ratio2.xmg");
+    ofstream out_3("matrix_elements/plots/divita_ratio3.xmg");
     out_1<<"@type xydy"<<endl;
     out_2<<"@type xydy"<<endl;
+    out_3<<"@type xydy"<<endl;
     jvec rat_1(nth_S0,njack);
     jvec rat_2(nth_S0,njack);
+    jvec rat_3(nth_S0,njack);
     for(int ith=0;ith<nth_S0;ith++)
 	{
 	  //find the combo
-	  int iVK=1,iV0=2;
+	  int iVK=1,iV0=2,iTK=3;
 	  combo_3pts combo_th(SPEC[im_spec],L_S0_3PTS[im_S0],H_S1_3PTS[im_S1],ith);
 	  combo_3pts combo_0(SPEC[im_spec],L_S0_3PTS[im_S0],H_S1_3PTS[im_S1],0);
 	  
@@ -215,19 +231,26 @@ int main()
 	  //load and take note
 	  jvec rat_1_corr=load_3pts(info_ME[iV0],combo_th)/load_3pts(info_ME[iV0],combo_0);
 	  for(int t=0;t<=tsep;t++) rat_1_corr[t]*=exp(D_K_P5*t)*E_K_P5/M_K_P5;
-	  rat_1[ith]=constant_fit(rat_1_corr,tmin_ME,tmax_ME);
+	  rat_1[ith]=constant_fit(rat_1_corr,tmin_VK,tmax_VK);
 	  
 	  //load and take note
 	  jvec rat_2_corr=load_3pts(info_ME[iVK],combo_th)/load_3pts(info_ME[iV0],combo_th)-
 	    load_3pts(info_ME[iVK],combo_0)/load_3pts(info_ME[iV0],combo_0);
-	  rat_2[ith]=constant_fit(rat_2_corr,tmin_ME,tmax_ME);
+	  rat_2[ith]=constant_fit(rat_2_corr,tmin_VK,tmax_VK);
 
-          out_1<<"@type xydy\n"<<rat_1_corr<<"&\n@type xy\n"<<write_constant_with_error(rat_1[ith],tmin_ME,tmax_ME)<<"&\n";
-          out_2<<"@type xydy\n"<<rat_2_corr<<"&\n@type xy\n"<<write_constant_with_error(rat_2[ith],tmin_ME,tmax_ME)<<"&\n";
+	  jvec rat_3_corr=(load_3pts(info_ME[iTK],combo_th)-load_3pts(info_ME[iTK],combo_0))/
+	    (load_3pts(info_ME[iVK],combo_th)-load_3pts(info_ME[iVK],combo_0));
+	  rat_3[ith]=constant_fit(rat_3_corr,tmin_VK,tmax_VK);
+
+
+          out_1<<"@type xydy\n"<<rat_1_corr<<"&\n@type xy\n"<<write_constant_with_error(rat_1[ith],tmin_VK,tmax_VK)<<"&\n";
+          out_2<<"@type xydy\n"<<rat_2_corr<<"&\n@type xy\n"<<write_constant_with_error(rat_2[ith],tmin_VK,tmax_VK)<<"&\n";
+          if(ith) out_3<<"@type xydy\n"<<rat_3_corr<<"&\n@type xy\n"<<write_constant_with_error(rat_3[ith],tmin_VK,tmax_VK)<<"&\n";
 	}
     
     rat_1.write_to_binfile("matrix_elements/divita_ratio_1");
     rat_2.write_to_binfile("matrix_elements/divita_ratio_2");
+    rat_3.write_to_binfile("matrix_elements/divita_ratio_3");
   }
   
   return 0;

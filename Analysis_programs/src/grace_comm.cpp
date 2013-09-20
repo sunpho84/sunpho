@@ -51,6 +51,7 @@ void write_polygon(ofstream &fout,double *x,VTYPE &in,int nset=0)
 
   fout<<"@type xy"<<endl;
   fout<<"@s"<<nset<<" fill type 1"<<endl;
+  //fout<<"@s"<<nset<<" fill color "<<nset+1<<endl;
   
   //lower line
   for(int i=0;i<nel;i++)
