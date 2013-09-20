@@ -32,7 +32,7 @@ int main()
 {
   read_set_pars("../data_pars");
   read_input_header("analysis_pars");
-  int nth_S0=7;
+  int nth_S0=5;
   //load the masses
   jack M_K(njack),M_H(njack);
   M_K.load("masses_Z/M_K_P5",0);
@@ -140,6 +140,8 @@ int main()
 	  fPd_out<<Q2[ith].med()<<" "<<fPd[ith].med()<<" "<<Q2[ith].err()<<" "<<fPd[ith].err()<<endl;
 	  f0d_out<<Q2[ith].med()<<" "<<f0d[ith].med()<<" "<<Q2[ith].err()<<" "<<f0d[ith].err()<<endl;
 	}
+      
+      f0d[0]=f0[0];
     }
   
   char results_path[]="form_factors/EP_Q2_fP_f0_fT_f0s";

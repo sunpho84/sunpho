@@ -99,6 +99,6 @@ int main(int narg,char **arg)
   
   aM.write_to_binfile(out_file);
   (Zl*Zl).append_to_binfile(out_file);
-
+  
   return 0;
 }
