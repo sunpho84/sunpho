@@ -168,9 +168,9 @@
                         'LT_INIT' => 1,
                         'LT_AC_PROG_GCJ' => 1,
                         'LT_SYS_DLOPEN_SELF' => 1,
-                        '_LT_AC_PROG_CXXCPP' => 1,
                         'AM_DISABLE_STATIC' => 1,
                         'AM_DEP_TRACK' => 1,
+                        '_LT_AC_PROG_CXXCPP' => 1,
                         '_AC_PROG_LIBTOOL' => 1,
                         'AM_CONFIG_HEADER' => 1,
                         'AM_PROG_CC_STDC' => 1,
@@ -283,6 +283,7 @@
                         'AM_GNU_GETTEXT' => 1,
                         'AM_PROG_AR' => 1,
                         'AC_LIBSOURCE' => 1,
+                        'AC_FUNC_MALLOC' => 1,
                         'AC_CANONICAL_BUILD' => 1,
                         'AM_PROG_FC_C_O' => 1,
                         'AC_FC_FREEFORM' => 1,
@@ -302,6 +303,7 @@
                         'AM_POT_TOOLS' => 1,
                         'm4_include' => 1,
                         '_AM_COND_ELSE' => 1,
+                        'AC_CHECK_FUNCS' => 1,
                         'AC_SUBST_TRACE' => 1
                       }
                     ], 'Autom4te::Request' ),
