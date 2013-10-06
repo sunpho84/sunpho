@@ -12,7 +12,7 @@
 
 using namespace std;
 
-const int clust_size=60;
+const int clust_size=5;
 int jackniffed_size;
 int njacks;
 int size;
@@ -30,7 +30,6 @@ void read(const char *path)
   
   //alloc
   njacks=buf.size()/clust_size;
-  cerr<<njacks<<endl;
   size=njacks*clust_size;
   data=(double*)malloc(sizeof(double)*size);
   for(int i=0;i<size;i++) data[i]=buf[i];
@@ -55,12 +54,11 @@ void autocorr(double *ave_corr,double *err_corr)
       ave/=jackniffed_size;
       
       //copy in
-      for(int i=0;i<jackniffed_size;i++)
+      EXCLUDING_LOOP(i,j,ijack)
 	{
-	  in[i][0]=data[i]-ave;
+	  in[i][0]=data[j]-ave;
 	  in[i][1]=0;
 	}
-      cerr<<ave<<endl;
       
       //take fftw
       fftw_plan pf=fftw_plan_dft_1d(jackniffed_size,in,out,FFTW_FORWARD,FFTW_ESTIMATE);
@@ -68,7 +66,7 @@ void autocorr(double *ave_corr,double *err_corr)
       fftw_destroy_plan(pf);
   
       //take module
-      for(int i=0;i<jackniffed_size;i++)
+      EXCLUDING_LOOP(i,j,ijack)
 	{
 	  in[i][0]=out[i][0]*out[i][0]+out[i][1]*out[i][1];
 	  in[i][1]=0;
@@ -80,7 +78,7 @@ void autocorr(double *ave_corr,double *err_corr)
       fftw_destroy_plan(pb);
       
       //copy back
-      for(int i=0;i<jackniffed_size;i++)
+      EXCLUDING_LOOP(i,j,ijack)
 	{
 	  double x=out[i][0]/out[0][0];
 	  ave_corr[i]+=x;
@@ -118,16 +116,34 @@ int main(int narg,char **arg)
   double *err_corr=(double*)malloc(sizeof(double)*jackniffed_size);
   autocorr(ave_corr,err_corr);
   
+  //compute ave and non adjusted err
+  double ave=0,err=0;
+  for(int i=0;i<size;i++)
+    {
+      double x=data[i];
+      ave+=x;
+      err+=x*x;
+    }
+  ave/=size;
+  err/=size;
+  err-=ave*ave;
+  err=sqrt(err/(size-1));
+  
+  //compute tint
   int i=1;
   double tint=0;
+  ofstream autocorr_plot("/tmp/autocorr.xmg");
+  autocorr_plot<<"@type xydy"<<endl;
+  autocorr_plot<<0<<" "<<1<<" "<<0<<endl;
   while(fabs(ave_corr[i])>err_corr[i])
     {
-      cout<<log(i)<<" "<<ave_corr[i]<<" "<<err_corr[i]<<endl;
-      i++;
       tint+=(ave_corr[i]+ave_corr[i-1])/2;
+      autocorr_plot<<i<<" "<<ave_corr[i]<<" "<<err_corr[i]<<endl;
+      i++;
     }
   tint=2*tint+1;
   cerr<<"tint: "<<tint<<endl;
+  cout<<ave<<" +- "<<err<<endl;
   
   free(data);
   free(ave_corr);

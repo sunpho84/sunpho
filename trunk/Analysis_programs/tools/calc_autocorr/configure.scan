@@ -12,6 +12,8 @@ AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
 # Checks for libraries.
+# FIXME: Replace `main' with a function in `-lfftw3':
+AC_CHECK_LIB([fftw3], [main])
 
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h])
@@ -19,6 +21,8 @@ AC_CHECK_HEADERS([stdlib.h])
 # Checks for typedefs, structures, and compiler characteristics.
 
 # Checks for library functions.
+AC_FUNC_MALLOC
+AC_CHECK_FUNCS([sqrt])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
