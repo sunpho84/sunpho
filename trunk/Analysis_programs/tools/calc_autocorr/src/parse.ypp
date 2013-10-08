@@ -1,0 +1,59 @@
+%pure-parser
+%locations
+%defines
+%error-verbose
+%parse-param {driver_t *driver}
+%lex-param {void *scanner}
+
+%{
+#include <stdio.h>
+#include <iostream>
+#include <string.h>
+#include <math.h>
+#include "debug.hpp"
+#include "driver.hpp"
+#include "parse.hpp"
+#include "redefine_yy.hpp"
+
+  using namespace std;
+
+  const int debug_parser=0;
+  
+  int parser_lex(YYSTYPE *lvalp,YYLTYPE *llocp,void *scanner);
+  void parser_error(YYLTYPE *locp,driver_t *driver,const char *err)
+  {CRASH("%d %s",locp->first_line,err);}
+
+#define scanner driver->scanner
+  %}
+
+//union used to catch all symbols
+%union
+{
+  int int_numb;
+  double double_numb;
+  char *text;
+}
+
+//type for terminal symbols
+%token ENDL
+%token LOAD_COLUMN
+%token <double_numb>  DOUBLE_NUMB
+%token <int_numb> INT_NUMB
+%token <text> QUOTED_TEXT
+
+//types for non-terminal symbol
+
+//associativity
+%right '='
+%left '-' '+'
+%left '*' '/'
+%left NEG
+
+%%
+
+ //load a column in a file
+load_column: LOAD_COLUMN '(' QUOTED_TEXT ',' INT_NUMB ')'
+   {
+     cout<<"Pretended to load: "<<$3<<" "<<$5<<endl;
+   }
+;

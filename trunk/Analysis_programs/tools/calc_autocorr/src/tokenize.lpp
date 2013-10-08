@@ -1,0 +1,86 @@
+%option noyywrap
+%option prefix="parser_"
+%option outfile="tokenize.cpp"
+%option reentrant
+%option bison-bridge
+%option bison-locations
+
+%{
+#include <stdio.h>
+#include "debug.hpp"
+#include "driver.hpp"
+
+#define YY_EXTRA_TYPE driver_t*
+
+#define YY_INPUT(buf,result,max_size)		\
+   {						\
+     char c;					\
+     fscanf(yyextra->fin,"%c",&c);		\
+     if(feof(yyextra->fin)) result=YY_NULL;	\
+     else					\
+       {					\
+	 result=1;				\
+	 buf[0]=c;				\
+       }					\
+   }
+   
+#include "parse.hpp"
+   
+   const int debug_lexer=0;
+%}
+
+%%
+ /* ignoring rules */
+\/\/[[:alnum:][:blank:]^+-/=*()\n]* if(debug_lexer) printf("Ignoring comment: %s\n",yytext);
+[[:blank:]]+ if(debug_lexer) printf("Ignoring spaces: \"%s\"\n",yytext);
+^[[:blank:]]+\n+ if(debug_lexer) printf("Ignoring new line at the begin of a line\n");
+
+ /* quoted text */
+\"[[:alnum:][:blank:]%]*\" yylval->text=strndup(yytext+1,strlen(yytext)-2); return QUOTED_TEXT;
+load_colmun return LOAD_COLUMN;
+
+ /* operators */
+\+ return '+';
+-  return '-';
+\( return '(';
+\) return ')';
+\* return '*';
+\/ return '/';
+
+ /* equal */
+\= return '=';
+
+ /* recognizing numbers */
+([0-9]*\.[0-9]+)|([0-9]+\.[0-9]*|([0-9]+)) if(debug_lexer) printf("Found DOUBLE: %s\n",yytext);sscanf(yytext,"%lg",&yylval->double_numb); return DOUBLE_NUMB;
+
+%%
+
+//initializator
+driver_t::driver_t(const char *path)
+{
+  //open file                                                                                                            
+  fin=fopen(path,"r");
+  if(fin==NULL) CRASH("opening %s",path);
+
+  init_scanner();
+}
+
+//initialize the scanner
+void driver_t::init_scanner()
+{
+  yylex_init(&scanner);
+  yyset_extra(this,scanner);
+}
+
+//destroy the scanner
+void driver_t::destroy_scanner()
+{
+  yylex_destroy(scanner);
+}
+
+//read a list of two pts
+void read_from_file(const char *path)
+{
+  driver_t driver(path);
+  parser_parse(&driver);
+}
