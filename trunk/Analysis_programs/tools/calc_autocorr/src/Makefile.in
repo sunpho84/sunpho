@@ -284,7 +284,7 @@ ACLOCAL_AMFLAGS = -I m4
 AUTOMAKE_OPTIONS = subdir-objects
 
 #parser
-AM_YFLAGS = -d
+AM_YFLAGS = -d -r all
 __top_builddir__bin_main_SOURCES = \
 	debug.cpp \
 	debug.hpp \

@@ -7,8 +7,38 @@
 
 using namespace std;
 
+typedef double (*single_arg_function_t) (double);
+typedef double (*double_arg_function_t) (double,double);
+
 //double vectors
-typedef vector<double> double_vect_t;
+struct double_vect_t : vector<double>
+{
+  double average();
+  double naive_error();
+  double_vect_t operator+(double_vect_t in);
+  double_vect_t operator-(double_vect_t in);
+  double_vect_t operator*(double_vect_t in);
+  double_vect_t operator+(double in);
+  double_vect_t operator-(double in);
+  double_vect_t operator*(double in);
+  double_vect_t operator/(double in);
+  double_vect_t operator/(double_vect_t in);
+  double_vect_t operator+=(double_vect_t in) {return (*this)=(*this)+in;};
+  double_vect_t operator-=(double_vect_t in) {return (*this)=(*this)-in;};
+  double_vect_t operator*=(double_vect_t in) {return (*this)=(*this)*in;};
+  double_vect_t operator/=(double_vect_t in) {return (*this)=(*this)/in;};
+  double_vect_t operator+=(double in) {return (*this)=(*this)+in;};
+  double_vect_t operator-=(double in) {return (*this)=(*this)-in;};
+  double_vect_t operator*=(double in) {return (*this)=(*this)*in;};
+  double_vect_t operator/=(double in) {return (*this)=(*this)/in;};
+  double_vect_t operator-();
+};
+
+double_vect_t operator+(double in1,double_vect_t in2);
+double_vect_t operator-(double in1,double_vect_t in2);
+double_vect_t operator*(double in1,double_vect_t in2);
+double_vect_t operator/(double in1,double_vect_t in2);
+double_vect_t pow(double_vect_t in1,double in2);
 
 //structure holding vars
 struct var_t
@@ -18,7 +48,11 @@ struct var_t
   string name;
   double double_numb;
   double_vect_t* double_vect;
+  single_arg_function_t single_arg_function;
+  double_arg_function_t double_arg_function;
   var_t();
+  var_t(single_arg_function_t in);
+  var_t(double_arg_function_t in);
   double_vect_t operator=(double_vect_t &in);
   double operator=(double in);
 };
@@ -36,11 +70,9 @@ public:
   driver_t(const char *path);
   virtual ~driver_t(){destroy_scanner();}
 protected:
+  driver_t();
   void init_scanner();
   void destroy_scanner();
 };
-
-//to be moved
-double average(double_vect_t in);
 
 #endif

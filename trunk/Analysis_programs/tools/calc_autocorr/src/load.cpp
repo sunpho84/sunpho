@@ -1,16 +1,16 @@
 #include <fstream>
 #include <iostream>
 #include <string.h>
-#include <vector>
 
 #include "debug.hpp"
+#include "new_types.hpp"
 
 using namespace std;
 
 //read a column in a vector
-vector<double> read_column_in_file(const char *path,int ic)
+double_vect_t read_column_in_file(const char *path,int ic)
 {
-  vector<double> out;
+  double_vect_t out;
      
   //open file
   ifstream fin(path);

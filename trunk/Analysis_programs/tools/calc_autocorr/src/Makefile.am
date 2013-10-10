@@ -7,7 +7,7 @@ AUTOMAKE_OPTIONS=subdir-objects
 LIBS=-lfftw3
 
 #parser
-AM_YFLAGS=-d
+AM_YFLAGS=-d -r all
 
 bin_PROGRAMS=$(top_builddir)/bin/main
 __top_builddir__bin_main_SOURCES= \

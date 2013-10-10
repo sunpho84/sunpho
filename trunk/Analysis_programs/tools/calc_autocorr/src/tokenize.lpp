@@ -30,7 +30,7 @@
    
 #include "parse.hpp"
    
-   const int debug_lexer=1;
+   const int debug_lexer=0;
 %}
 
 %%
@@ -40,46 +40,58 @@
 ^[[:blank:]]+\n+ if(debug_lexer) printf("Ignoring new line at the begin of a line\n");
 
  /* quoted text */
-\"[[:alnum:][:blank:]%]*\" yylval->text=strndup(yytext+1,strlen(yytext)-2); return QUOTED_TEXT;
+\"[[:alnum:][:blank:]%()+-:/\*]*\" yylval->text=strndup(yytext+1,strlen(yytext)-2); return QUOTED_TEXT;
 
  /* new line */
 \n return '\n';
 
  /* commands */
 double_vect_load_column return DOUBLE_VECT_LOAD_COLUMN;
+double_vect_load return DOUBLE_VECT_LOAD;
 print return PRINT;
 average return AVERAGE;
+naive_error return NAIVE_ERROR;
+subset return SUBSET;
 
  /* variable name */
-[[:alpha:]][[:alnum:]]* {
+[[:alpha:]][[:alnum:]_]* {
   //search
-  if(yyextra->var_map.find(yytext)==yyextra->var_map.end()) cout<<"Add ";
-  else cout<<"Found ";
+  if(debug_lexer)
+    {
+      if(yyextra->var_map.find(yytext)==yyextra->var_map.end()) cout<<"Add ";
+      else cout<<"Found ";
+    }
   
   //take (or add)
   yylval->var=&(yyextra->var_map[yytext]);
   yylval->var->name=yytext;
-  cout<<"var "<<yytext<<" of type: ";
+  if(debug_lexer) cout<<"var "<<yytext<<" of type: ";
   
   //print type
-  switch(yyextra->var_map[yytext].type)
-    {
-    case UNINIT_VAR: cout<<"UNINIT_VAR"<<endl; break;
-    case DOUBLE_NUMB_VAR: cout<<"DOUBLE_NUMB_VAR"<<endl; break;
-    case DOUBLE_VECT_VAR: cout<<"DOUBLE_VECT_VAR"<<endl; break;
-    default: CRASH("Unknown type ",yylval->var->type);
-    }
+  if(debug_lexer)
+    switch(yyextra->var_map[yytext].type)
+      {
+      case UNINIT_VAR: cout<<"UNINIT_VAR"<<endl; break;
+      case DOUBLE_NUMB_VAR: cout<<"DOUBLE_NUMB_VAR"<<endl; break;
+      case DOUBLE_VECT_VAR: cout<<"DOUBLE_VECT_VAR"<<endl; break;
+      case SINGLE_ARG_FUNCTION: cout<<"SINGLE_ARG_FUNCTION"<<endl; break;
+      default: CRASH("Unknown type ",yylval->var->type);
+      }
   
   return yylval->var->type;
 }
 
  /* operators */
 \+ return '+';
--  return '-';
-\( return '(';
-\) return ')';
+\- return '-';
 \* return '*';
 \/ return '/';
+\( return '(';
+\) return ')';
+\+= return SUMMASSIGN;
+\-= return SUBTASSIGN;
+\*= return PRODASSIGN;
+\/= return DIVIASSIGN;
 
  /* equal and comma */
 \= return '=';
