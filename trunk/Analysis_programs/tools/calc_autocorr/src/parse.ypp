@@ -8,10 +8,13 @@
 %{
 #include <stdio.h>
 #include <iostream>
-#include <string.h>
+#include <vector>
 #include <math.h>
+
 #include "debug.hpp"
 #include "driver.hpp"
+#include "load.hpp"
+#include "new_types.hpp"
 #include "parse.hpp"
 #include "redefine_yy.hpp"
 
@@ -31,17 +34,24 @@
 {
   int int_numb;
   double double_numb;
+  std::vector<double> *double_vect;
   char *text;
+  var_t *var;
 }
 
 //type for terminal symbols
-%token ENDL
-%token LOAD_COLUMN
-%token <double_numb>  DOUBLE_NUMB
+%token DOUBLE_VECT_LOAD_COLUMN
+%token AVERAGE
+%token PRINT
+%token <double_numb> DOUBLE_NUMB
+%token <double_vect> DOUBLE_VECT
 %token <int_numb> INT_NUMB
 %token <text> QUOTED_TEXT
+%token <var> UNINIT_VAR DOUBLE_NUMB_VAR DOUBLE_VECT_VAR
 
 //types for non-terminal symbol
+%type <double_vect> double_vect_exp double_vect_load_column
+%type <double_numb> double_numb_exp
 
 //associativity
 %right '='
@@ -51,9 +61,46 @@
 
 %%
 
- //load a column in a file
-load_column: LOAD_COLUMN '(' QUOTED_TEXT ',' INT_NUMB ')'
-   {
-     cout<<"Pretended to load: "<<$3<<" "<<$5<<endl;
-   }
+ //generic
+input:
+       %empty
+     | input line
+;
+
+//line
+line:
+       '\n'
+     | double_vect_exp '\n'
+     | double_numb_exp '\n'
+     | print_command '\n'
+;
+
+//vect expression
+double_vect_exp:
+        UNINIT_VAR '=' double_vect_exp {(*$1)=(*$3);$$=$3;}
+      | DOUBLE_VECT_VAR {cout<<"Using this"<<endl;$$=$1->double_vect;}
+      | DOUBLE_VECT_VAR '=' double_vect_exp {(*$1)=(*$3);$$=$3;}
+      | double_vect_load_column
+;
+
+//double expression
+double_numb_exp:
+        UNINIT_VAR '=' double_numb_exp {(*$1)=$3;$$=$3;}
+      | DOUBLE_NUMB_VAR {$$=$1->double_numb;}
+      | DOUBLE_NUMB_VAR '=' double_numb_exp {(*$1)=$3;$$=$3;}
+      | AVERAGE '(' double_vect_exp ')' {$$=average(*$3);}
+;
+
+//load a column in a file
+double_vect_load_column:
+        DOUBLE_VECT_LOAD_COLUMN '(' QUOTED_TEXT ',' INT_NUMB ')'
+        {
+	  $$=new double_vect_t;
+	  (*$$)=read_column_in_file($3,$5);
+	}
+;
+
+//print
+print_command: 
+       PRINT double_numb_exp {cout<<$2<<endl;}
 ;

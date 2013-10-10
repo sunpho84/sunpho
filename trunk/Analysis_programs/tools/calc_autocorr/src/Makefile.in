@@ -91,7 +91,8 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am___top_builddir__bin_main_OBJECTS = debug.$(OBJEXT) main.$(OBJEXT) \
+am___top_builddir__bin_main_OBJECTS = debug.$(OBJEXT) driver.$(OBJEXT) \
+	load.$(OBJEXT) main.$(OBJEXT) new_types.$(OBJEXT) \
 	parse.$(OBJEXT) tokenize.$(OBJEXT)
 __top_builddir__bin_main_OBJECTS =  \
 	$(am___top_builddir__bin_main_OBJECTS)
@@ -285,16 +286,21 @@ AUTOMAKE_OPTIONS = subdir-objects
 #parser
 AM_YFLAGS = -d
 __top_builddir__bin_main_SOURCES = \
-	macros.hpp \
 	debug.cpp \
 	debug.hpp \
+        driver.cpp \
+        driver.hpp \
+        load.cpp \
+        load.hpp \
+	macros.hpp \
 	main.cpp \
+	new_types.cpp \
+	new_types.hpp \
         parse.ypp \
         tokenize.lpp \
-        parse.hpp \
-        driver.hpp \
         redefine_yy.hpp
 
+CLEANFILES = parse.cpp parse.hpp tokenize.cpp
 all: config.hpp
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -405,7 +411,10 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/debug.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/driver.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/load.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/new_types.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/parse.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tokenize.Po@am__quote@
 
@@ -542,6 +551,7 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
+	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)

@@ -7,8 +7,12 @@
 
 %{
 #include <stdio.h>
+#include <iostream>
+#include <vector>
 #include "debug.hpp"
 #include "driver.hpp"
+
+   using namespace std;
 
 #define YY_EXTRA_TYPE driver_t*
 
@@ -26,7 +30,7 @@
    
 #include "parse.hpp"
    
-   const int debug_lexer=0;
+   const int debug_lexer=1;
 %}
 
 %%
@@ -37,7 +41,37 @@
 
  /* quoted text */
 \"[[:alnum:][:blank:]%]*\" yylval->text=strndup(yytext+1,strlen(yytext)-2); return QUOTED_TEXT;
-load_colmun return LOAD_COLUMN;
+
+ /* new line */
+\n return '\n';
+
+ /* commands */
+double_vect_load_column return DOUBLE_VECT_LOAD_COLUMN;
+print return PRINT;
+average return AVERAGE;
+
+ /* variable name */
+[[:alpha:]][[:alnum:]]* {
+  //search
+  if(yyextra->var_map.find(yytext)==yyextra->var_map.end()) cout<<"Add ";
+  else cout<<"Found ";
+  
+  //take (or add)
+  yylval->var=&(yyextra->var_map[yytext]);
+  yylval->var->name=yytext;
+  cout<<"var "<<yytext<<" of type: ";
+  
+  //print type
+  switch(yyextra->var_map[yytext].type)
+    {
+    case UNINIT_VAR: cout<<"UNINIT_VAR"<<endl; break;
+    case DOUBLE_NUMB_VAR: cout<<"DOUBLE_NUMB_VAR"<<endl; break;
+    case DOUBLE_VECT_VAR: cout<<"DOUBLE_VECT_VAR"<<endl; break;
+    default: CRASH("Unknown type ",yylval->var->type);
+    }
+  
+  return yylval->var->type;
+}
 
  /* operators */
 \+ return '+';
@@ -47,40 +81,20 @@ load_colmun return LOAD_COLUMN;
 \* return '*';
 \/ return '/';
 
- /* equal */
+ /* equal and comma */
 \= return '=';
+\, return ',';
 
  /* recognizing numbers */
-([0-9]*\.[0-9]+)|([0-9]+\.[0-9]*|([0-9]+)) if(debug_lexer) printf("Found DOUBLE: %s\n",yytext);sscanf(yytext,"%lg",&yylval->double_numb); return DOUBLE_NUMB;
+([0-9]*\.[0-9]+)|([0-9]+\.[0-9]*) sscanf(yytext,"%lg",&yylval->double_numb); return DOUBLE_NUMB;
+([0-9]+) sscanf(yytext,"%d",&yylval->int_numb); return INT_NUMB;
 
 %%
-
-//initializator
-driver_t::driver_t(const char *path)
-{
-  //open file                                                                                                            
-  fin=fopen(path,"r");
-  if(fin==NULL) CRASH("opening %s",path);
-
-  init_scanner();
-}
-
-//initialize the scanner
-void driver_t::init_scanner()
-{
-  yylex_init(&scanner);
-  yyset_extra(this,scanner);
-}
-
-//destroy the scanner
-void driver_t::destroy_scanner()
-{
-  yylex_destroy(scanner);
-}
 
 //read a list of two pts
 void read_from_file(const char *path)
 {
   driver_t driver(path);
   parser_parse(&driver);
+  cout<<"EXT: "<<driver.var_map["cane"].double_vect->size()<<endl;
 }

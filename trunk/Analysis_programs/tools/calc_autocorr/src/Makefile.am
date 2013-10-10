@@ -11,12 +11,18 @@ AM_YFLAGS=-d
 
 bin_PROGRAMS=$(top_builddir)/bin/main
 __top_builddir__bin_main_SOURCES= \
-	macros.hpp \
 	debug.cpp \
 	debug.hpp \
+        driver.cpp \
+        driver.hpp \
+        load.cpp \
+        load.hpp \
+	macros.hpp \
 	main.cpp \
+	new_types.cpp \
+	new_types.hpp \
         parse.ypp \
         tokenize.lpp \
-        parse.hpp \
-        driver.hpp \
         redefine_yy.hpp
+
+CLEANFILES=parse.cpp parse.hpp tokenize.cpp
