@@ -6,10 +6,12 @@
 %lex-param {void *scanner}
 
 %{
-#include <stdio.h>
+#include <algorithm>
+#include <functional>
 #include <iostream>
-#include <vector>
 #include <math.h>
+#include <stdio.h>
+#include <vector>
 
 #include "debug.hpp"
 #include "driver.hpp"
@@ -19,6 +21,7 @@
 #include "redefine_yy.hpp"
 
   using namespace std;
+  using namespace std::placeholders;
 
   const int debug_parser=0;
   
@@ -34,27 +37,27 @@
 {
   int int_numb;
   double double_numb;
-  std::vector<double> *double_vect;
+  double_vect_t *double_vect;
   char *text;
   var_t *var;
 }
 
 //type for terminal symbols
-%token DOUBLE_VECT_LOAD_COLUMN
-%token AVERAGE
+%token DOUBLE_VECT_LOAD_COLUMN DOUBLE_VECT_LOAD
+%token AVERAGE NAIVE_ERROR SUBSET
 %token PRINT
 %token <double_numb> DOUBLE_NUMB
 %token <double_vect> DOUBLE_VECT
 %token <int_numb> INT_NUMB
 %token <text> QUOTED_TEXT
-%token <var> UNINIT_VAR DOUBLE_NUMB_VAR DOUBLE_VECT_VAR
+%token <var> UNINIT_VAR DOUBLE_NUMB_VAR DOUBLE_VECT_VAR SINGLE_ARG_FUNCTION DOUBLE_ARG_FUNCTION
 
 //types for non-terminal symbol
 %type <double_vect> double_vect_exp double_vect_load_column
 %type <double_numb> double_numb_exp
 
 //associativity
-%right '='
+%right '=' SUMMASSIGN SUBTASSIGN PRODASSIGN DIVIASSIGN
 %left '-' '+'
 %left '*' '/'
 %left NEG
@@ -72,23 +75,92 @@ line:
        '\n'
      | double_vect_exp '\n'
      | double_numb_exp '\n'
-     | print_command '\n'
+     | print_command '\n' {cout<<endl;}
 ;
 
 //vect expression
 double_vect_exp:
-        UNINIT_VAR '=' double_vect_exp {(*$1)=(*$3);$$=$3;}
-      | DOUBLE_VECT_VAR {cout<<"Using this"<<endl;$$=$1->double_vect;}
-      | DOUBLE_VECT_VAR '=' double_vect_exp {(*$1)=(*$3);$$=$3;}
+        UNINIT_VAR '=' double_vect_exp { (*$1)=(*$3);$$=$3; }
+      | DOUBLE_VECT_VAR '=' double_vect_exp { (*$1)=(*$3);$$=$3; }
+      | DOUBLE_VECT_VAR { $$=new double_vect_t;(*$$)=*($1->double_vect); }
+
+      | double_vect_exp '+' double_vect_exp { $$=new double_vect_t;(*$$)=(*$1)+(*$3); }
+      | double_vect_exp '-' double_vect_exp { $$=new double_vect_t;(*$$)=(*$1)-(*$3); }
+      | double_vect_exp '*' double_vect_exp { $$=new double_vect_t;(*$$)=(*$1)*(*$3); }
+      | double_vect_exp '/' double_vect_exp { $$=new double_vect_t;(*$$)=(*$1)/(*$3); }
+
+      | DOUBLE_VECT_VAR SUMMASSIGN double_vect_exp { 
+	(*$1->double_vect)+=(*$3);$$=new double_vect_t;(*$$)=(*$1->double_vect); }
+      | DOUBLE_VECT_VAR SUBTASSIGN double_vect_exp {
+	(*$1->double_vect)-=(*$3);$$=new double_vect_t;(*$$)=(*$1->double_vect); }
+      | DOUBLE_VECT_VAR PRODASSIGN double_vect_exp {
+	(*$1->double_vect)*=(*$3);$$=new double_vect_t;(*$$)=(*$1->double_vect); }
+      | DOUBLE_VECT_VAR DIVIASSIGN double_vect_exp {
+	(*$1->double_vect)/=(*$3);$$=new double_vect_t;(*$$)=(*$1->double_vect); }
+
+      | double_vect_exp '+' double_numb_exp { $$=new double_vect_t;(*$$)=(*$1)+$3; }
+      | double_vect_exp '-' double_numb_exp { $$=new double_vect_t;(*$$)=(*$1)-$3; }
+      | double_vect_exp '*' double_numb_exp { $$=new double_vect_t;(*$$)=(*$1)*$3; }
+      | double_vect_exp '/' double_numb_exp { $$=new double_vect_t;(*$$)=(*$1)/$3; }
+
+      | DOUBLE_VECT_VAR SUMMASSIGN double_numb_exp { 
+	(*$1->double_vect)+=$3;$$=new double_vect_t;(*$$)=(*$1->double_vect); }
+      | DOUBLE_VECT_VAR SUBTASSIGN double_numb_exp {
+	(*$1->double_vect)-=$3;$$=new double_vect_t;(*$$)=(*$1->double_vect); }
+      | DOUBLE_VECT_VAR PRODASSIGN double_numb_exp {
+	(*$1->double_vect)*=$3;$$=new double_vect_t;(*$$)=(*$1->double_vect); }
+      | DOUBLE_VECT_VAR DIVIASSIGN double_numb_exp {
+	(*$1->double_vect)/=$3;$$=new double_vect_t;(*$$)=(*$1->double_vect); }
+
+      | double_numb_exp '+' double_vect_exp { $$=new double_vect_t;(*$$)=$1+(*$3); }
+      | double_numb_exp '-' double_vect_exp { $$=new double_vect_t;(*$$)=$1-(*$3); }
+      | double_numb_exp '*' double_vect_exp { $$=new double_vect_t;(*$$)=$1*(*$3); }
+      | double_numb_exp '/' double_vect_exp { $$=new double_vect_t;(*$$)=$1/(*$3); }
+
+      | SINGLE_ARG_FUNCTION '(' double_vect_exp ')' {
+	$$=new double_vect_t;
+	$$->resize($3->size());
+	transform($3->begin(),$3->end(),$$->begin(),$1->single_arg_function); }
+
+      | DOUBLE_ARG_FUNCTION '(' double_vect_exp ',' double_numb_exp ')' {
+	$$=new double_vect_t;
+	$$->resize($3->size());
+	transform($3->begin(),$3->end(),$$->begin(),bind($1->double_arg_function,_1,$5)); }
+
+      | '-' double_vect_exp %prec NEG { $$=new double_vect_t;(*$$)=-(*$2); }
+      | '(' double_vect_exp ')' { $$=$2; }
+
+      | SUBSET '(' double_vect_exp ',' INT_NUMB ',' INT_NUMB ')' {
+	$$=new double_vect_t;
+	for(int i=$5;i<$7;i++) $$->push_back((*$3)[i]);}
       | double_vect_load_column
 ;
 
 //double expression
 double_numb_exp:
         UNINIT_VAR '=' double_numb_exp {(*$1)=$3;$$=$3;}
+      | DOUBLE_NUMB {$$=$1;}
+      | INT_NUMB {$$=$1;}
       | DOUBLE_NUMB_VAR {$$=$1->double_numb;}
       | DOUBLE_NUMB_VAR '=' double_numb_exp {(*$1)=$3;$$=$3;}
-      | AVERAGE '(' double_vect_exp ')' {$$=average(*$3);}
+
+      | double_numb_exp '+' double_numb_exp { $$=$1+$3; }
+      | double_numb_exp '-' double_numb_exp { $$=$1-$3; }
+      | double_numb_exp '*' double_numb_exp { $$=$1*$3; }
+      | double_numb_exp '/' double_numb_exp { $$=$1/$3; }
+
+      | DOUBLE_NUMB_VAR SUMMASSIGN double_numb_exp { $1->double_numb+=$3;$$=$1->double_numb; }
+      | DOUBLE_NUMB_VAR SUBTASSIGN double_numb_exp { $1->double_numb-=$3;$$=$1->double_numb; }
+      | DOUBLE_NUMB_VAR PRODASSIGN double_numb_exp { $1->double_numb*=$3;$$=$1->double_numb; }
+      | DOUBLE_NUMB_VAR DIVIASSIGN double_numb_exp { $1->double_numb/=$3;$$=$1->double_numb; }
+
+      | '-' double_numb_exp %prec NEG { $$=-$2; }
+      | '(' double_numb_exp ')' { $$=$2; }
+      
+      | SINGLE_ARG_FUNCTION '(' double_numb_exp ')' {$$=(*($1->single_arg_function))($3);}
+      | DOUBLE_ARG_FUNCTION '(' double_numb_exp ',' double_numb_exp ')' {$$=(*($1->double_arg_function))($3,$5);}
+      | AVERAGE '(' double_vect_exp ')' {$$=$3->average();}
+      | NAIVE_ERROR '(' double_vect_exp ')' {$$=$3->naive_error();}
 ;
 
 //load a column in a file
@@ -98,9 +170,17 @@ double_vect_load_column:
 	  $$=new double_vect_t;
 	  (*$$)=read_column_in_file($3,$5);
 	}
+      | DOUBLE_VECT_LOAD '(' QUOTED_TEXT ')'
+        {
+	  $$=new double_vect_t;
+	  (*$$)=read_column_in_file($3,0);
+	}
 ;
 
 //print
-print_command: 
-       PRINT double_numb_exp {cout<<$2<<endl;}
+print_command:
+        PRINT
+      | print_command double_numb_exp {cout<<$2<<" ";}
+      | print_command double_vect_exp {for(double_vect_t::iterator it=$2->begin();it!=$2->end();it++) cout<<*it<<endl;}
+      | print_command QUOTED_TEXT {cout<<$2<<" ";}
 ;
