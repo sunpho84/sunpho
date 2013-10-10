@@ -10,6 +10,8 @@
 #include <fftw3.h>
 #include <math.h>
 
+#include "driver.hpp"
+
 using namespace std;
 
 const int clust_size=5;
@@ -143,11 +145,13 @@ int main(int narg,char **arg)
     }
   tint=2*tint+1;
   cerr<<"tint: "<<tint<<endl;
-  cout<<ave<<" +- "<<err<<endl;
+  cout<<ave<<" +- "<<err*sqrt(tint)<<endl;
   
   free(data);
   free(ave_corr);
   free(err_corr);
+  
+  read_from_file("/tmp/in");
   
   return 0;
 }
