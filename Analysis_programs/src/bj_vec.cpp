@@ -385,6 +385,7 @@ VTYPE asinh(const VTYPE &a){return single_operator(a,asinh);}
 VTYPE acosh(const VTYPE &a){return single_operator(a,acosh);}
 VTYPE atanh(const VTYPE &a){return single_operator(a,atanh);}
 
+VTYPE fabs(const VTYPE &a){return single_operator(a,fabs);}
 VTYPE sqr(const VTYPE &a){return single_operator(a,sqr);}
 VTYPE log(const VTYPE &a){return single_operator(a,log);}
 VTYPE sqrt(const VTYPE &a){return single_operator(a,sqrt);}
@@ -485,8 +486,8 @@ string write_constant_fit_plot(VTYPE in,TYPE y,int tin,int tfin,int iset=0)
   double ym=y.med(),dy=y.err();
   //error of the line
   out<<"@s"<<iset+0<<" line type 1"<<endl;      
-  out<<"@s"<<iset+0<<" line color "<<iset+1<<endl;
-  out<<"@s"<<iset+0<<" fill color "<<iset+7<<endl;
+  out<<"@s"<<iset+0<<" line color "<<iset/3%7+8<<endl;
+  out<<"@s"<<iset+0<<" fill color "<<iset/3%7+8<<endl;
   out<<"@s"<<iset+0<<" fill type 1"<<endl;
   out<<"@type xy"<<endl;      
   out<<tin<<" "<<ym-dy<<endl<<tfin<<" "<<ym-dy<<endl;
@@ -494,16 +495,16 @@ string write_constant_fit_plot(VTYPE in,TYPE y,int tin,int tfin,int iset=0)
   out<<tin<<" "<<ym-dy<<endl;
   out<<"&"<<endl;
   //central line
-  out<<"@s"<<iset+1<<" line color "<<iset+1<<endl;
+  out<<"@s"<<iset+1<<" line color "<<iset/3%7+1<<endl;
   out<<"@type xy"<<endl;      
   out<<tin<<" "<<ym<<endl<<tfin<<" "<<ym<<endl;
   //plot the original data with error  
   out<<"&"<<endl;
   out<<"@type xydy"<<endl;      
   out<<"@s"<<iset+2<<" line type 0"<<endl;      
-  out<<"@s"<<iset+2<<" symbol color "<<iset+1<<endl;
-  out<<"@s"<<iset+2<<" errorbar color "<<iset+1<<endl;
-  out<<"@s"<<iset+2<<" symbol "<<iset+1<<endl;
+  out<<"@s"<<iset+2<<" symbol color "<<iset/3%7+1<<endl;
+  out<<"@s"<<iset+2<<" errorbar color "<<iset/3%7+1<<endl;
+  out<<"@s"<<iset+2<<" symbol "<<iset/3%7+1<<endl;
   out<<in;
   out<<"&"<<endl;
   

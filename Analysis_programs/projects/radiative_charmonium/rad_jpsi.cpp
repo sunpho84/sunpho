@@ -6,7 +6,7 @@
 
 int T,TH,L,tsep;
 double theta,lmass,cmass;
-int ntheta;
+int nr,ntheta,include_local;
 const double Zvm[4]={0.5816,0.6103,0.6451,0.686};
 
 char base_path[1024];
@@ -24,7 +24,7 @@ double Zam[4]={0.746,0.746,0.772,0.780};
 
 int icombo_2pts(int r1,int r2,int ith1,int reim)
 {
-  return reim+2*(r1+2*(r2+2*ith1));
+  return reim+nr*(r1+nr*(r2+2*ith1));
 }
 
 int icombo_3pts(int ith1,int ith2,int reim)
@@ -37,10 +37,13 @@ jvec load_3pts(const char *name,int ith1,int ith2,int reim)
 
 jvec load_2pts(const char *name,int ith1,int r1,int r2,int reim,const char *sl)
 {
-  return (
-	  jvec_load(combine("%s/2pts_%s_%s",base_path,name,sl).c_str(),T,njack,icombo_2pts(r1,r2,ith1,reim))
-	  +jvec_load(combine("%s/2pts_%s_%s",base_path,name,sl).c_str(),T,njack,icombo_2pts(!r1,!r2,ith1,reim))
-	  )/2;
+  if(nr==2)
+    return (
+	    jvec_load(combine("%s/2pts_%s_%s",base_path,name,sl).c_str(),T,njack,icombo_2pts(r1,r2,ith1,reim))
+	    +jvec_load(combine("%s/2pts_%s_%s",base_path,name,sl).c_str(),T,njack,icombo_2pts(!r1,!r2,ith1,reim))
+	    )/2;
+  else
+    return jvec_load(combine("%s/2pts_%s_%s",base_path,name,sl).c_str(),T,njack,icombo_2pts(0,0,ith1,reim));
 }
 
 void read_data_list(const char *path)
@@ -52,6 +55,8 @@ void read_data_list(const char *path)
   L=TH=T/2;
   read_formatted_from_file_expecting((char*)(&njack),input_file,"%d","njack");
   read_formatted_from_file_expecting((char*)(&ibeta),input_file,"%d","ibeta");
+  read_formatted_from_file_expecting((char*)(&nr),input_file,"%d","nr");
+  read_formatted_from_file_expecting((char*)(&include_local),input_file,"%d","include_local");
   read_formatted_from_file_expecting((char*)(&ntheta),input_file,"%d","ntheta");
   read_formatted_from_file_expecting((char*)(&theta),input_file,"%lg","theta");
   read_formatted_from_file_expecting((char*)(&tsep),input_file,"%d","tsep");
@@ -93,33 +98,51 @@ int main()
   //load ss P5P5 for D
   jvec P5P5_ss=load_2pts("P5P5",0, 0,0, 0, "30_30");
   //load sl P5P5 for D
-  jvec P5P5_sl=load_2pts("P5P5",0, 0,0, 0, "30_00");
+  jvec P5P5_sl;
+  if(include_local) P5P5_sl=load_2pts("P5P5",0, 0,0, 0, "30_00");
   
   //load ss P5P5 for D
   jvec P5P5_mov_ss;
   if(ntheta==2) P5P5_mov_ss=load_2pts("P5P5",1, 0,0, 0, "30_30");
   //load sl P5P5 for D
   jvec P5P5_mov_sl;
-  if(ntheta==2) P5P5_mov_sl=load_2pts("P5P5",1, 0,0, 0, "30_00");
+  if(ntheta==2 && include_local) P5P5_mov_sl=load_2pts("P5P5",1, 0,0, 0, "30_00");
   
   //load ss VKVK for D
   jvec VKVK_ss=load_2pts("VKVK",0, 0,0, 0, "30_30");
   //load sl VKVK for D
-  jvec VKVK_sl=load_2pts("VKVK",0, 0,0, 0, "30_00");
+  jvec VKVK_sl;
+  if(include_local) VKVK_sl=load_2pts("VKVK",0, 0,0, 0, "30_00");
 
   //////////////////////////////////// Fit masses and Z for standing D and D* ////////////////////////////////////////
   
   //compute D mass and Z
   jack M_P5,ZL_P5,ZS_P5;
-  two_pts_SL_fit(M_P5,ZL_P5,ZS_P5,P5P5_sl.simmetrized(1),P5P5_ss.simmetrized(1),tminL_P,tmaxL_P,tminS_P,tmaxS_P,
-		 "MSL_P5.xmg","MSS_P5.xmg");
-  cout<<"PSEUDO D mass: "<<M_P5<<", Z: "<<ZL_P5<<endl;
-  
+  if(include_local)
+    {
+      two_pts_SL_fit(M_P5,ZL_P5,ZS_P5,P5P5_sl.simmetrized(1),P5P5_ss.simmetrized(1),tminL_P,tmaxL_P,tminS_P,tmaxS_P,
+		     "MSL_P5.xmg","MSS_P5.xmg");
+      cout<<"PSEUDO D mass: "<<M_P5<<", Z: "<<ZL_P5<<endl;
+    }
+  else
+    {
+      two_pts_fit(M_P5,ZS_P5,P5P5_ss.simmetrized(1),tminS_P,tmaxS_P,"MSS_P5.xmg");
+      cout<<"PSEUDO D mass: "<<M_P5<<endl;
+    }
+
   //compute D* mass and Z
   jack M_VK,ZL_VK,ZS_VK;
-  two_pts_SL_fit(M_VK,ZL_VK,ZS_VK,VKVK_sl.simmetrized(1),VKVK_ss.simmetrized(1),tminL_V,tmaxL_V,tminS_V,tmaxS_V,
-		 "MSL_VK.xmg","MSS_VK.xmg");
-  cout<<"VECT D mass: "<<M_VK<<", Z: "<<ZL_VK<<endl;
+  if(include_local)
+    {
+      two_pts_SL_fit(M_VK,ZL_VK,ZS_VK,VKVK_sl.simmetrized(1),VKVK_ss.simmetrized(1),tminL_V,tmaxL_V,tminS_V,tmaxS_V,
+		     "MSL_VK.xmg","MSS_VK.xmg");
+      cout<<"VECT D mass: "<<M_VK<<", Z: "<<ZL_VK<<endl;
+    }
+  else
+    {
+      two_pts_fit(M_VK,ZS_VK,VKVK_ss.simmetrized(1),tminS_V,tmaxS_V,"MSS_VK.xmg");
+      cout<<"VECT D mass: "<<M_VK<<endl;
+    }
   
   //reconstruct moving D mass
   double qi=M_PI*theta/L;
@@ -227,9 +250,11 @@ int main()
   if(fit_M1) V1_nu.write_to_binfile("V1_nu");
   if(ntheta==2) V_nu.write_to_binfile("V_nu");
   
-  
-  (ZL_VK/M_VK*Za_med[ibeta]).write_to_binfile("ZJPSI");
-  (2*cmass*ZL_P5/M_P5/sinh(M_P5)).write_to_binfile("ZETAC");
-  
+  if(include_local)
+    {
+      (ZL_VK/M_VK*Za_med[ibeta]).write_to_binfile("ZJPSI");
+      (2*cmass*ZL_P5/M_P5/sinh(M_P5)).write_to_binfile("ZETAC");
+    }      
+
   return 0;
 }
