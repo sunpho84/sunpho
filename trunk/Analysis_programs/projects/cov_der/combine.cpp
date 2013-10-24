@@ -205,7 +205,7 @@ corr_t<double> combine(int ism_so,op_t &op_so,int ism_si,op_t &op_si)
   corr_t<double> total(0);
   for(uint icontr_so=0;icontr_so<op_so.size();icontr_so++)
     for(uint icontr_si=0;icontr_si<op_si.size();icontr_si++)
-      total+=corr(ism_si,op_so[icontr_so],ism_so,op_si[icontr_si])*op_so[icontr_so].weight*op_si[icontr_si].weight;
+      total+=corr(ism_so,op_so[icontr_so],ism_si,op_si[icontr_si])*op_so[icontr_so].weight*op_si[icontr_si].weight;
   
   return total;
 }

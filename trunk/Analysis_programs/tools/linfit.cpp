@@ -32,21 +32,27 @@ int main(int narg,char **arg)
       double t,dt;
       in>>x[i]>>t>>dt;
 
+      //find min max for graph
       if(i==0) xmin=xmax=x[0];
       else
 	{
 	  xmin=min(xmin,x[i]);
 	  xmax=max(xmax,x[i]);
 	}
-
+      
+      //put data
       Y[i].fill_gauss(t,dt,i+4);
       
-      cout<<x[i]<<" "<<Y[i]<<endl;
+      cout<<"Data "<<i<<": "<<x[i]<<" "<<smart_print(Y[i])<<endl;
     }
   
+  //fit
+  cout<<"Fitting with: a+b*x"<<endl;
   bvec pars_fit=poly_fit(x,Y,1,xmin,xmax);
-  cout<<pars_fit<<endl;
+  cout<<"a: "<<smart_print(pars_fit[0])<<endl;
+  cout<<"b: "<<smart_print(pars_fit[1])<<endl;
   
+  //plot
   if(narg>2)
     {
       ofstream out(arg[2]);
