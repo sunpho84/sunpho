@@ -12,7 +12,7 @@ char infile[100];
 
 jack F(jack M,jack Z)
 {
-  return Z*2*mc/sinh(M)/M;
+  return fabs(Z*2*mc/sinh(M)/M);
 }
 
 int main(int narg,char **arg)
@@ -174,15 +174,20 @@ int main(int narg,char **arg)
   ZL[0]=ZLZOPT/Z_P[0];
   double lat_med[4]={0.486508,0.422773,0.335339,0.268402};
   cout<<"M0: "<<smart_print(M_P2[0])<<endl;
-  cout<<"F[0]: "<<smart_print(F(M_P2[0],ZL[0])/lat_med[ibeta])<<endl;
+  jack FETA=F(M_P2[0],ZL[0]);
+  FETA.write_to_binfile("FETA");
+  cout<<"F[0]: "<<smart_print(FETA/lat_med[ibeta])<<endl;
   out_sink_plot<<write_constant_fit_plot(effective_mass(impr_sink_corr[0]),M_P2[0],tfit_ground_min,tfit_ground_max,0);
 
   if(nlevls>1)
     {
       two_pts_fit(M_P2[1],ZLZOPT,impr_sink_corr[1],tfit_first_min,tfit_first_max);
       ZL[1]=ZLZOPT/Z_P[1];
-      cout<<"F[1]: "<<smart_print(F(M_P2[1],ZL[1])/lat_med[ibeta])<<endl;
-      cout<<"F[1]/F[0]: "<<smart_print(F(M_P2[1],ZL[1])/F(M_P2[0],ZL[0]))<<endl;
+      jack FETA_P=F(M_P2[1],ZL[1]);
+      jack FETA_P_FETA=FETA_P/FETA;
+      FETA_P_FETA.write_to_binfile("FETA_P_FETA");
+      cout<<"F[1]: "<<smart_print(FETA_P/lat_med[ibeta])<<endl;
+      cout<<"F[1]/F[0]: "<<smart_print(FETA_P_FETA)<<endl;
       out_sink_plot<<write_constant_fit_plot(effective_mass(impr_sink_corr[1]),M_P2[1],tfit_first_min,
 					     tfit_first_max,3);
       
@@ -191,6 +196,11 @@ int main(int narg,char **arg)
 	{
 	  two_pts_fit(M_P2[2],ZLZOPT,impr_sink_corr[2],tfit_second_min,tfit_second_max);
 	  ZL[2]=ZLZOPT/Z_P[2];
+	  jack FETA_PP=F(M_P2[2],ZL[2]);
+	  jack FETA_PP_FETA=FETA_PP/FETA;
+	  FETA_PP_FETA.write_to_binfile("FETA_PP_FETA");
+	  cout<<"F[2]: "<<smart_print(FETA_PP/lat_med[ibeta])<<endl;
+	  cout<<"F[2]/F[0]: "<<smart_print(FETA_PP_FETA)<<endl;
 	  out_sink_plot<<write_constant_fit_plot(effective_mass(impr_sink_corr[2]),M_P2[2],
 						 tfit_second_min,tfit_second_max,6);
 	  

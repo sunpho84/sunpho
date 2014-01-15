@@ -14,7 +14,7 @@
 
 using namespace std;
 
-const int clust_size=5;
+const int clust_size=1;
 int jackniffed_size;
 int njacks;
 int size;
@@ -35,13 +35,15 @@ void read(const char *path)
   size=njacks*clust_size;
   data=(double*)malloc(sizeof(double)*size);
   for(int i=0;i<size;i++) data[i]=buf[i];
+  
+  cout<<"Finished reading"<<endl;
 }
 
 #define EXCLUDING_LOOP(i,j,ijack)					\
   for(int imin[2]={0,(ijack+1)*clust_size},imax[2]={ijack*clust_size,size},iter=0;iter<2;iter++) \
     for(int j=imin[iter],i=j-iter*clust_size;j<imax[iter];j++,i++)
 
-void autocorr(double *ave_corr,double *err_corr)
+void autocorr(double *ave_corr,double *jck_corr,double *err_corr)
 {
   fftw_complex *in=(fftw_complex*)fftw_malloc(jackniffed_size*sizeof(fftw_complex));
   fftw_complex *out=(fftw_complex*)fftw_malloc(jackniffed_size*sizeof(fftw_complex));
@@ -83,6 +85,7 @@ void autocorr(double *ave_corr,double *err_corr)
       EXCLUDING_LOOP(i,j,ijack)
 	{
 	  double x=out[i][0]/out[0][0];
+	  jck_corr[ijack*jackniffed_size+i]=x;
 	  ave_corr[i]+=x;
 	  err_corr[i]+=x*x;
 	}
@@ -115,8 +118,9 @@ int main(int narg,char **arg)
   
   //compute autocorr
   double *ave_corr=(double*)malloc(sizeof(double)*jackniffed_size);
+  double *jck_corr=(double*)malloc(sizeof(double)*jackniffed_size*jackniffed_size);
   double *err_corr=(double*)malloc(sizeof(double)*jackniffed_size);
-  autocorr(ave_corr,err_corr);
+  autocorr(ave_corr,jck_corr,err_corr);
   
   //compute ave and non adjusted err
   double ave=0,err=0;
@@ -131,27 +135,44 @@ int main(int narg,char **arg)
   err-=ave*ave;
   err=sqrt(err/(size-1));
   
-  //compute tint
-  int i=1;
-  double tint=0;
+  //fix where to stop and plot autocorr
+  int istop=0;
   ofstream autocorr_plot("/tmp/autocorr.xmg");
   autocorr_plot<<"@type xydy"<<endl;
-  autocorr_plot<<0<<" "<<1<<" "<<0<<endl;
-  while(fabs(ave_corr[i])>err_corr[i])
+  do
     {
-      tint+=(ave_corr[i]+ave_corr[i-1])/2;
-      autocorr_plot<<i<<" "<<ave_corr[i]<<" "<<err_corr[i]<<endl;
-      i++;
+      autocorr_plot<<istop<<" "<<ave_corr[istop]<<" "<<err_corr[istop]<<endl;
+      istop++;
     }
-  tint=2*tint+1;
-  cerr<<"tint: "<<tint<<endl;
-  cout<<ave<<" +- "<<err*sqrt(tint)<<endl;
+  while(fabs(ave_corr[istop])>err_corr[istop] && istop<jackniffed_size-1);
+  
+  //compute tint across jacknives
+  double stint=0,s2tint=0;
+  for(int ijack=0;ijack<jackniffed_size;ijack++)
+    {
+      double tint=0;
+      int i=1;
+      while(fabs(jck_corr[ijack*jackniffed_size+i])>err_corr[i] && i<jackniffed_size-1)
+	{
+	  tint+=(jck_corr[ijack*jackniffed_size+i]+jck_corr[ijack*jackniffed_size+i-1])/2;
+	  i++;
+	}
+      stint+=tint;
+      s2tint+=tint*tint;
+    }
+  s2tint/=jackniffed_size;
+  stint/=jackniffed_size;
+  s2tint-=stint*stint;
+  s2tint=sqrt(s2tint*(jackniffed_size-1));
+  
+  double tau=(2*stint-1)/2;
+  cerr<<"tint: "<<stint<<" "<<s2tint<<endl;
+  cout<<ave<<" +- "<<err*sqrt(2*tau+1)<<endl;
   
   free(data);
   free(ave_corr);
+  free(jck_corr);
   free(err_corr);
-  
-  read_from_file("/tmp/in");
   
   return 0;
 }

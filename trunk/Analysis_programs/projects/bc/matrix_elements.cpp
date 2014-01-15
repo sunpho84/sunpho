@@ -69,7 +69,11 @@ void read_input(const char *path)
   fclose(input_file);
 }
 
+double momentum(double th)
+{return M_PI/TH*th;}
 
+jack latt_en(jack M,double th)
+{return 2*asinh(sqrt(3*sqr(sin(momentum(th)/2))+sqr(sinh(M/2))));}
 
 int main()
 {
@@ -134,22 +138,32 @@ int main()
     {
       //open the output
       ofstream raw_corr_3pts_plot(combine("plots/raw_3pts_%d.xmg",im_S1).c_str());
+      ofstream dt_3pts_plot(combine("plots/dt_3pts_%d.xmg",im_S1).c_str());
       ofstream ME_plot[3];
       ME_plot[0].open(combine("plots/V0_corr_%d.xmg",im_S1).c_str());
       ME_plot[1].open(combine("plots/VK_corr_%d.xmg",im_S1).c_str());
       ME_plot[2].open(combine("plots/TK_corr_%d.xmg",im_S1).c_str());
       raw_corr_3pts_plot<<"@type xydy"<<endl;
+      dt_3pts_plot<<"@type xydy"<<endl;
       for(int i_ME=0;i_ME<3;i_ME++) ME_plot[i_ME]<<"@type xydy"<<endl;
 	
       //loop over theta
       for(int ith_S0=0;ith_S0<nth;ith_S0++)
 	{
 	  //define the temporal dependance
-	  jack E_eta=/*latt_en*/(E[ith_S0*nmass]/*,theta[ith_S0]*/),ZS_eta=ZS[ith_S0*nmass];
+	  //jack E_eta=latt_en(E[0],theta[ith_S0]),ZS_eta=ZS[ith_S0*nmass];
+	  jack E_eta=E[ith_S0*nmass],ZS_eta=ZS[ith_S0*nmass];
 	  jack M_Bc=E[im_S1],ZS_Bc=ZS[im_S1];
-	  jvec dT(tsep+1,njack);
+	  
+	  //build dt
+	  jvec dT_analytic(tsep+1,njack);
+	  jvec dT_numeric(tsep+1,njack);
 	  for(int t=0;t<=tsep;t++)
-	    dT[t]=(ZS_eta*ZS_Bc)/(2*E_eta*2*M_Bc)*exp(-E_eta*t)*exp(-M_Bc*(tsep-t));
+	    {
+	      dT_analytic[t]=(ZS_eta*ZS_Bc)/(2*E_eta*2*M_Bc)*exp(-E_eta*t)*exp(-M_Bc*(tsep-t));
+	      dT_numeric[t]=P5_corr_SS[ith_S0*nmass][t]*P5_corr_SS[im_S1][tsep-t]/(ZS_eta*ZS_Bc);
+	    }
+	  dt_3pts_plot<<dT_analytic<<"&"<<dT_numeric<<"&"<<endl;
 	  
 	  //load the corr and divide it by dT
 	  for(int i_ME=0;i_ME<3;i_ME++)
@@ -158,9 +172,10 @@ int main()
 	      raw_corr_3pts_plot<<raw_corr_3pts<<"&"<<endl;
 	      
 	      //divide
-	      jvec ME_corr=raw_corr_3pts/dT;
-
-	      ME_plot[i_ME]<<ME_corr<<"&"<<endl;
+	      jvec ME_corr_numeric=raw_corr_3pts/dT_numeric;
+	      jvec ME_corr_analytic=raw_corr_3pts/dT_analytic;
+	      ME_plot[i_ME]<<ME_corr_numeric<<"&"<<endl;
+	      ME_plot[i_ME]<<ME_corr_analytic<<"&"<<endl;
 	    }
 	}
     }

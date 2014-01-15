@@ -10,9 +10,11 @@ int deg_z=2;
 int iboot;
 int stranged;
 
-const double MDstar=2.01,MD0star=2.32;
-const double MDSstar=2.112,MD0Sstar=2.32;
-const double MD_ph=1.868,MK_ph=0.4944,MP_ph=0.135;
+double lat_internal[4]={1/2.0275,1/2.338,1/2.9657,1/3.679};
+
+const double MDstar=2.01,MD0star=2.318;
+const double MDSstar=2.1123,MD0Sstar=2.3178;
+const double MD_ph=1.8696,MK_ph=0.4937,MP_ph=0.13957;
 const double Q2_max_ph[2]={sqr(MD_ph-MP_ph),sqr(MD_ph-MK_ph)};
 bvec Q2,FP,F0,FT,MD,MP,EP,Z;
 
@@ -68,7 +70,8 @@ void plot_funz_ml(const char *out_path,const char *title,const char *xlab,const 
           bvec Y_pol(npoint,nboot,njack);
           for(int ipoint=0;ipoint<npoint;ipoint++)
             for(iboot=0;iboot<=nboot;iboot++)
-              Y_pol.data[ipoint].data[iboot]=fun(par[0][iboot],par[1][iboot],par[2][iboot],X_pol[ipoint],lat[ib][iboot]);
+              Y_pol.data[ipoint].data[iboot]=fun(par[0][iboot],par[1][iboot],par[2][iboot],X_pol[ipoint],
+						 /*lat[ib][iboot]*/lat_internal[ib]);
           
           out.set(1,set_fill_color[ib]);
           out.polygon(X_pol,Y_pol);
@@ -166,10 +169,11 @@ void chi2_par(int &npar,double *fuf,double &ch,double *p,int flag)
   for(int iens=0;iens<nens;iens++)
     if(use[iens])
       {
-	double Y_teo=fun_fit_par(p[0],p[1],p[2],ml[iens][iboot],lat[ibeta[iens]][iboot]);
+	double Y_teo=fun_fit_par(p[0],p[1],p[2],ml[iens][iboot],/*lat[ibeta[iens]][iboot]*/lat_internal[ibeta[iens]]);
 	double contr=pow((Y_fit[iens]-Y_teo)/err_Y_fit[iens],2);
 	ch+=contr;
-	if(flag==1) cout<<"contr iens "<<iens<<", ml="<<ml[iens][iboot]<<", a="<<lat[ibeta[iens]][iboot]<<", ("<<Y_fit[iens]<<"-"<<Y_teo<<")/"<<err_Y_fit[iens]<<"="<<contr<<endl;
+	if(flag==1) cout<<"contr iens "<<iens<<", ml="<<ml[iens][iboot]<<", a="<</*lat[ibeta[iens]][iboot]*/
+		      lat_internal[ibeta[iens]]<<", ("<<Y_fit[iens]<<"-"<<Y_teo<<")/"<<err_Y_fit[iens]<<"="<<contr<<endl;
       }
 }
 
@@ -242,11 +246,12 @@ boot fit_par(bvec &X,bvec &Y,const char *title,int include_ml_term=1,int include
       for(int ib=0;ib<nbeta;ib++)
 	{
 	  int r=ref_ml_beta[ib];
-	  Y_chir[ib].data[iboot]=fun_fit_par(A[iboot],B[iboot],C[iboot],ml_phys[iboot],lat[ib][iboot]);
+	  Y_chir[ib].data[iboot]=fun_fit_par(A[iboot],B[iboot],C[iboot],ml_phys[iboot],/*lat[ib][iboot]*/
+					     lat_internal[ib]);
 	  if(r!=-1)
 	    Y_estr_ml.data[ib].data[iboot]=Y[r][iboot]*
-	      fun_fit_par(A[nboot],B[nboot],C[nboot],ml_phys[nboot],lat[ib][iboot])/
-	      fun_fit_par(A[nboot],B[nboot],C[nboot],ml[r][nboot],lat[ib][iboot]);
+	      fun_fit_par(A[nboot],B[nboot],C[nboot],ml_phys[nboot],/*lat[ib][iboot]*/lat_internal[ib])/
+	      fun_fit_par(A[nboot],B[nboot],C[nboot],ml[r][nboot],/*lat[ib][iboot]*/lat_internal[ib]);
 	}
     }
   
@@ -262,7 +267,8 @@ boot fit_par(bvec &X,bvec &Y,const char *title,int include_ml_term=1,int include
   
   const char tag_ml[1024]="m\\sl\\N\\SMS,2GeV\\N (GeV)";
   const char tag_a2[1024]="a\\S2\\N (fm)";
-  double lat_med_fm[4]={lat[0].med()*hc,lat[1].med()*hc,lat[2].med()*hc,lat[3].med()*hc};
+  //double lat_med_fm[4]={lat[0].med()*hc,lat[1].med()*hc,lat[2].med()*hc,lat[3].med()*hc};
+  double lat_med_fm[4]={lat_internal[0]*hc,lat_internal[1]*hc,lat_internal[2]*hc,lat_internal[3]*hc};
   
   plot_funz_ml(combine("%s_funz_ml.xmg",title).c_str(),title,tag_ml,title,ml,Y,par_res_fit_F,
 	       ml_phys.med(),fun_fit_par,Y_chir_cont);
@@ -573,8 +579,11 @@ int main(int narg,char **arg)
       MP_j.load(combine(base_path_MP,ens_path[iens]).c_str(),0);
       boot_from_jack(MD[iens],MD_j,iboot_jack);
       boot_from_jack(MP[iens],MP_j,iboot_jack);
-      MD[iens]/=lat[ibeta[iens]];
-      MP[iens]/=lat[ibeta[iens]];
+      //MD[iens]/=lat[ibeta[iens]];
+      //MP[iens]/=lat[ibeta[iens]];
+      cout<<"a*MD: "<<smart_print(MD[iens])<<", a*MP: "<<smart_print(MP[iens])<<endl;
+      MD[iens]/=lat_internal[ibeta[iens]];
+      MP[iens]/=lat_internal[ibeta[iens]];
       
       //write the bare data table while converting jack to boot
       for(int ith=0;ith<nth_to_use;ith++)
@@ -587,8 +596,12 @@ int main(int narg,char **arg)
           boot_from_jack(FT.data[ic],FT_j[ith],iboot_jack);
           
           //pass to dimensionful quantity
-          Q2[ic]/=sqr(lat[ib]);          
-          EP[ic]/=lat[ib];
+          //Q2[ic]/=sqr(lat[ib]);
+          //EP[ic]/=lat[ib];
+          Q2[ic]/=sqr(lat_internal[ib]);
+          EP[ic]/=lat_internal[ib];
+	  
+	  cout<<Q2[ic]<<endl;
 	  
 	  //compute
 	  Z[ic]=fun_Z(MP[iens],MD[iens],Q2[ic]);
@@ -610,7 +623,8 @@ int main(int narg,char **arg)
 	int b=ibeta[iens],r=ref_ml_beta[b];
 	//define ml
 	cout<<iens<<" "<<b<<" "<<lmass[iens]<<endl;
-	ml[iens]=lmass[iens]/lat[b]/Zp[b];
+	//ml[iens]=lmass[iens]/lat[b]/Zp[b];
+	ml[iens]=lmass[iens]/lat_internal[b]/Zp[b];
 	//set the lighter mass
 	if(r==-1||fabs(ml[r].med()-0.050)>fabs(ml[iens].med()-0.050)) ref_ml_beta[b]=iens;
       }
