@@ -38,10 +38,11 @@ public:
 #endif
   ~TYPE(){if(data!=NULL) delete[]data;data=NULL;}
   
-  double operator[](int i){return data[i];}
+  double &operator[](int i){return data[i];}
   TYPE operator=(double a){for(int i=0;i<N+1;i++) data[i]=a;return *this;}
   
   double med(){return data[N];}
+  double true_med(){double sx=0;for(int ij=0;ij<N;ij++) sx+=data[ij];return sx/N;}
   double err();
   
   void fill_gauss(double med,double sigma,int seed);

@@ -490,14 +490,14 @@ string write_constant_fit_plot(VTYPE in,TYPE y,int tin,int tfin,int iset=0)
   out<<"@s"<<iset+0<<" fill color "<<iset/3%7+8<<endl;
   out<<"@s"<<iset+0<<" fill type 1"<<endl;
   out<<"@type xy"<<endl;      
-  out<<tin<<" "<<ym-dy<<endl<<tfin<<" "<<ym-dy<<endl;
-  out<<tfin<<" "<<ym+dy<<endl<<tin<<" "<<ym+dy<<endl;
-  out<<tin<<" "<<ym-dy<<endl;
+  out<<tin-0.4<<" "<<ym-dy<<endl<<tfin+0.4<<" "<<ym-dy<<endl;
+  out<<tfin+0.4<<" "<<ym+dy<<endl<<tin-0.4<<" "<<ym+dy<<endl;
+  out<<tin-0.4<<" "<<ym-dy<<endl;
   out<<"&"<<endl;
   //central line
   out<<"@s"<<iset+1<<" line color "<<iset/3%7+1<<endl;
   out<<"@type xy"<<endl;      
-  out<<tin<<" "<<ym<<endl<<tfin<<" "<<ym<<endl;
+  out<<tin-0.4<<" "<<ym<<endl<<tfin+0.4<<" "<<ym<<endl;
   //plot the original data with error  
   out<<"&"<<endl;
   out<<"@type xydy"<<endl;      

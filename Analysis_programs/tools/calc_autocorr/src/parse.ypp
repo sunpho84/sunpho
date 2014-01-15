@@ -65,8 +65,7 @@
 %%
 
  //generic
-input:
-       %empty
+input:       
      | input line
 ;
 

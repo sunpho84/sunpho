@@ -97,7 +97,7 @@ jvec aperiodic_effective_mass(const jvec a)
 jack mass_fit(jvec corr,int tmin,int tmax,const char *path=NULL,int TH=-1,int parity=1)
 {
   jvec effe=effective_mass(corr,TH,parity);
-  jack mass=constant_fit(effe,tmin,tmax,path);
+  jack mass=constant_fit(effe,tmin,tmax-1,path);
   
   return mass;
 }
@@ -356,4 +356,31 @@ bvec poly_fit(double *x,bvec y,int d,double xmin,double xmax)
       A[i*(d+1)+j]=Al[i+j];
   
   return lin_solve(A,c);
+}      
+
+boot chi2_poly_fit(double *x,bvec y,int d,double xmin,double xmax,bvec pars)
+{
+  int np=y.nel;
+  int nboot=y.nboot;
+  int njack=y.njack;
+  
+  boot ch2(nboot,njack);
+  int ndof=-pars.nel;
+  ch2*=0;
+  for(int ip=0;ip<np;ip++)
+    if(x[ip]<=xmax && x[ip]>=xmin)
+      {
+	boot t=pars[0];
+	double R=x[ip];
+	for(int ipow=1;ipow<pars.nel;ipow++)
+	  {
+	    t+=pars[ipow]*R;
+	    R*=x[ip];
+	  }
+
+	ch2+=sqr((t-y[ip])/y[ip].err());
+	ndof++;
+      }
+  
+  return ch2/ndof;
 }      
