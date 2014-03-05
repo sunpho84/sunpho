@@ -27,6 +27,7 @@ int main()
   cout<<"1/a420: "<<1/lat[3]<<endl<<endl;
 
   cout<<"mc: "<<mc_phys<<endl<<endl;
+  cout<<"r0: "<<smart_print(r0)<<endl<<endl;
   
   double ghat=0.45;
   //double Amed=-1.200,Aerr=0.5;

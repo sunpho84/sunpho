@@ -25,10 +25,10 @@ int main()
   load_all_ensembles_MZ(aM,Z,nens,T,ibeta,nlights,nmass,base_MZ_path,obs_name,ens_name,base_corrs_path,mode);
   
   //compute f
-  bvec M[nens];
-  bvec f[nens];
-  bvec phi[nens];
-  bvec x[nens];
+  bvec *M=new bvec[nens];
+  bvec *f=new bvec[nens];
+  bvec *phi=new bvec[nens];
+  bvec *x=new bvec[nens];
   for(int iens=0;iens<nens;iens++)
     {
       int b=ibeta[iens];

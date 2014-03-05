@@ -27,6 +27,13 @@ public:
   void reallocate_if_necessary(int nb,int nj){if(nboot!=nb||njack!=nj){if(data!=NULL) delete[] data;create(nb,nj);}}
   TYPE operator=(const TYPE& in){reallocate_if_necessary(in.nboot,in.njack);put(in.data);return *this;}
 #else
+  void clusterize()
+  {
+    data[njack]=0;
+    for(int ijack=0;ijack<njack;ijack++) data[njack]+=data[ijack];
+    for(int ijack=0;ijack<njack;ijack++) data[ijack]=(data[njack]-data[ijack])/(njack-1);
+    data[njack]/=njack;
+  }
   void create(int nj){njack=nj;data=new double[nj+1];}
   TYPE(const TYPE& in){create(in.njack);put(in.data);}
   explicit TYPE(){data=NULL;njack=0;}
@@ -306,3 +313,13 @@ string smart_print(TYPE a)
   
   return o.str();
 }
+
+double med(TYPE x)
+{
+  double s=0;
+  for(int i=0;i<x.N;i++) s+=x[i];
+  return s/x.N;
+}
+
+double cov(TYPE x,TYPE y)
+{return (med(x*y)-med(x)*med(y))*(x.njack-1);}

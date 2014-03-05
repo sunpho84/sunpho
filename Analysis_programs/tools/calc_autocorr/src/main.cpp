@@ -151,11 +151,12 @@ void compute_tint(double &med_tint,double &err_tint)
 	{
 	  double tint=0;
 	  int i=1;
-	  while(fabs(jck_corr[ijack*jackniffed_size+i])>0.5*err_corr[i] && i<jackniffed_size-1)
+	  do
 	    {
 	      tint+=(jck_corr[ijack*jackniffed_size+i]+jck_corr[ijack*jackniffed_size+i-1])/2;
 	      i++;
 	    }
+	  while(fabs(jck_corr[ijack*jackniffed_size+i])>0.5*err_corr[i] && i<jackniffed_size-2);
 	  med_tint+=tint;
 	  err_tint+=tint*tint;
 	}
@@ -171,9 +172,9 @@ void compute_tint(double &med_tint,double &err_tint)
       free(err_corr);
       
       loop=false;
-      if(fabs(clust_size-2*med_tint)>=2*err_tint)
+      if(fabs(clust_size-2*med_tint)>=4*err_tint)
 	{
-	  clust_size=2*med_tint;
+	  clust_size=int(2*med_tint+0.5);
 	  loop=true;
 	  cout<<" recomputing with cluster size: "<<clust_size<<endl;
 	}

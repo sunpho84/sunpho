@@ -70,6 +70,15 @@ jvec effective_mass(jvec a,int TH=-1,int par=1)
   return b;
 }
 
+jvec antonin_effective_mass(jvec in,int par=1)
+{
+  jvec out(in.nel-2,in.njack);
+  if(par==1) for(int t=1;t<in.nel-1;t++) out[t-1]=acosh((in[t-1]+in[t+1])/(2*in[t]));
+  else       for(int t=1;t<in.nel-1;t++) out[t-1]=asinh((in[t-1]+in[t+1])/(2*in[t]));
+
+  return out;
+}
+
 jvec numerical_derivative(jvec a)
 {
   jvec b(a.nel-1,a.njack);
@@ -138,26 +147,32 @@ void ch2_two_pts_migrad_fit(int &npar,double *fuf,double &ch,double *p,int flag)
       double err=e_two_pts_fit[t];
       double cont=sqr(diff/err);
       ch+=cont;
-      if(flag==3) cout<<" t="<<t<<", diff=("<<num<<"-"<<teo<<")="<<diff<<" err="<<err<<" cont="<<cont<<endl;
+      if(flag==3)
+	cout<<" Z2: "<<Z2<<", M: "<<M<<", t="<<t<<", diff=("<<num<<"-"<<teo<<")="<<diff<<" err="<<err<<" cont="<<cont<<endl;
     }
 }
 
 void two_pts_migrad_fit(jack &M,jack &Z2,jvec corr,int tmin,int tmax,const char *path=NULL)
 {
+  TMinuit minu;
+  minu.SetPrintLevel(-1);
+  minu.SetFCN(ch2_two_pts_migrad_fit);
+
   jvec ecorr=effective_mass(corr);
-  
   M=constant_fit(ecorr,tmin,tmax,NULL);
+  double M_med=M.med();
+  if(isnan(M_med)) M_med=1;
+  
   jvec temp(corr.nel,corr.njack);
   int TH=temp.nel-1;
   for(int t=0;t<=TH;t++)
     temp[t]=corr[t]/exp(-M*TH)/cosh(M*(TH-t))*M;
   
   Z2=constant_fit(temp,tmin,tmax,NULL);
-  
-  TMinuit minu;
-  minu.SetPrintLevel(-1);
-  minu.SetFCN(ch2_two_pts_migrad_fit);
-  minu.DefineParameter(1,"Z2",Z2.med(),0.001,0,0);
+  double Z2_med=Z2.med();
+  if(isnan(Z2_med)) Z2_med=M_med=1;
+  minu.DefineParameter(0,"M",M_med,0.001,0,0);
+  minu.DefineParameter(1,"Z2",Z2_med,0.001,0,0);
   
   int njack=M.njack;
   c_two_pts_fit=new double[TH+1];
@@ -172,7 +187,6 @@ void two_pts_migrad_fit(jack &M,jack &Z2,jvec corr,int tmin,int tmax,const char 
   
   for(int ijack_fit=0;ijack_fit<=njack;ijack_fit++)
     {
-      minu.DefineParameter(0,"M",M[ijack_fit],0.001,0,0);
       //minu.FixParameter(0);
       for(int iel=0;iel<=TH;iel++)
 	  c_two_pts_fit[iel]=corr[iel][ijack_fit];
