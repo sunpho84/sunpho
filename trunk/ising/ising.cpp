@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <bitset>
+#include <omp.h>
 
 using namespace std;
 
@@ -15,7 +16,8 @@ using namespace std;
 
 typedef int coords_t[nmu];
 typedef int neighs_t[2*nmu];
-typedef bitset<ncopies> spin_t;
+//typedef bitset<ncopies> spin_t;
+typedef bool spin_t[ncopies];
 
 //structure for the random generator
 struct rnd_gen_t
@@ -34,6 +36,7 @@ neighs_t *neighs;                                     //neighbors
 int glb_par_link[ncopies],glb_up_spins[ncopies];      //store the total number of parallel link and up spins
 double beta,flip_prob;                                //beta and probablity to flip single spin
 rnd_gen_t glb_rnd_gen[ncopies],*loc_rnd_gen;          //random number generators
+int total_flipped[ncopies];                           //total number of flipped per copy
 
 /////////////////////////////////////////// utils //////////////////////////////////////
 
@@ -234,11 +237,8 @@ void init(const char *path)
   
   //generate the configuration
   for(int site=0;site<nsites;site++)
-    {
-      spins[site]=0;
-      for(int icopy=0;icopy<ncopies;icopy++)
-	spins[site][icopy]=(bool)(rnd_get_unif(loc_rnd_gen+site*ncopies+icopy,0,1)>=0.5);
-    }
+    for(int icopy=0;icopy<ncopies;icopy++)
+      spins[site][icopy]=(icopy%2)?0:(bool)(rnd_get_unif(loc_rnd_gen+site*ncopies+icopy,0,1)>=0.5);
   
   //count the "up" sites and number of parallel sites
   for(int site=0;site<nsites;site++)
@@ -253,7 +253,7 @@ void init(const char *path)
 }
 
 //change a single cluster using Wolf algorithm
-void change_single_cluster(int icopy)
+int change_single_cluster(int icopy)
 {
   //cluster size, for future reference
   int cluster_size=1;
@@ -265,7 +265,7 @@ void change_single_cluster(int icopy)
   
   //update parallel sites surrounding
   for(int mu=0;mu<2*nmu;mu++)
-    if(spins[neighs[site][mu]]==nse) glb_par_link[icopy]++;
+    if(spins[neighs[site][mu]][icopy]==nse) glb_par_link[icopy]++;
     else glb_par_link[icopy]--;
 
   //set in the cluster
@@ -318,22 +318,42 @@ void change_single_cluster(int icopy)
   //adjust up count
   if(nse==1) glb_up_spins[icopy]+=cluster_size;
   else glb_up_spins[icopy]-=cluster_size;
+  
+  return cluster_size;
 }
 
 //run the simulation
 void run()
 {
+  //reset the number of totally flipped
+  for(int icopy=0;icopy<ncopies;icopy++) total_flipped[icopy]=0;
+
   for(int iconf=0;iconf<nconfs;iconf++)
     {
+      double magnetizz[ncopies];
       //sweep
+#pragma omp parallel for private(nsweeps)
       for(int icopy=0;icopy<ncopies;icopy++)
 	{
-	  for(int isweep=0;isweep<nsweeps;isweep++) change_single_cluster(icopy);
+	  int nsweeps=0;
+	  do
+	    {
+	      total_flipped[icopy]+=change_single_cluster(icopy);
+	      nsweeps++;
+	    }
+	  while(nsweeps<nsites && total_flipped[icopy]<iconf*nsites);
+	  
+	  //check that we did a number of sweeps smaller than the total number of sites
+	  if(nsweeps>nsites) crash("something went wront, nsweeps: %d, nsites: %d",nsweeps,nsites);
+	  
 	  //compute energy and magnetization
 	  //double energy=-glb_par_link*2;
-	  double magnetizz=((glb_up_spins[icopy]*2)-nsites)/(double)(nsites);
-	  cout<<magnetizz<<" ";
+	  magnetizz[icopy]=((glb_up_spins[icopy]*2)-nsites)/(double)(nsites);
+	  //cout<<nsweeps/(double)nsites<<" ";
 	}
+      
+      //print magnetizzation
+      for(int icopy=0;icopy<ncopies;icopy++) cout<<magnetizz[icopy]<<" ";
       cout<<endl;
     }
 }
