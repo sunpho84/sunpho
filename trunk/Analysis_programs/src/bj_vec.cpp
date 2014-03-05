@@ -26,6 +26,7 @@ public:
   VTYPE operator=(const VTYPE& a){
     reallocate_if_necessary(a.nel,a.nboot,a.njack);for(int iel=0;iel<nel;iel++) data[iel]=a.data[iel];return *this;}
 #else
+  void clusterize(){for(int iel=0;iel<nel;iel++) data[iel].clusterize();}
   void create(int ne,int nj){nel=ne;njack=nj;data=new jack[nel];for(int iel=0;iel<nel;iel++) data[iel].create(nj);}
   explicit VTYPE(){data=NULL;nel=njack=0;}
   VTYPE(const VTYPE& a) : nel(a.nel),njack(a.njack){create(nel,njack);for(int iel=0;iel<nel;iel++) data[iel]=a.data[iel];}
@@ -433,7 +434,7 @@ VTYPE VTYPE::simmetric()
 #endif
   
   for(int iel=0;iel<nel;iel++)
-    c.data[iel]=data[nel-iel-1];
+    c.data[iel]=data[(nel-iel)%nel];
 
   return c;
 }

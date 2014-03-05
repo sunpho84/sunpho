@@ -1,12 +1,12 @@
 #include "common.cpp"
 
+int ib;
+double am_l;
 int tmin_K,tmax_K;
 int tmin_H,tmax_H;
 int tmin_V0,tmax_V0;
 int tmin_VK,tmax_VK;
 int tmin_TK,tmax_TK;
-
-int im_spec,im_S0,im_S1;
 
 ///////////////////////////////////////////////////////////////////////////////////
 
@@ -18,10 +18,20 @@ jvec load_2pts(const char *path,REIM ri,S_2pts_mass im1,S_2pts_mass im2)
 
 int main(int narg,char **arg)
 {
-  int im_spec=0;
-
+  FILE *data_pars_file=open_file("../data_pars","r");
+  int dum;
+  read_formatted_from_file_expecting((char*)&dum,data_pars_file,"%d","T");
+  read_formatted_from_file_expecting((char*)&dum,data_pars_file,"%d","TSep");
+  read_formatted_from_file_expecting((char*)&ib,data_pars_file,"%d","ibeta");
+  read_formatted_from_file_expecting((char*)&dum,data_pars_file,"%d","nmass");
+  read_formatted_from_file_expecting((char*)&am_l,data_pars_file,"%lg","mass_list");
+  fclose(data_pars_file);
+  
   FILE *input_file=open_file("analysis_pars","r");
 
+  int im_spec;
+  read_formatted_from_file_expecting((char*)&im_spec,input_file,"%d","im_spec");  
+  
   int tminP,tmaxP,tminV,tmaxV;
   read_formatted_from_file_expecting((char*)&tminP,input_file,"%d","tintP");
   read_formatted_from_file((char*)&tmaxP,input_file,"%d","tintP");
@@ -38,6 +48,10 @@ int main(int narg,char **arg)
   ofstream P5_SS_out("M_P5_fit_SS.xmg");
   ofstream VK_SL_out("M_VK_fit_SL.xmg");
   ofstream VK_SS_out("M_VK_fit_SS.xmg");
+  ofstream ratio_SL_out("ratio_SL.xmg");
+  ofstream ratio_SS_out("ratio_SS.xmg");
+  ratio_SL_out<<"@type xydy"<<endl;
+  ratio_SS_out<<"@type xydy"<<endl;
   
   //results
   jvec M_P5(10,njack),ZL_P5(10,njack);
@@ -70,6 +84,15 @@ int main(int narg,char **arg)
   for(int im_S0=0;im_S0<10;im_S0++){for(int ijack=0;ijack<=njack;ijack++) table<<ZL_P5[im_S0][ijack]<<" ";table<<endl;}
   for(int im_S0=0;im_S0<10;im_S0++){for(int ijack=0;ijack<=njack;ijack++) table<<M_VK[im_S0][ijack]<<" ";table<<endl;}
   for(int im_S0=0;im_S0<10;im_S0++){for(int ijack=0;ijack<=njack;ijack++) table<<ZL_VK[im_S0][ijack]<<" ";table<<endl;}
+
+  double mc[4]={0.2331,0.2150,0.1849,0.1566};
+  double lat_med[4]={0.486508,0.422773,0.335339,0.268402};
+  double Za_med[4]={0.746,0.746,0.772,0.780};
+  jack f_P5=ZL_P5[0]*(am_l+mc[ib])/M_P5[0]/sinh(M_P5[0])/lat_med[ib];
+  jack f_VK=Za_med[ib]*ZL_VK[0]/M_VK[0]/lat_med[ib];
+  cout<<smart_print(M_P5[0]/lat_med[ib])<<"    "<<smart_print(f_P5)<<endl;
+  cout<<smart_print(M_VK[0]/lat_med[ib])<<"    "<<smart_print(f_VK)<<endl;
+  cout<<smart_print(f_VK/f_P5)<<endl;
   
   return 0;
 }

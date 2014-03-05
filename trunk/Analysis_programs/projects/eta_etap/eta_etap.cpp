@@ -246,6 +246,9 @@ int main()
   out_ss_conn<<effective_mass(Css)<<endl;
   out_ss_conn<<"&"<<endl;
   out_ss_conn<<effective_mass(Css_exa)<<endl;
+
+  jack ss_conn_mass=constant_fit(effective_mass(Css),10,47,"plots/ss_conn_fit.xmg");
+  cout<<"SS conn mass: "<<smart_print(ss_conn_mass)<<" = "<<smart_print(ss_conn_mass/a)<<" GeV"<<endl;
   
   //fit the SL
   jack MSL(njacks),ZL(njacks),ZS(njacks);
