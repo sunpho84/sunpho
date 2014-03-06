@@ -2143,6 +2143,27 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
+#include all config flags
+config_flags="$*"
+
+cat >>confdefs.h <<_ACEOF
+@%:@define CONFIG_FLAGS "$config_flags"
+_ACEOF
+
+
+#get configuration time
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking configuration date and time" >&5
+$as_echo_n "checking configuration date and time... " >&6; }
+CONFIG_DATE=`date`
+
+cat >>confdefs.h <<_ACEOF
+@%:@define CONFIG_TIME "$CONFIG_TIME"
+_ACEOF
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $CONFIG_DATE" >&5
+$as_echo "$CONFIG_DATE" >&6; }
+
+
 ac_aux_dir=
 for ac_dir in config "$srcdir"/config; do
   if test -f "$ac_dir/install-sh"; then
