@@ -33,7 +33,6 @@ struct simul_t
     GET_THREAD_ID();
     int ret=0;
     
-    printf("qui! %u %d %d\n",thread_id,rank,IS_MASTER_THREAD);
     if(rank==0 && IS_MASTER_THREAD)
       {
         va_list ap;
