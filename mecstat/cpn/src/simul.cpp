@@ -3,6 +3,7 @@
 #endif
 
 #include <execinfo.h>
+#include <signal.h>
 #include <stdlib.h>
 
 #include "debug.hpp"
@@ -16,8 +17,6 @@ simul_t *simul;
 //basic MPI initialization
 void simul_t::init_MPI_thread(int narg,char **arg)
 {
-  if(simul_started) CRASH("simul already started");
-    
   int provided;
   MPI_Init_thread(&narg,&arg,MPI_THREAD_SERIALIZED,&provided);
   simul_started=true;
@@ -33,7 +32,7 @@ void simul_t::start(int narg,char **arg,void(*main_function)(int narg,char **arg
   //get the number of rank and the id of the local one
   get_MPI_nranks();
   get_MPI_rank();
-  printf("%d\n",rank);
+  
   //associate sigsegv with proper handle
   signal(SIGSEGV,signal_handler);
   signal(SIGFPE,signal_handler);
@@ -84,6 +83,10 @@ void simul_t::abort(int err)
 //initialize MPI and threads
 simul_t::simul_t(int narg,char **arg,void(*main_function)(int narg,char **arg))
 {
+  //check immediately that it is not already started
+  if(simul_started) CRASH("simulation already started");
+  
+  simul=this; //because must assigned before starting
   start(narg,arg,main_function);
   
   close();
