@@ -78,7 +78,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = $(top_builddir)/bin/ising$(EXEEXT)
+bin_PROGRAMS = $(top_builddir)/bin/cpn$(EXEEXT)
 subdir = .
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/configure $(am__configure_deps) \
@@ -101,12 +101,12 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__dirstamp = $(am__leading_dot)dirstamp
-am___top_builddir__bin_ising_OBJECTS = src/global_variables.$(OBJEXT) \
-	src/main.$(OBJEXT) src/random.$(OBJEXT) src/system.$(OBJEXT) \
-	src/utils.$(OBJEXT)
-__top_builddir__bin_ising_OBJECTS =  \
-	$(am___top_builddir__bin_ising_OBJECTS)
-__top_builddir__bin_ising_LDADD = $(LDADD)
+am___top_builddir__bin_cpn_OBJECTS = src/debug.$(OBJEXT) \
+	src/fields.$(OBJEXT) src/geometry.$(OBJEXT) src/main.$(OBJEXT) \
+	src/system.$(OBJEXT)
+__top_builddir__bin_cpn_OBJECTS =  \
+	$(am___top_builddir__bin_cpn_OBJECTS)
+__top_builddir__bin_cpn_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -136,8 +136,8 @@ AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
 am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
-SOURCES = $(__top_builddir__bin_ising_SOURCES)
-DIST_SOURCES = $(__top_builddir__bin_ising_SOURCES)
+SOURCES = $(__top_builddir__bin_cpn_SOURCES)
+DIST_SOURCES = $(__top_builddir__bin_cpn_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -281,7 +281,13 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 ACLOCAL_AMFLAGS = -I m4
-__top_builddir__bin_ising_SOURCES = src/global_variables.cpp src/main.cpp src/random.cpp src/system.cpp src/utils.cpp
+__top_builddir__bin_cpn_SOURCES = \
+	src/debug.cpp \
+	src/fields.cpp \
+	src/geometry.cpp \
+	src/main.cpp \
+	src/system.cpp
+
 all: all-am
 
 .SUFFIXES:
@@ -383,21 +389,21 @@ src/$(am__dirstamp):
 src/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/$(DEPDIR)
 	@: > src/$(DEPDIR)/$(am__dirstamp)
-src/global_variables.$(OBJEXT): src/$(am__dirstamp) \
+src/debug.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/fields.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/geometry.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/main.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
-src/random.$(OBJEXT): src/$(am__dirstamp) \
-	src/$(DEPDIR)/$(am__dirstamp)
 src/system.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
-src/utils.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 $(top_builddir)/bin/$(am__dirstamp):
 	@$(MKDIR_P) $(top_builddir)/bin
 	@: > $(top_builddir)/bin/$(am__dirstamp)
 
-$(top_builddir)/bin/ising$(EXEEXT): $(__top_builddir__bin_ising_OBJECTS) $(__top_builddir__bin_ising_DEPENDENCIES) $(EXTRA___top_builddir__bin_ising_DEPENDENCIES) $(top_builddir)/bin/$(am__dirstamp)
-	@rm -f $(top_builddir)/bin/ising$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(__top_builddir__bin_ising_OBJECTS) $(__top_builddir__bin_ising_LDADD) $(LIBS)
+$(top_builddir)/bin/cpn$(EXEEXT): $(__top_builddir__bin_cpn_OBJECTS) $(__top_builddir__bin_cpn_DEPENDENCIES) $(EXTRA___top_builddir__bin_cpn_DEPENDENCIES) $(top_builddir)/bin/$(am__dirstamp)
+	@rm -f $(top_builddir)/bin/cpn$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(__top_builddir__bin_cpn_OBJECTS) $(__top_builddir__bin_cpn_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -406,11 +412,11 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/global_variables.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/debug.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/fields.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/geometry.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/main.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/random.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/system.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/utils.Po@am__quote@
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -781,6 +787,11 @@ uninstall-am: uninstall-binPROGRAMS
 	mostlyclean-generic pdf pdf-am ps ps-am tags tags-am uninstall \
 	uninstall-am uninstall-binPROGRAMS
 
+
+# \
+#	src/random.cpp \
+#	src/system.cpp \
+#	src/utils.cpp
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
