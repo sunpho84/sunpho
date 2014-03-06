@@ -8,6 +8,13 @@
 
 using namespace std;
 
+//write all magnetizations
+void write_all_magnetizations()
+{
+  for(int icopy=0;icopy<ncopies;icopy++) cout<<systems[icopy]->get_magnetization(nsites)<<" ";
+  cout<<endl;
+}
+
 //initialize the program
 void init(const char *path)
 {
@@ -48,8 +55,9 @@ void init(const char *path)
     }
   
   //generate the systems and initialize them
-  for(int icopy=0;icopy<ncopies;icopy++) systems[icopy]=new system_t(seed+icopy);
-  
+#pragma omp parallel for
+  for(int icopy=0;icopy<ncopies;icopy++) systems[icopy]=new system_t(seed+icopy,0.5+(double)icopy/(ncopies-1)/2);
+
   //define the probability
   flip_prob=1-exp(-2*beta);
 }
@@ -60,34 +68,63 @@ void run()
   //reset the number of totally flipped
   int total_flipped[ncopies];
   for(int icopy=0;icopy<ncopies;icopy++) total_flipped[icopy]=0;
+
+  //keep track of magnetization across last "nave" configurations
+  bool thermalized=false;
+  int nave=10;
+  double magnetiz[ncopies][nave];
   
   for(int iconf=0;iconf<nconfs;iconf++)
     {
-      double magnetizz[ncopies];
       //sweep
 #pragma omp parallel for
       for(int icopy=0;icopy<ncopies;icopy++)
 	{
 	  int nsweeps=0;
-	  do
+	  while(nsweeps<nsites && total_flipped[icopy]<iconf*nsites)
 	    {
 	      total_flipped[icopy]+=systems[icopy]->change_single_cluster();
 	      nsweeps++;
 	    }
-	  while(nsweeps<nsites && total_flipped[icopy]<iconf*nsites);
 	  
 	  //check that we did a number of sweeps smaller than the total number of sites
-	  if(nsweeps>nsites) crash("something went wront, nsweeps: %d, nsites: %d",nsweeps,nsites);
-	  
-	  //compute energy and magnetization
-	  //double energy=-glb_par_link*2;
-	  magnetizz[icopy]=(systems[icopy]->glb_up_spins*2-nsites)/(double)(nsites);
-	  //cout<<nsweeps/(double)nsites<<" ";
+	  if(nsweeps>nsites) crash("something went wrong, nsweeps: %d, nsites: %d",nsweeps,nsites);
+
+	  //store magnetization
+	  if(!thermalized) magnetiz[icopy][iconf%nave]=fabs(systems[icopy]->get_magnetization(nsites));
 	}
       
-      //print magnetizzation
-      for(int icopy=0;icopy<ncopies;icopy++) cout<<magnetizz[icopy]<<" ";
-      cout<<endl;
+      //check thermalization
+      if(!thermalized && iconf>=nave)
+	{
+	  double mave[ncopies],mvar[ncopies];
+	  for(int icopy=0;icopy<ncopies;icopy++)
+	    {
+	      mave[icopy]=mvar[icopy]=0;
+	      for(int iave=0;iave<nave;iave++)
+		{
+		  mave[icopy]+=magnetiz[icopy][iave];
+		  mvar[icopy]+=magnetiz[icopy][iave]*magnetiz[icopy][iave];
+		}
+	      mave[icopy]/=nave;
+	      mvar[icopy]/=nave;
+	      mvar[icopy]-=mave[icopy]*mave[icopy];	      
+	    }
+      
+	  //check compatibility of different copies
+	  int nincomp=0;;
+	  for(int icopy=1;icopy<ncopies;icopy++)
+	    for(int jcopy=0;jcopy<icopy;jcopy++)
+	      {
+		double diff=mave[icopy]-mave[jcopy];
+		double fluct=sqrt(mvar[icopy]+mvar[jcopy]);
+		if(fluct<diff) nincomp++;
+	      }
+	  if(nincomp==0) cout<<"Thermalized!"<<endl;
+	  cout<<nincomp<<"   ";
+	  for(int icopy=0;icopy<ncopies;icopy++) cout<<systems[icopy]->get_magnetization(nsites)<<" ";
+	  cout<<endl;
+	}
     }
 }
 

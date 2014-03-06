@@ -239,17 +239,20 @@ void study_single_tsep(int tsep,ios::openmode mode=ios::out)
 				 (pion_move_tilde[tsep]*kaon_rest_tilde[tsep]));
   jvec kp_VK_move_R1=Zv_mixed*sqrt(4*E_Pi*M_K*kp_VK_move*partially_simmetric(kp_VK_move,tsep)/
 				 (pion_move_tilde[tsep]*kaon_rest_tilde[tsep]));
-  kp_VK_move_R1=sqrt(kp_VK_move*partially_simmetric(kp_VK_move,tsep)/
-				 (pion_move_tilde[tsep]*kaon_rest_tilde[tsep]));
+  
+  
+  kp_VK_move_R1=kp_VK_move*partially_simmetric(kp_VK_move,tsep)/
+    (pion_move_tilde[tsep]*kaon_rest_tilde[tsep]);
   
   simple_plot("kp_V0_rest_R1",kp_V0_rest_R1.subset(0,tsep),tsep,mode);
   simple_plot("kp_V0_move_R1",kp_V0_move_R1.subset(0,tsep),tsep,mode);
   simple_plot("kp_VK_move_R1",kp_VK_move_R1.subset(0,tsep),tsep,mode);
   
   //fit V move ratios             0     4     8     12    16     20     24     28     32      36     40
-  int f_VK_move_R1_tint[11][2]={{0,0},{1,3},{4,6},{4,8},{5,11},{5,14},{6,20},{4,24},{14,17},{8,28},{10,35}};
+  int f_VK_move_R1_tint[11][2]={{0,0},{1,3},{4,6},{4,8},{5,11},{6,14},{6,20},{4,24},{14,17},{8,28},{10,35}};
   jack f_VK_move_R1=fit_ratio("f_VK_move_R1",kp_VK_move_R1,f_VK_move_R1_tint[it],tsep,mode);
-  
+  cout<<"VK tsep "<<tsep<<" at timeslice 4: "<<kp_VK_move_R1[4]<<endl;
+
   /////////////////////////////////////////////////////////////////////////
 
   //build ratios

@@ -8,7 +8,7 @@
 using namespace std;
 
 //initialization
-system_t::system_t(int seed)
+system_t::system_t(int seed,double filling)
 {
   //start the global random generator
   glb_rnd_gen.init(seed);
@@ -24,7 +24,7 @@ system_t::system_t(int seed)
   curr_cluster=new int[nsites];
   
   //generate the configuration
-  for(int site=0;site<nsites;site++) spins[site]=(bool)(loc_rnd_gen[site].rnd_get_unif(0,1)>=0.5);
+  for(int site=0;site<nsites;site++) spins[site]=(bool)(loc_rnd_gen[site].rnd_get_unif(0,1)<filling);
   
   //count the "up" sites and number of parallel sites
   glb_par_link=glb_up_spins=0;
