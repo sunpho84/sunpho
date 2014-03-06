@@ -1,5 +1,11 @@
 /* src/config.hpp.in.  Generated from configure.ac by autoheader.  */
 
+/* Flags passed to configure */
+#undef CONFIG_FLAGS
+
+/* Time when configured */
+#undef CONFIG_TIME
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 

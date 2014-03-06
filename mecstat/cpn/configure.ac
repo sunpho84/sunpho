@@ -1,5 +1,15 @@
-AC_PREREQ([2.63])
 AC_INIT([mecstat],[1.0],[fr.sanfilippo@gmail.com])
+
+#include all config flags
+config_flags="$*"
+AC_DEFINE_UNQUOTED([CONFIG_FLAGS],["$config_flags"],[Flags passed to configure])
+
+#get configuration time
+AC_MSG_CHECKING([configuration date and time])
+CONFIG_DATE=`date`
+AC_DEFINE_UNQUOTED([CONFIG_TIME], "$CONFIG_TIME", [Time when configured])
+AC_MSG_RESULT([$CONFIG_DATE])
+
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_AUX_DIR([config])
 AM_INIT_AUTOMAKE([1.0 no-define foreign subdir-objects])

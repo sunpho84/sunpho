@@ -2,15 +2,31 @@
  #include "config.hpp"
 #endif
 
-#include "system.hpp"
+#include <stdlib.h>
+
+#include "debug.hpp"
+#include "simul.hpp"
+#include "threads.hpp"
+#include "utils.hpp"
 #include "vectors.hpp"
+
+//print the content of a vect
+void vector_el_t::print_content()
+{
+  if(simul->rank==0)
+    {
+      printf("\"%s\" ",tag);
+      printf("of %d elements of type \"%s\" (%d bytes) ",nel,type,nel*size_per_el);
+      printf("allocated in file %s line %d\n",file,line);
+    }
+}
 
 //initialize the first vector element
 vector_el_t::vector_el_t()
 {
-  sprintf(main_vect.tag,"base");
-  sprintf(main_vect.type,"(null)");
-  prev=main_vect.next=NULL;
+  sprintf(tag,"base");
+  sprintf(type,"(null)");
+  prev=next=NULL;
   nel=0;
   size_per_el=0;
 }
@@ -30,6 +46,18 @@ void vector_el_t::mark_as(const char *_tag,int _nel,int _size_per_el,const char 
 
 //////////////////////////////////////////////////////
 
+//print all vector
+void vectors_t::print_all_contents()
+{
+  vector_el_t *curr=main_vector;
+    do
+      {  
+        curr->print_content();
+        curr=curr->next;
+      }
+    while(curr!=NULL);
+}
+
 //initialize the first vector
 vectors_t::vectors_t()
 {
@@ -37,7 +65,7 @@ vectors_t::vectors_t()
   required_memory=max_required_memory=0;
   
   //point last vector to main one and create it
-  last_vect=main_vect=new vector_el_t;
+  last_vector=main_vector=new vector_el_t;
 }
 
 //alocate a vector
@@ -50,25 +78,25 @@ void* vectors_t::allocate(const char *tag,int nel,int size_per_el,const char *ty
       //try to allocate the new vector
       vector_el_t *nv=(vector_el_t*)malloc(size+sizeof(vector_el_t));
       if(nv==NULL)
-	system->crash("could not allocate vector named \"%s\" of %d elements of type %s (total size: %d bytes) "
-		      "request on line %d of file %s",tag,nel,type,size,line,file);
+	CRASH("could not allocate vector named \"%s\" of %d elements of type %s (total size: %d bytes) "
+	      "request on line %d of file %s",tag,nel,type,size,line,file);
       
       //append the new vector to the list
       nv->mark_as(tag,nel,size_per_el,type,file,line);
       nv->next=NULL;
-      nv->prev=last_vect;        
-      last_vect->next=nv;
-      last_vect=nv;
+      nv->prev=last_vector;        
+      last_vector->next=nv;
+      last_vector=nv;
         
       if(VERBOSITY_LV3)
 	{
-	  master_printf("Allocated vector ");
-	  last_vect->printf();
+	  MASTER_PRINTF("Allocated vector ");
+	  last_vector->print_content();
 	}
 
       //define returned pointer and check for its alignement
-      system->return_malloc_ptr=last_vect->get_pointer_to_data;
-      int offset=((long long int)(system_return_malloc_ptr))%VECTOR_ALIGNMENT;
+      simul->returned_malloc_ptr=last_vector->get_pointer_to_data();
+      int offset=((long long int)(simul->returned_malloc_ptr))%VECTOR_ALIGNMENT;
       if(offset!=0) CRASH("memory alignment problem, vector %s has %d offset",tag,offset);
         
       //Update the amount of required memory
@@ -80,7 +108,7 @@ void* vectors_t::allocate(const char *tag,int nel,int size_per_el,const char *ty
     
   //sync so we are sure that master thread allocated
   THREAD_BARRIER();
-  void *res=return_malloc_ptr;
+  void *res=simul->returned_malloc_ptr;
     
   //resync so all threads return the same pointer
   THREAD_BARRIER();
@@ -92,7 +120,7 @@ void* vectors_t::allocate(const char *tag,int nel,int size_per_el,const char *ty
 int vectors_t::total_memory_usage()
 {
   int tot=0;
-  vector_el_t *curr=main_vect;
+  vector_el_t *curr=main_vector;
   do
     {  
       tot+=curr->nel*curr->size_per_el;
