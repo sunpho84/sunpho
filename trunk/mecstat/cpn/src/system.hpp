@@ -1,15 +1,33 @@
-#ifndef _FIELDS_HPP
-#define _FIELDS_HPP
+#ifndef _SYSTEM_HPP
+#define _SYSTEM_HPP
 
-#include "random.hpp"
+#include <mpi.h>
+#include <mpi.h>
 
-//fields
-struct fields_t
+#include "thread_macros.hpp"
+
+extern bool system_started;
+
+//system
+struct system_t
 {
-  rnd_gen_t *loc_rnd_gen;                 //random number generators
+  int rank,nranks;
   
-  fields_t(pars_t *pars);
-  ~fields_t();
+  //basic MPI initialization
+  void init_MPI_thread(int narg,char **arg);
+  void get_MPI_nranks(){MPI_Comm_size(MPI_COMM_WORLD,&nranks);} //get nranks
+  void get_MPI_rank(){MPI_Comm_rank(MPI_COMM_WORLD,&rank);} //get rank
+  
+  //debug
+  void print_backtrace_list();
+  void abort(int arg);
+  
+  system_t(int narg,char **arg);
+  ~system_t();
+private:
+  system_t();
 };
+
+extern system_t *system;
 
 #endif
