@@ -7,9 +7,11 @@
 #include <stdlib.h>
 
 #include "debug.hpp"
+#include "endianness.hpp"
 #include "simul.hpp"
 #include "svnversion.hpp"
 #include "threads.hpp"
+#include "utils.hpp"
 
 bool simul_started;
 simul_t *simul;
@@ -39,12 +41,30 @@ void simul_t::start(int narg,char **arg,void(*main_function)(int narg,char **arg
   signal(SIGXCPU,signal_handler);
   
   //print SVN version and configuration and compilation time
-  MASTER_PRINTF("Initializing nissa, version: %s\n",SVN_VERSION);
+  MASTER_PRINTF("Initializing mecstat, version: %s\n",SVN_VERSION);
   MASTER_PRINTF("Configured at %s with flags: %s\n",CONFIG_TIME,CONFIG_FLAGS);
   MASTER_PRINTF("Compiled at %s of %s\n",__TIME__,__DATE__);
   
+  //initialize the first vector
+  vectors=new vectors_t();
 
-  //verb
+  //check endianness
+  is_little_endian=get_little_endianness();
+  if(is_little_endian) MASTER_PRINTF("System endianness: little (ordinary machine)\n");
+  else MASTER_PRINTF("System endianness: big (BG, etc)\n");
+  
+  //some init missing
+  
+  //now start the threads
+  #pragma omp parallel
+  {
+    //get the number of threads
+    nthreads=omp_get_num_threads();
+    MASTER_PRINTF("Using %u threads\n",nthreads);
+    
+    //start internal main
+    main_function(narg,arg);
+  }
 }
 
 //write the list of called routines
@@ -55,7 +75,7 @@ void simul_t::print_backtrace_list()
   char **strs=backtrace_symbols(callstack,frames);
     
   //only master rank, but not master thread
-  if(rank==0)
+  if(IS_MASTER_RANK)
     {
       printf("Backtracing...\n");
       for(int i=0;i<frames;i++) printf("%s\n",strs[i]);
@@ -67,6 +87,20 @@ void simul_t::print_backtrace_list()
 //close
 void simul_t::close()
 {
+  //print information over the maximum amount of memory used
+  MASTER_PRINTF("Maximal memory used during the run: %d bytes (",vectors->max_required_memory);
+  if(IS_MASTER_RANK) fprintf_friendly_filesize(stdout,vectors->max_required_memory);
+  MASTER_PRINTF(") per rank\n\n");
+    
+  //check wether there are still allocated vectors
+  if(vectors->main_vector->next!=NULL && IS_MASTER_RANK)
+    {
+      printf("Warning, there are still allocated vectors:\n");
+      vectors->print_all_contents();
+      printf("For a total of %d bytes\n",vectors->total_memory_usage());
+    }
+
+  //final message
   MPI_Barrier(MPI_COMM_WORLD);
   MASTER_PRINTF("   Ciao!\n\n");
   MPI_Finalize();
@@ -76,7 +110,7 @@ void simul_t::close()
 void simul_t::abort(int err)
 {
   GET_THREAD_ID();
-  printf("thread %d on rank %d aborting\n",thread_id,rank);
+  printf("thread %d on rank %d aborting\n",thread_id,rank_id);
   MPI_Abort(MPI_COMM_WORLD,0);
 }
 

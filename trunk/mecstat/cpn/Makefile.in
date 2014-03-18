@@ -101,8 +101,10 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__dirstamp = $(am__leading_dot)dirstamp
-am___top_builddir__bin_cpn_OBJECTS = src/debug.$(OBJEXT) \
-	src/fields.$(OBJEXT) src/geometry.$(OBJEXT) src/main.$(OBJEXT) \
+am___top_builddir__bin_cpn_OBJECTS = src/all_to_all_comm.$(OBJEXT) \
+	src/debug.$(OBJEXT) src/endianness.$(OBJEXT) \
+	src/field.$(OBJEXT) src/geometry.$(OBJEXT) \
+	src/local_mask.$(OBJEXT) src/main.$(OBJEXT) \
 	src/simul.$(OBJEXT) src/threads.$(OBJEXT) src/utils.$(OBJEXT) \
 	src/vectors.$(OBJEXT)
 __top_builddir__bin_cpn_OBJECTS =  \
@@ -284,13 +286,16 @@ top_srcdir = @top_srcdir@
 ACLOCAL_AMFLAGS = -I m4
 
 #svn versioning: specify to build sources and include script
-BUILT_SOURCES = update_svnversion svnversion.hpp
-EXTRA_DIST = svnversion.hpp update_svnversion.hpp.sh
-CLEANFILES = svnversion.hpp
+BUILT_SOURCES = update_svnversion src/svnversion.hpp
+EXTRA_DIST = src/svnversion.hpp $(top_srcdir)/src/update_svnversion.hpp.sh
+CLEANFILES = src/svnversion.hpp
 __top_builddir__bin_cpn_SOURCES = \
+	src/all_to_all_comm.cpp \
 	src/debug.cpp \
-	src/fields.cpp \
+	src/endianness.cpp \
+	src/field.cpp \
 	src/geometry.cpp \
+	src/local_mask.cpp \
 	src/main.cpp \
 	src/simul.cpp \
 	src/threads.cpp \
@@ -399,10 +404,15 @@ src/$(am__dirstamp):
 src/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/$(DEPDIR)
 	@: > src/$(DEPDIR)/$(am__dirstamp)
-src/debug.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
-src/fields.$(OBJEXT): src/$(am__dirstamp) \
+src/all_to_all_comm.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/debug.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/endianness.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/field.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/geometry.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/local_mask.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/main.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/simul.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
@@ -426,9 +436,12 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/all_to_all_comm.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/debug.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/fields.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/endianness.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/field.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/geometry.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/local_mask.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/simul.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/threads.Po@am__quote@
@@ -809,7 +822,7 @@ uninstall-am: uninstall-binPROGRAMS
 	uninstall-am uninstall-binPROGRAMS
 
 update_svnversion:
-	$(srcdir)/src/update_svnversion.hpp.sh $(top_srcdir)
+	$(top_srcdir)/src/update_svnversion.hpp.sh $(top_srcdir)
 .PHONY: update_svnversion
 
 # \

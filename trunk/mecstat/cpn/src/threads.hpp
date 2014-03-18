@@ -17,6 +17,12 @@ inline void cache_flush()
  #pragma omp flush
 }
 
+//cast a pointer from master thread to all the others
+#define CAST_PTR_FROM_MASTER_THREAD(A)					\
+  (IS_MASTER_THREAD?                                                    \
+  (THREAD_BARRIER(),simul->returned_malloc_ptr=A,THREAD_BARRIER(),(typeof(A))simul->returned_malloc_ptr): \
+   (THREAD_BARRIER(),THREAD_BARRIER(),(typeof(A))simul->returned_malloc_ptr))
+
 //barriers
 void thread_barrier_internal();
 #ifdef THREAD_DEBUG
