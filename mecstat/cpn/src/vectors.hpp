@@ -5,8 +5,11 @@
  #include "config.hpp"
 #endif
 
-#define VECTOR_STRING_LENGTH 30
-#define VECTOR_ALIGNMENT 64
+#define VECTOR_STRING_LENGTH 20
+#define VECTOR_ALIGNMENT 16
+
+#define ALLOCATE(A,B,C) (C*)simul->vectors->allocate(#A,B,sizeof(C),#C,__FILE__,__LINE__)
+#define FREE(A) simul->vectors->deallocate((void**)&(A),__FILE__,__LINE__)
 
 //element vector
 struct vector_el_t
@@ -33,10 +36,11 @@ struct vectors_t
   vector_el_t *main_vector,*last_vector;
   
   void *allocate(const char *tag,int nel,int size_per_el,const char *type,const char *file,int line);
+  void deallocate(void **arr,const char *file,int line);
   void print_all_contents(); //print all allocated vectors
   vectors_t();
-  ~vectors_t();
   int total_memory_usage();
+  ~vectors_t();
 };
 
 #endif

@@ -9,23 +9,24 @@
 
 extern bool simul_started;
 
+#define IS_MASTER_RANK (simul->rank_id==0)
+
 //simul
 struct simul_t
 {
-  //mpi rank and numebr of ranks
-  int rank,nranks;
+  int rank_id,nranks;    //rank and number of ranks
+  int nthreads;          //number of threads
   
-  //debug variables
-  int verbosity_lv;
+  int verbosity_lv;      //debug variables
+  bool is_little_endian; //endianness flag
   
-  //vectors manager stuff
-  void *returned_malloc_ptr;
-  vectors_t *vectors;
+  void *returned_malloc_ptr;   //returned global pointer
+  vectors_t *vectors;          //vectors manager
   
   //basic MPI initialization
   void init_MPI_thread(int narg,char **arg);
   void get_MPI_nranks(){MPI_Comm_size(MPI_COMM_WORLD,&nranks);} //get nranks
-  void get_MPI_rank(){MPI_Comm_rank(MPI_COMM_WORLD,&rank);} //get rank
+  void get_MPI_rank(){MPI_Comm_rank(MPI_COMM_WORLD,&rank_id);} //get rank
   
   //only master rank and thread print
   int master_fprintf(FILE *stream,const char *format,...)
@@ -33,7 +34,7 @@ struct simul_t
     GET_THREAD_ID();
     int ret=0;
     
-    if(rank==0 && IS_MASTER_THREAD)
+    if(rank_id==0 && IS_MASTER_THREAD)
       {
         va_list ap;
         va_start(ap,format);

@@ -37,7 +37,7 @@ void internal_crash(int line,const char *file,const char *templ,...)
   GET_THREAD_ID();
   if(!IS_MASTER_THREAD) sleep(1);
     
-  if(simul->rank==0)
+  if(simul->rank_id==0)
     {
       //expand error message
       char mess[1024];

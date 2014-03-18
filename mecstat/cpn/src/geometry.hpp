@@ -18,13 +18,13 @@ typedef int neighs_t[2*NMU];
 struct geometry_t
 {
   MPI_Comm rank_comm;      //communicator
-  int nranks;              //total number of ranks
   coords_t nranks_per_dir; //ranks per direction
   coords_t rank_coords;    //coordinates in the proc grid
   neighs_t neigh_ranks;    //neighbors ranks
   
-  coords_t glb_sizes,loc_sizes; //local dimensions
-  int glb_size,loc_size;        //number of sites
+  bool homogeneous_partitioning; //store if each node has the same number of sites
+  coords_t glb_sizes,loc_sizes;  //local dimensions
+  int glb_size,loc_size;         //number of sites
   
   void loc_coords_of_loc_site(coords_t loc_coords,int loc_site){coords_of_site(loc_coords,loc_site,loc_sizes);}
   int loc_site_of_loc_coords(coords_t loc_coords){return site_of_coords(loc_coords,loc_sizes);}
@@ -40,6 +40,7 @@ struct geometry_t
     start(ext_glb_sizes);
   }
 private:
+  void partition_ranks_homogeneously();
   void coords_of_site(coords_t coords,int loc_site,coords_t sizes);
   int site_of_coords(coords_t coords,coords_t sizes);
   geometry_t();

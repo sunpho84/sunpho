@@ -8,12 +8,14 @@
 #include <mpi.h>
 
 #include "geometry.hpp"
+#include "local_mask.hpp"
 
 //structure for a field
-struct field_t
+template <class T> struct field_t
 {
-  geometry_t *geometry;
-  field_t(geometry_t *geometry): geometry(geometry) {};
+  T *data;
+  local_mask_t *mask;
+  field_t(local_mask_t *mask): mask(mask) {};
 private:
   field_t();
 };

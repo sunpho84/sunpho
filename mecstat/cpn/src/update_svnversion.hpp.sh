@@ -7,7 +7,7 @@ then
 fi
 
 #take old version
-old_svnversion=$(if [ -f svnversion.hpp ];then sed 's|\"||g' svnversion.hpp|awk '{print $NF}';else echo 0;fi)
+old_svnversion=$(if [ -f src/svnversion.hpp ];then sed 's|\"||g' src/svnversion.hpp|awk '{print $NF}';else echo 0;fi)
 
 #take new version
 cd $1
@@ -24,14 +24,14 @@ fi
 
 #compare and decide if to update
 echo \#define SVN_VERSION \""$new_svnversion"\" > test
-if [ ! -f svnversion.hpp ]
+if [ ! -f src/svnversion.hpp ]
 then
-    mv test svnversion.hpp
+    mv test src/svnversion.hpp
 else
-    diff test svnversion.hpp > /dev/null
+    diff test src/svnversion.hpp > /dev/null
     if [ "$?" != "0" ]
     then
-	mv test svnversion.hpp
+	mv test src/svnversion.hpp
     else
 	rm test
     fi

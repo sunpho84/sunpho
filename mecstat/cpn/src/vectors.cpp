@@ -13,7 +13,7 @@
 //print the content of a vect
 void vector_el_t::print_content()
 {
-  if(simul->rank==0)
+  if(IS_MASTER_RANK)
     {
       printf("\"%s\" ",tag);
       printf("of %d elements of type \"%s\" (%d bytes) ",nel,type,nel*size_per_el);
@@ -114,6 +114,51 @@ void* vectors_t::allocate(const char *tag,int nel,int size_per_el,const char *ty
   THREAD_BARRIER();
     
   return res;
+}
+
+//release a vector
+void vectors_t::deallocate(void **arr,const char *file,int line)
+{
+  //sync so all thread are not using the vector
+  THREAD_BARRIER();
+    
+  GET_THREAD_ID();
+  if(IS_MASTER_THREAD)
+    {
+      if(arr!=NULL)
+	{
+	  vector_el_t *vect=(vector_el_t*)(*arr)-1;
+	  vector_el_t *prev=vect->prev;
+	  vector_el_t *next=vect->next;
+            
+	  if(VERBOSITY_LV3)
+	    {
+	      MASTER_PRINTF("At line %d of file %s freeing vector ",line,file);
+	      vect->print_content();
+	    }
+            
+	  //detach from previous
+	  prev->next=next;
+            
+	  //if not last element
+	  if(next!=NULL) next->prev=prev;
+	  else last_vector=prev;
+            
+	  //update the required memory
+	  required_memory-=(vect->size_per_el*vect->nel);
+	  
+	  //really free
+	  free(vect);
+	}
+      else CRASH("Error, trying to delocate a NULL vector on line: %d of file: %s\n",line,file);
+      
+      //put to zero the array and flush the cache
+      *arr=NULL;
+      cache_flush();
+    }
+    
+  //sync so all threads see that have deallocated
+  THREAD_BARRIER();
 }
 
 //compute current memory usage
