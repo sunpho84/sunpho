@@ -5,43 +5,90 @@
  #include "config.hpp"
 #endif
 
+#include <algorithm>
+#include <functional>
 #include <mpi.h>
+#include <vector>
 
-#define NMU 2
-#define BW 0
-#define FW 1
+#include "debug.hpp"
 
-typedef int coords_t[NMU];
-typedef int neighs_t[2*NMU];
+class geometry_t;
+
+//coordinate of a point
+class coords_t : public std::vector<int>
+{ 
+public:
+  coords_t(size_t ndims=0) : std::vector<int>(ndims) {}
+  
+  size_t ndims(){return size();}
+  void check_compatibility(const coords_t &a,const coords_t &b)
+  {if(a.size()!=b.size()) CRASH("incompatible vectors");}
+  int total_product(){int p=1;for(std::vector<int>::iterator it=begin();it!=end();it++)p*=*it;return p;}
+  
+  coords_t operator+(coords_t a)
+  {coords_t b(a.ndims());transform(this->begin(),this->end(),a.begin(),b.begin(),std::plus<int>());return b;}
+  coords_t operator-(coords_t a)
+  {coords_t b(a.ndims());transform(this->begin(),this->end(),a.begin(),b.begin(),std::minus<int>());return b;}
+  coords_t operator*(coords_t a)
+  {coords_t b(a.ndims());transform(this->begin(),this->end(),a.begin(),b.begin(),std::multiplies<int>());return b;}
+  coords_t operator/(coords_t a)
+  {coords_t b(a.ndims());transform(this->begin(),this->end(),a.begin(),b.begin(),std::divides<int>());return b;}
+  coords_t operator%(coords_t a)
+  {coords_t b(a.ndims());transform(this->begin(),this->end(),a.begin(),b.begin(),std::modulus<int>());return b;}
+};
 
 //structure to hold geometry
 struct geometry_t
 {
-  MPI_Comm rank_comm;      //communicator
-  coords_t nranks_per_dir; //ranks per direction
-  coords_t rank_coords;    //coordinates in the proc grid
-  neighs_t neigh_ranks;    //neighbors ranks
+  size_t ndims;
+  int cart_rank;
+  MPI_Comm cart_comm;        //communicator
+  coords_t nranks_per_dir;   //ranks per direction
+  coords_t rank_coords;      //coordinates in the proc grid
+  coords_t neigh_ranks;      //neighbors ranks
   
-  bool homogeneous_partitioning; //store if each node has the same number of sites
-  coords_t glb_sizes,loc_sizes;  //local dimensions
-  int glb_size,loc_size;         //number of sites
+  bool homogeneous_partitioning;         //store if each node has the same number of sites
+  coords_t glb_sizes,loc_sizes;          //local dimensions
+  coords_t loc_comm_sizes;               //dimensions an all ranks apart last one
+  int nglb_sites,nloc_sites;             //number of sites
   
-  void loc_coords_of_loc_site(coords_t loc_coords,int loc_site){coords_of_site(loc_coords,loc_site,loc_sizes);}
+  coords_t glb_coords_of_loc_origin;                 //global coords of local origin
+  std::vector<coords_t> loc_coords_of_loc_site_table; //lookup-table for loc site loc coords
+  std::vector<coords_t> glb_coords_of_loc_site_table; //lookup-table for loc site glb coords
+  
+  int bulk_volume(coords_t L);
+  int bulk_recip_lat_volume(coords_t R,coords_t L);
+  int compute_border_variance(coords_t L,coords_t P,int factorize_processor);
+
+  coords_t glb_coords_of_origin_of_rank_coords(coords_t in_coords){return loc_comm_sizes*in_coords;}
+  coords_t loc_sizes_of_rank_coords(coords_t in_coords);
+  void rank_and_loc_site_of_rel_glb_coords(int &rank,int &site,coords_t glb_coords)
+  {rank_and_loc_site_of_glb_coords(rank,site,(glb_coords+glb_sizes)%glb_sizes);}
+  void rank_and_loc_site_of_glb_coords(int &rank,int &site,coords_t coords);
+
+  coords_t loc_coords_of_loc_site(int loc_site){return loc_coords_of_loc_site_table[loc_site];}
   int loc_site_of_loc_coords(coords_t loc_coords){return site_of_coords(loc_coords,loc_sizes);}
-  void glb_coords_of_glb_site(coords_t glb_coords,int glb_site){coords_of_site(glb_coords,glb_site,glb_sizes);}
+  int loc_site_of_glb_coords(coords_t glb_coords){return site_of_coords(glb_coords-glb_coords_of_loc_origin,loc_sizes);}
+  int glb_site_of_loc_coords(coords_t loc_coords){return glb_site_of_glb_coords(loc_coords+glb_coords_of_loc_origin);}
+  int glb_site_of_loc_rel_coords(coords_t loc_coords)
+  {return glb_site_of_glb_rel_coords(loc_coords+glb_coords_of_loc_origin);}
+  coords_t glb_coords_of_glb_site(int glb_site){return coords_of_site(glb_site,glb_sizes);}
+  coords_t glb_coords_of_loc_site(int loc_site){return glb_coords_of_loc_site_table[loc_site];}
   int glb_site_of_glb_coords(coords_t glb_coords){return site_of_coords(glb_coords,glb_sizes);}
+  int glb_site_of_glb_rel_coords(coords_t glb_coords)
+  {return site_of_coords((glb_coords+glb_sizes)%glb_sizes,glb_sizes);}
   void start(coords_t ext_glb_sizes);
   
-  geometry_t(coords_t ext_glb_sizes){start(ext_glb_sizes);};
-  geometry_t(int glb_comm_size)
+  geometry_t(coords_t ext_glb_sizes) : ndims(ext_glb_sizes.size()) {start(ext_glb_sizes);};
+  geometry_t(size_t ndims,int glb_comm_size) : ndims(ndims)
   {
-    coords_t ext_glb_sizes;
-    for(int mu=0;mu<NMU;mu++) ext_glb_sizes[mu]=glb_comm_size;
+    coords_t ext_glb_sizes(ndims);
+    for(size_t dim=0;dim<ndims;dim++) ext_glb_sizes[dim]=glb_comm_size;
     start(ext_glb_sizes);
   }
 private:
   void partition_ranks_homogeneously();
-  void coords_of_site(coords_t coords,int loc_site,coords_t sizes);
+  coords_t coords_of_site(int loc_site,coords_t sizes);
   int site_of_coords(coords_t coords,coords_t sizes);
   geometry_t();
 };
