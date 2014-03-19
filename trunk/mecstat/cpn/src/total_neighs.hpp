@@ -18,12 +18,22 @@ typedef std::map<int,std::map<int,int> > site_list_per_rank_t;
 typedef std::map<int,std::map<int,std::vector<int> > > temp_total_neighs_t;
 
 //hold info on ranks asking id, size ans position
-class rank_id_size_dest_start_t
+class rank_to_ask_t
 {
 public:
   int rank;
   int size;
   int dest;
+};
+
+//hold info on ranks asking id, size ans position
+class rank_asking_t
+{
+public:
+  int rank;
+  int size;
+  int dest;
+  int *list_from;
 };
 
 //holds the neighbors
@@ -35,13 +45,15 @@ public:
 
   size_t nneighs_per_site; //neighbors per site
   size_t nouter_sites;     //total number of sites non local
+  size_t nsites_to_send;   //number of sites to send away
   size_t ntotal_sites;     //total number of sites, including outer ones
   int *neighs;             //movements
   
   int nranks_to_ask;    //number of ranks to ask to
   int nranks_asking;    //number of ranks asking data
   
-  rank_id_size_dest_start_t *ranks_to_ask;    //info on the ranks to ask
+  rank_to_ask_t *ranks_to_ask;    //info on the ranks to ask
+  rank_asking_t *ranks_asking;    //info on asking ranks
   
   int *operator[](int isite){return neighs+isite*nneighs_per_site;}
   void mark_all_neighbors(int loc_site,coords_t glb_site_coords,per_site_neighs_t &per_site_neighs,

@@ -10,14 +10,11 @@ CLEANFILES=src/svnversion.hpp
 
 bin_PROGRAMS=$(top_builddir)/bin/cpn
 __top_builddir__bin_cpn_SOURCES= \
-	src/all_to_all_comm.cpp \
 	src/debug.cpp \
 	src/endianness.cpp \
 	src/field.cpp \
 	src/geometry.cpp \
-	src/local_mask.cpp \
 	src/main.cpp \
-	src/per_site_neighs.cpp \
 	src/simul.cpp \
 	src/threads.cpp \
 	src/total_neighs.cpp \

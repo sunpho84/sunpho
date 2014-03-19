@@ -10,6 +10,25 @@
 #include "debug.hpp"
 #include "simul.hpp"
 
+//print a message with line
+void internal_shout(int line,const char *file,const char *templ,...)
+{
+  //give time to master thread to crash, if possible
+  GET_THREAD_ID();
+
+  if(IS_MASTER_THREAD && IS_MASTER_RANK)
+    {
+      //expand message
+      char mess[1024];
+      va_list ap;
+      va_start(ap,templ);
+      vsprintf(mess,templ,ap);
+      va_end(ap);
+
+      printf("line %d of file \"%s\" said: \"%s\".\n",line,file,mess);
+    }
+}
+
 //called when signal received
 void signal_handler(int sig)
 {

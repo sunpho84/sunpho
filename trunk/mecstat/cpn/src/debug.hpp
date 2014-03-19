@@ -10,6 +10,7 @@
 
 #define MASTER_PRINTF(...) simul->master_fprintf(stdout,__VA_ARGS__)
 #define CRASH(...) internal_crash(__LINE__,__FILE__,__VA_ARGS__)
+#define SHOUT(...) internal_shout(__LINE__,__FILE__,__VA_ARGS__)
 
 #define MAX_VERBOSITY_LV 3
 
@@ -37,5 +38,6 @@
 
 void signal_handler(int sig);
 void internal_crash(int line,const char *file,const char *templ,...);
+void internal_shout(int line,const char *file,const char *templ,...);
 
 #endif

@@ -6,7 +6,11 @@
 
 #include "geometry.hpp"
 #include "simul.hpp"
+#include "threads.hpp"
 #include "total_neighs.hpp"
+
+//hold temporarily info
+typedef std::map<int,int> sites_to_send_t;
 
 //mark the connections of the site
 void total_neighs_t::mark_all_neighbors(int loc_site,coords_t glb_site_coords,per_site_neighs_t &per_site_neighs,
@@ -49,6 +53,8 @@ void total_neighs_t::mark_all_neighbors(int loc_site,coords_t glb_site_coords,pe
 //construct using per-site mask
 total_neighs_t::total_neighs_t(geometry_t *geometry,per_site_neighs_t &per_site_neighs) : geometry(geometry),nneighs_per_site(per_site_neighs.size())
 {
+  GET_THREAD_ID();
+  
   //loop on all local sites and mark all required neighbours
   site_list_per_rank_t outer_sites_per_rank;
   for(int loc_site=0;loc_site<geometry->nloc_sites;loc_site++)
@@ -85,7 +91,7 @@ total_neighs_t::total_neighs_t(geometry_t *geometry,per_site_neighs_t &per_site_
   
   //create the list of ranks to ask to
   nranks_to_ask=outer_sites_per_rank.size();
-  ranks_to_ask=ALLOCATE("ranks_to_ask",nranks_to_ask,rank_id_size_dest_start_t);
+  ranks_to_ask=ALLOCATE("ranks_to_ask",nranks_to_ask,rank_to_ask_t);
   site_list_per_rank_t::iterator sites_per_rank=outer_sites_per_rank.begin();
   for(int irank=0;irank<nranks_to_ask;irank++)
     {
@@ -96,7 +102,49 @@ total_neighs_t::total_neighs_t(geometry_t *geometry,per_site_neighs_t &per_site_
       sites_per_rank++;
     }
   
+  //communicate to each rank how many elements to ask
+  sites_to_send_t *temp_nsites_to_send_to=CAST_PTR_FROM_MASTER_THREAD(new sites_to_send_t);
+  if(IS_MASTER_THREAD)
+    for(int delta_rank=1;delta_rank<simul->nranks;delta_rank++)
+      {
+	int dest_rank=(geometry->cart_rank+simul->nranks+delta_rank)%simul->nranks;
+	int recv_rank=(geometry->cart_rank+simul->nranks-delta_rank)%simul->nranks;
+	
+	int nto_ask=0,nasking;
+	int jrank=0;
+	do
+	  {
+	    if(ranks_to_ask[jrank].rank==dest_rank) nto_ask=ranks_to_ask[jrank].size;
+	    jrank++;
+	  }
+	while(nto_ask==0 && jrank<nranks_to_ask);
+	
+	//transfer the info and mark
+	MPI_Sendrecv(&nto_ask,1,MPI_INT,dest_rank,0, &nasking,1,MPI_INT,recv_rank,0,  MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+	MASTER_PRINTF("Told to rank %d to send %d, told by rank %d to send %d\n",dest_rank,nto_ask,recv_rank,nasking);
+	if(nasking!=0) (*temp_nsites_to_send_to)[recv_rank]=nasking;
+      }
+  THREAD_BARRIER();
   
+  //convert to store this into proper list
+  nsites_to_send=0;
+  nranks_asking=temp_nsites_to_send_to->size();
+  ranks_asking=ALLOCATE("ranks_asking",nranks_asking,rank_asking_t);
+  std::map<int,int>::iterator nsites_to_send_to_ptr=temp_nsites_to_send_to->begin();
+  for(int irank=0;irank<nranks_asking;irank++)
+    {
+      ranks_asking[irank].rank=nsites_to_send_to_ptr->first;
+      ranks_asking[irank].size=nsites_to_send_to_ptr->second;
+      ranks_asking[irank].dest=(irank==0)?0:ranks_asking[irank-1].dest+ranks_asking[irank].size;
+      ranks_asking[irank].list_from=ALLOCATE("list_from",ranks_asking[irank].size,int);
+      nsites_to_send+=ranks_asking[irank].size;
+      //SHOUT("%d/%d, %d %d %d",irank,nranks_asking,ranks_asking[irank].rank,
+      //ranks_asking[irank].size,ranks_asking[irank].dest);
+      
+      nsites_to_send_to_ptr++;
+    }
+  
+  if(IS_MASTER_THREAD) delete temp_nsites_to_send_to;
 }
 
 //deallocate
@@ -104,4 +152,6 @@ total_neighs_t::~total_neighs_t()
 {
   FREE(neighs);
   FREE(ranks_to_ask);
+  for(int irank=0;irank<nranks_asking;irank++) FREE(ranks_asking[irank].list_from);
+  FREE(ranks_asking);
 }
