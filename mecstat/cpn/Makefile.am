@@ -17,8 +17,10 @@ __top_builddir__bin_cpn_SOURCES= \
 	src/geometry.cpp \
 	src/local_mask.cpp \
 	src/main.cpp \
+	src/per_site_neighs.cpp \
 	src/simul.cpp \
 	src/threads.cpp \
+	src/total_neighs.cpp \
 	src/utils.cpp \
 	src/vectors.cpp
 
