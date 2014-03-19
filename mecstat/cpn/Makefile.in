@@ -101,11 +101,9 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__dirstamp = $(am__leading_dot)dirstamp
-am___top_builddir__bin_cpn_OBJECTS = src/all_to_all_comm.$(OBJEXT) \
-	src/debug.$(OBJEXT) src/endianness.$(OBJEXT) \
-	src/field.$(OBJEXT) src/geometry.$(OBJEXT) \
-	src/local_mask.$(OBJEXT) src/main.$(OBJEXT) \
-	src/per_site_neighs.$(OBJEXT) src/simul.$(OBJEXT) \
+am___top_builddir__bin_cpn_OBJECTS = src/debug.$(OBJEXT) \
+	src/endianness.$(OBJEXT) src/field.$(OBJEXT) \
+	src/geometry.$(OBJEXT) src/main.$(OBJEXT) src/simul.$(OBJEXT) \
 	src/threads.$(OBJEXT) src/total_neighs.$(OBJEXT) \
 	src/utils.$(OBJEXT) src/vectors.$(OBJEXT)
 __top_builddir__bin_cpn_OBJECTS =  \
@@ -291,14 +289,11 @@ BUILT_SOURCES = update_svnversion src/svnversion.hpp
 EXTRA_DIST = src/svnversion.hpp $(top_srcdir)/src/update_svnversion.hpp.sh
 CLEANFILES = src/svnversion.hpp
 __top_builddir__bin_cpn_SOURCES = \
-	src/all_to_all_comm.cpp \
 	src/debug.cpp \
 	src/endianness.cpp \
 	src/field.cpp \
 	src/geometry.cpp \
-	src/local_mask.cpp \
 	src/main.cpp \
-	src/per_site_neighs.cpp \
 	src/simul.cpp \
 	src/threads.cpp \
 	src/total_neighs.cpp \
@@ -407,19 +402,13 @@ src/$(am__dirstamp):
 src/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/$(DEPDIR)
 	@: > src/$(DEPDIR)/$(am__dirstamp)
-src/all_to_all_comm.$(OBJEXT): src/$(am__dirstamp) \
-	src/$(DEPDIR)/$(am__dirstamp)
 src/debug.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/endianness.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/field.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/geometry.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
-src/local_mask.$(OBJEXT): src/$(am__dirstamp) \
-	src/$(DEPDIR)/$(am__dirstamp)
 src/main.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
-src/per_site_neighs.$(OBJEXT): src/$(am__dirstamp) \
-	src/$(DEPDIR)/$(am__dirstamp)
 src/simul.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/threads.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
@@ -443,14 +432,11 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/all_to_all_comm.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/debug.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/endianness.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/field.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/geometry.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/local_mask.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/main.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/per_site_neighs.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/simul.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/threads.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/total_neighs.Po@am__quote@

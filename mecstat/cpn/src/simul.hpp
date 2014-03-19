@@ -22,7 +22,12 @@ struct simul_t
   
   void *returned_malloc_ptr;   //returned global pointer
   vectors_t *vectors;          //vectors manager
-  
+
+#ifdef THREAD_DEBUG
+  char glb_barr_file[1024];
+  int glb_barr_line;
+#endif
+
   //basic MPI initialization
   void init_MPI_thread(int narg,char **arg);
   void get_MPI_nranks(){MPI_Comm_size(MPI_COMM_WORLD,&nranks);} //get nranks

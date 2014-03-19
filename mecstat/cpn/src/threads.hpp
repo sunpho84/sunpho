@@ -8,13 +8,23 @@
 #include <omp.h>
 #include <stdint.h>
 
+#include "debug.hpp"
+
 #define GET_THREAD_ID() uint32_t thread_id=omp_get_thread_num()
 #define IS_MASTER_THREAD (thread_id==0)
+
+#include "simul.hpp"
 
 //flush the cache
 inline void cache_flush()
 {
  #pragma omp flush
+}
+
+//barrier
+inline void thread_barrier_internal()
+{
+  #pragma omp barrier
 }
 
 //cast a pointer from master thread to all the others
@@ -26,9 +36,9 @@ inline void cache_flush()
 //barriers
 void thread_barrier_internal();
 #ifdef THREAD_DEBUG
- #define THREAD_BARRIER_FORCE() thread_barrier_internal()
- #define THREAD_BARRIER()       thread_barrier_with_check(__FILE__,__LINE__)
- void thread_barrier_with_check(__FILE__,__LINE__);
+  #define THREAD_BARRIER_FORCE() thread_barrier_internal()
+  #define THREAD_BARRIER()       thread_barrier_with_check(__FILE__,__LINE__)
+  void thread_barrier_with_check(const char *file,int line);
 #else
  #define THREAD_BARRIER_FORCE() thread_barrier_internal()
  #define THREAD_BARRIER()       thread_barrier_without_check()
