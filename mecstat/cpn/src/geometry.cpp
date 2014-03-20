@@ -28,6 +28,7 @@ void geometry_t::rank_and_loc_site_of_glb_coords(int &dest_rank,int &dest_site,c
 {
   //find rank coords
   coords_t dest_rank_coords=dest_glb_coords/loc_comm_sizes;
+  for(size_t dim=0;dim<ndims;dim++) dest_rank_coords[dim]=std::min(dest_rank_coords[dim],nranks_per_dir[dim]-1);
   coords_t dest_rank_origin=glb_coords_of_origin_of_rank_coords(dest_rank_coords);
   
   //wrap coords to ask mpi what's the rank
@@ -113,209 +114,193 @@ int geometry_t::site_of_coords(coords_t coords,coords_t sizes)
 //divide the global lattice into ranks in homogeneous way
 void geometry_t::partition_ranks_homogeneously()
 {
-  GET_THREAD_ID();
-  if(IS_MASTER_THREAD)
+  bool something_found=false;
+  
+  int NR=simul->nranks;
+  int LV=nglb_sites/NR;
+  
+  //minimal variance border
+  int mBV=-1;
+  
+  //factorize the volume
+  int list_fact_LV[log2N(LV)];
+  int nfact_LV=factorize(list_fact_LV,LV);
+  
+  //factorize the number of rank
+  int list_fact_NR[log2N(NR)];
+  int nfact_NR=factorize(list_fact_NR,NR);
+  
+  //if nfact_LV>=nfact_NR factorize the number of rank, otherwise the local volume
+  //in the first case we find the best way to assign the ranks to different directions
+  //in the second case we find how many sites per direction to assign to each rank
+  int factorize_rank=(nfact_LV>=nfact_NR);
+  int nfact=factorize_rank ? nfact_NR : nfact_LV;
+  int *list_fact=factorize_rank ? list_fact_NR : list_fact_LV;
+  
+  //compute the number of combinations: this is given by ndims^nfact
+  int ncombo=1;
+  for(int ifact=0;ifact<nfact;ifact++) ncombo*=ndims;
+  
+  //find the partition which minimize the surface and the surface variance
+  int min_surf_LV=-1;
+  int icombo=0;
+  for(size_t dim=0;dim<ndims;dim++) nranks_per_dir[dim]=-1;
+  
+  do
     {
-      bool something_found=false;
+      //number of ranks in each direction for current partitioning
+      coords_t R(ndims);
+      for(size_t dim=0;dim<ndims;dim++) R[dim]=1;
       
-      int NR=simul->nranks;
-      int LV=nglb_sites/NR;
-      
-      //minimal variance border
-      int mBV=-1;
-      
-      //factorize the volume
-      int list_fact_LV[log2N(LV)];
-      int nfact_LV=factorize(list_fact_LV,LV);
-      
-      //factorize the number of rank
-      int list_fact_NR[log2N(NR)];
-      int nfact_NR=factorize(list_fact_NR,NR);
-      
-      //if nfact_LV>=nfact_NR factorize the number of rank, otherwise the local volume
-      //in the first case we find the best way to assign the ranks to different directions
-      //in the second case we find how many sites per direction to assign to each rank
-      int factorize_rank=(nfact_LV>=nfact_NR);
-      int nfact=factorize_rank ? nfact_NR : nfact_LV;
-      int *list_fact=factorize_rank ? list_fact_NR : list_fact_LV;
-      
-      //compute the number of combinations: this is given by ndims^nfact
-      int ncombo=1;
-      for(int ifact=0;ifact<nfact;ifact++) ncombo*=ndims;
-      
-      //find the partition which minimize the surface and the surface variance
-      int min_surf_LV=-1;
-      int icombo=0;
-      for(size_t dim=0;dim<ndims;dim++) nranks_per_dir[dim]=-1;
-      
+      //find the partioning corresponding to icombo
+      int ifact=nfact-1;
+      int valid_partitioning=1;
+      int jcombo=icombo;
       do
 	{
-	  //number of ranks in each direction for current partitioning
-	  coords_t R(ndims);
-	  for(size_t dim=0;dim<ndims;dim++) R[dim]=1;
+	  //find the direction: this is given by the ifact digit of icombo wrote in base ndims
+	  size_t dim=(jcombo&(ndims-1));
+	  jcombo/=ndims;
 	  
-	  //find the partioning corresponding to icombo
-	  int ifact=nfact-1;
-	  int valid_partitioning=1;
-	  int jcombo=icombo;
-	  do
-	    {
-	      //find the direction: this is given by the ifact digit of icombo wrote in base ndims
-	      size_t dim=(jcombo&(ndims-1));
-	      jcombo/=ndims;
-	      
-	      //if we are factorizing local lattice, rank factor is given by list_fact, otherwise L/list_fact
-	      R[dim]*=list_fact[ifact];
-	      
-	      //check that the total volume glb_sizes[dim] is a multiple and it is larger than the number of proc
-	      valid_partitioning=(glb_sizes[dim]%R[dim]==0 && glb_sizes[dim]>=R[dim]);
-	      if(valid_partitioning) ifact--;
-	    }
-	  while(valid_partitioning && ifact>=0);
+	  //if we are factorizing local lattice, rank factor is given by list_fact, otherwise L/list_fact
+	  R[dim]*=list_fact[ifact];
 	  
-	  //validity could have changed
-	  if(valid_partitioning)
-	    {
-	      //if we are factorizing reciprocal lattice, convert back to rank grid
-	      for(size_t dim=0;dim<ndims;dim++)
-		if(!factorize_rank)
-		  R[dim]=glb_sizes[dim]/R[dim];
-	      
-	      //compute the surface=loc_vol-bulk_volume
-	      int BV=bulk_recip_lat_volume(R,glb_sizes);
-	      int surf_LV=LV-BV;
-	      
-	      //look if this is the new minimal surface
-	      int new_minimal=0;
-	      //if it is the minimal surface (or first valid combo) copy it and compute the border size
-	      if(surf_LV<min_surf_LV||min_surf_LV==-1)
-		{
-		  new_minimal=1;
-		  mBV=compute_border_variance(glb_sizes,R,factorize_rank);
-		}
-	      //if it is equal to previous found surface, consider borders variance
-	      if(surf_LV==min_surf_LV)
-		{
-		  int BV=compute_border_variance(glb_sizes,R,factorize_rank);
-		  //if borders are more homogeneus consider this grid
-		  if(BV<mBV)
-		    {
-		      mBV=BV;
-		      new_minimal=1;
-		    }
-		}
-	      
-	      //save it as new minimal
-	      if(new_minimal)
-		{
-		  min_surf_LV=surf_LV;
-		  for(size_t dim=0;dim<ndims;dim++) nranks_per_dir[dim]=R[dim];
-		  something_found=1;
-		}
-	      
-	      icombo++;
-	    }
-	  //skip all remaining factorization using the same structure
-	  else
-	    {
-	      int skip=1;
-	      for(int jfact=0;jfact<ifact-1;jfact++) skip*=ndims;
-	      icombo+=skip;
-	    }
+	  //check that the total volume glb_sizes[dim] is a multiple and it is larger than the number of proc
+	  valid_partitioning=(glb_sizes[dim]%R[dim]==0 && glb_sizes[dim]>=R[dim]);
+	  if(valid_partitioning) ifact--;
 	}
-      while(icombo<ncombo);
+      while(valid_partitioning && ifact>=0);
       
-      if(!something_found) CRASH_SOFTLY("no valid partitioning found");
+      //validity could have changed
+      if(valid_partitioning)
+	{
+	  //if we are factorizing reciprocal lattice, convert back to rank grid
+	  for(size_t dim=0;dim<ndims;dim++)
+	    if(!factorize_rank)
+	      R[dim]=glb_sizes[dim]/R[dim];
+	  
+	  //compute the surface=loc_vol-bulk_volume
+	  int BV=bulk_recip_lat_volume(R,glb_sizes);
+	  int surf_LV=LV-BV;
+	  
+	  //look if this is the new minimal surface
+	  int new_minimal=0;
+	  //if it is the minimal surface (or first valid combo) copy it and compute the border size
+	  if(surf_LV<min_surf_LV||min_surf_LV==-1)
+	    {
+	      new_minimal=1;
+	      mBV=compute_border_variance(glb_sizes,R,factorize_rank);
+	    }
+	  //if it is equal to previous found surface, consider borders variance
+	  if(surf_LV==min_surf_LV)
+	    {
+	      int BV=compute_border_variance(glb_sizes,R,factorize_rank);
+	      //if borders are more homogeneus consider this grid
+	      if(BV<mBV)
+		{
+		  mBV=BV;
+		  new_minimal=1;
+		}
+	    }
+	  
+	  //save it as new minimal
+	  if(new_minimal)
+	    {
+	      min_surf_LV=surf_LV;
+	      for(size_t dim=0;dim<ndims;dim++) nranks_per_dir[dim]=R[dim];
+	      something_found=1;
+	    }
+	  
+	  icombo++;
+	}
+      //skip all remaining factorization using the same structure
+      else
+	{
+	  int skip=1;
+	  for(int jfact=0;jfact<ifact-1;jfact++) skip*=ndims;
+	  icombo+=skip;
+	}
     }
-  THREAD_BARRIER();
+  while(icombo<ncombo);
+  
+  if(!something_found) CRASH_SOFTLY("no valid partitioning found");
 }
 
 //do not rely on homogeneous local sizes
 void geometry_t::partition_ranks_inhomogeneously()
 {
-  GET_THREAD_ID();
-  if(IS_MASTER_THREAD)
+  //factorize the number of ranks
+  int list_fact_nranks[log2N(simul->nranks)];
+  int nfact_nranks=factorize(list_fact_nranks,simul->nranks);
+  
+  //compute the number of combinations: this is given by ndims^nfact
+  int ncombo=1;
+  for(int ifact=0;ifact<nfact_nranks;ifact++) ncombo*=ndims;
+  
+  //find the partition which minimize the volume variance
+  int min_vol_var=-1;
+  int icombo=0;
+  for(size_t dim=0;dim<ndims;dim++) nranks_per_dir[dim]=-1;
+  
+  do
     {
-      //factorize the number of ranks
-      int list_fact_nranks[log2N(simul->nranks)];
-      int nfact_nranks=factorize(list_fact_nranks,simul->nranks);
+      //number of ranks in each direction for current partitioning
+      coords_t nranks_per_dir_old=nranks_per_dir;
+      for(size_t dim=0;dim<ndims;dim++) nranks_per_dir[dim]=1;
       
-      //compute the number of combinations: this is given by ndims^nfact
-      int ncombo=1;
-      for(int ifact=0;ifact<nfact_nranks;ifact++) ncombo*=ndims;
-      
-      //find the partition which minimize the volume variance
-      int min_vol_var=-1;
-      int icombo=0;
-      for(size_t dim=0;dim<ndims;dim++) nranks_per_dir[dim]=-1;
-      
-      do
+      //find the partioning corresponding to icombo
+      int jcombo=icombo;
+      for(int ifact=nfact_nranks-1;ifact>=0;ifact--)
 	{
-	  //number of ranks in each direction for current partitioning
-	  coords_t nranks_per_dir_old=nranks_per_dir;
-	  for(size_t dim=0;dim<ndims;dim++) nranks_per_dir[dim]=1;
+	  //find the direction: this is given by the ifact digit of icombo wrote in base ndims
+	  size_t dim=(jcombo&(ndims-1));
+	  jcombo/=ndims;
 	  
-	  //find the partioning corresponding to icombo
-	  int jcombo=icombo;
-	  for(int ifact=nfact_nranks-1;ifact>=0;ifact--)
-	    {
-	      //find the direction: this is given by the ifact digit of icombo wrote in base ndims
-	      size_t dim=(jcombo&(ndims-1));
-	      jcombo/=ndims;
-	      
-	      //rank factor is given by list_fact
-	      nranks_per_dir[dim]*=list_fact_nranks[ifact];
-	    }
-	  
-	  //find common sizes
-	  for(size_t dim=0;dim<ndims;dim++) loc_comm_sizes[dim]=(int)((double)glb_sizes[dim]/nranks_per_dir[dim]+0.5);
-	  
-	  MASTER_PRINTF(" icombo %d:\t%d",icombo,nranks_per_dir[0]);
-	  for(size_t dim=1;dim<ndims;dim++) MASTER_PRINTF("x%d",nranks_per_dir[dim]);
-	  MASTER_PRINTF("\n");
-	  
-	  //compute variance
-	  int v_sum=0,v_sum2=0;
-	  for(int irank=0;irank<simul->nranks;irank++)
-	    {
-	      coords_t rank_coords=coords_of_site(irank,nranks_per_dir);
-	      coords_t rank_sizes=loc_sizes_of_rank_coords(rank_coords);
-	      int v=rank_sizes.total_product();
-	      v_sum+=v;
-	      v_sum+=v*v;
-	      
-	      MASTER_PRINTF("  icombo %d:\t%d",icombo,rank_sizes[0]);
-	      for(size_t dim=1;dim<ndims;dim++) MASTER_PRINTF("x%d",rank_sizes[dim]);
-	      MASTER_PRINTF(" vol: %d\n",v);
-	    }
-	  v_sum/=simul->nranks;
-	  v_sum2/=simul->nranks;
-	  v_sum2-=v_sum*v_sum;
-	  
-	  //if new minimal volume variance
-	  int new_minimal_vol_var=0;
-	  //if it is the minimal volume variance (or first valid combo) copy it and compute the border size
-	  if(v_sum2<min_vol_var||min_vol_var==-1)
-	    {
-	      new_minimal_vol_var=1;
-	      min_vol_var=v_sum2;
-	    }
-	  
-	  //convert to previous one if it not a new minimal
-	  if(!new_minimal_vol_var) nranks_per_dir=nranks_per_dir_old;
-	  
-	  icombo++;
+	  //rank factor is given by list_fact
+	  nranks_per_dir[dim]*=list_fact_nranks[ifact];
 	}
-      while(icombo<ncombo);
+      
+      //find common sizes
+      for(size_t dim=0;dim<ndims;dim++) loc_comm_sizes[dim]=(int)((double)glb_sizes[dim]/nranks_per_dir[dim]+0.5);
+      
+      //compute variance
+      int v_sum=0,v_sum2=0;
+      for(int irank=0;irank<simul->nranks;irank++)
+	{
+	  coords_t rank_coords=coords_of_site(irank,nranks_per_dir);
+	  coords_t rank_sizes=loc_sizes_of_rank_coords(rank_coords);
+	  int v=rank_sizes.total_product();
+	  v_sum+=v;
+	  v_sum+=v*v;
+	  
+	  MASTER_PRINTF("  icombo %d, rank %d:\t%d",icombo,irank,rank_sizes[0]);
+	  for(size_t dim=1;dim<ndims;dim++) MASTER_PRINTF("x%d",rank_sizes[dim]);
+	  MASTER_PRINTF(" vol: %d\n",v);
+	}
+      v_sum/=simul->nranks;
+      v_sum2/=simul->nranks;
+      v_sum2-=v_sum*v_sum;
+      
+      //if new minimal volume variance
+      int new_minimal_vol_var=0;
+      //if it is the minimal volume variance (or first valid combo) copy it and compute the border size
+      if(v_sum2<min_vol_var||min_vol_var==-1)
+	{
+	  new_minimal_vol_var=1;
+	  min_vol_var=v_sum2;
+	}
+      
+      //convert to previous one if it not a new minimal
+      if(!new_minimal_vol_var) nranks_per_dir=nranks_per_dir_old;
+      
+      icombo++;
     }
-  THREAD_BARRIER();
+  while(icombo<ncombo);
 }
 
 //initialize the geometry
 void geometry_t::start(coords_t ext_glb_sizes)
 {
-  GET_THREAD_ID();
-  
   //resize all the coords
   nranks_per_dir.resize(ndims);
   rank_coords.resize(ndims);
@@ -339,7 +324,7 @@ void geometry_t::start(coords_t ext_glb_sizes)
   if(simul->nranks>nglb_sites) CRASH_SOFTLY("too many ranks!");
   
   //check wheter each ranks will have the same number of sites
-  homogeneous_partitioning=false;//(nglb_sites%simul->nranks==0);
+  homogeneous_partitioning=(nglb_sites%simul->nranks==0);
 
   //on the base of the results, partition
   if(homogeneous_partitioning) partition_ranks_homogeneously();
@@ -356,17 +341,13 @@ void geometry_t::start(coords_t ext_glb_sizes)
       periods[dim]=1;
       nranks_per_dir_conv[dim]=nranks_per_dir[dim];
     }
-  if(IS_MASTER_THREAD) MPI_Cart_create(MPI_COMM_WORLD,ndims,nranks_per_dir_conv,periods,1,&cart_comm);
+  MPI_Cart_create(MPI_COMM_WORLD,ndims,nranks_per_dir_conv,periods,1,&cart_comm);
 
   //takes rank and coord of local rank
-  if(IS_MASTER_THREAD)
-    {
-      MPI_Comm_rank(cart_comm,&cart_rank);
-      int rank_coords_conv[ndims];
-      MPI_Cart_coords(cart_comm,cart_rank,ndims,rank_coords_conv);
-      for(size_t dim=0;dim<ndims;dim++) rank_coords[dim]=rank_coords_conv[dim];
-    }
-  THREAD_BARRIER();
+  MPI_Comm_rank(cart_comm,&cart_rank);
+  int rank_coords_conv[ndims];
+  MPI_Cart_coords(cart_comm,cart_rank,ndims,rank_coords_conv);
+  for(size_t dim=0;dim<ndims;dim++) rank_coords[dim]=rank_coords_conv[dim];
   
   //understand the local sizes
   nloc_sites=1;
@@ -382,33 +363,21 @@ void geometry_t::start(coords_t ext_glb_sizes)
   MASTER_PRINTF("\n");
   
   //write non-homogeneous partitioning
-  if(0)
   if(!homogeneous_partitioning)
     {
-      if(IS_MASTER_THREAD)
-	for(int irank=0;irank<simul->nranks;irank++)
-	  {
-	    if(simul->rank_id==irank)
-	      if(loc_sizes!=loc_comm_sizes)
-		{
-		  printf(" inhomogeneous rank %d: %d",irank,loc_sizes[0]);
-		  for(size_t dim=1;dim<ndims;dim++) printf("x%d ",loc_sizes[dim]);
-		  printf("= %d\n",loc_sizes.total_product());
-		}
-	    MPI_Barrier(MPI_COMM_WORLD);
-	  }
-      THREAD_BARRIER();
+      for(int irank=0;irank<simul->nranks;irank++)
+	{
+	  if(simul->rank_id==irank)
+	    if(loc_sizes!=loc_comm_sizes)
+	      {
+		printf(" inhomogeneous rank %d: %d",irank,loc_sizes[0]);
+		for(size_t dim=1;dim<ndims;dim++) printf("x%d ",loc_sizes[dim]);
+		printf("= %d\n",loc_sizes.total_product());
+	      }
+	  MPI_Barrier(MPI_COMM_WORLD);
+	}
     }
   
-  if(IS_MASTER_THREAD)
-    for(int irank=0;irank<simul->nranks;irank++)
-      {
-	MPI_Barrier(MPI_COMM_WORLD);
-	if(simul->rank_id==irank) print();
-      }
-  THREAD_BARRIER();
-
-  //CRASH_SOFTLY("");    
   //fill lookup tables
   for(int loc_site=0;loc_site<nloc_sites;loc_site++)
     {
