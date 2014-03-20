@@ -39,13 +39,13 @@ void select_new_delay_pattern()
     {
     case DELAY_RANDOMLY:
       //delayed_thread_barrier[thread_id]=(int)rnd_get_unif(delay_rnd_gen+thread_id,0,2);
-      CRASH("unspoorted");
+      CRASH_SOFTLY("unsupported");
       break;
     case DELAY_SLAVES:
       delayed_thread_barrier[thread_id]=!IS_MASTER_THREAD;
       break;
     default:
-      CRASH("Unknown delay pattern %d",picked);
+      CRASH_SOFTLY("Unknown delay pattern %d",picked);
     }
 }
 
@@ -83,7 +83,7 @@ void check_barrier(const char *barr_file,int barr_line)
   //check
   if(!IS_MASTER_THREAD)
     if(simul->glb_barr_line!=barr_line||strcmp(simul->glb_barr_file,barr_file))
-      CRASH("Thread %d found barrier on line %d of file %s when master thread invoked it at line %d of file %s)",
+      CRASH_HARDLY("Thread %d found barrier on line %d of file %s when master thread invoked it at line %d of file %s)",
 	    thread_id,barr_line,barr_file,simul->glb_barr_line,simul->glb_barr_file);
 }
 #endif
