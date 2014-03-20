@@ -112,12 +112,13 @@ total_neighs_t::total_neighs_t(geometry_t *geometry,per_site_neighs_t &per_site_
 	
 	int nto_ask=0,nasking;
 	int jrank=0;
-	do
-	  {
-	    if(ranks_to_ask[jrank].rank==dest_rank) nto_ask=ranks_to_ask[jrank].size;
-	    jrank++;
-	  }
-	while(nto_ask==0 && jrank<nranks_to_ask);
+	if(nranks_to_ask>0)
+	  do
+	    {
+	      if(ranks_to_ask[jrank].rank==dest_rank) nto_ask=ranks_to_ask[jrank].size;
+	      jrank++;
+	    }
+	  while(nto_ask==0 && jrank<nranks_to_ask);
 	
 	//transfer the info and mark
 	MPI_Sendrecv(&nto_ask,1,MPI_INT,dest_rank,0, &nasking,1,MPI_INT,recv_rank,0,  MPI_COMM_WORLD,MPI_STATUS_IGNORE);
