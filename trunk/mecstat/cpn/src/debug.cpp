@@ -42,11 +42,11 @@ void signal_handler(int sig)
     }
   simul->vectors->print_all_contents();
   simul->print_backtrace_list();
-  if(sig!=SIGXCPU) CRASH("signal %d (%s) detected, exiting",sig,name);
+  if(sig!=SIGXCPU) CRASH_HARDLY("signal %d (%s) detected, exiting",sig,name);
 }
 
 //crash reporting the expanded error message
-void internal_crash(int line,const char *file,const char *templ,...)
+void internal_crash(bool strongly,int line,const char *file,const char *templ,...)
 {
   //flush everything
   fflush(stdout);
@@ -66,7 +66,7 @@ void internal_crash(int line,const char *file,const char *templ,...)
       va_end(ap);
         
       fprintf(stderr,"ERROR on line %d of file \"%s\", message error: \"%s\".\n",line,file,mess);
-      simul->print_backtrace_list();
+      if(strongly) simul->print_backtrace_list();
       simul->abort(0);
     }
 }

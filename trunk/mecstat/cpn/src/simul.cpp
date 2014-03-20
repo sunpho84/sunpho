@@ -27,6 +27,9 @@ void simul_t::init_MPI_thread(int narg,char **arg)
 //start the simul
 void simul_t::start(int narg,char **arg,void(*main_function)(int narg,char **arg))
 {
+  //set verbosity_lv
+  verbosity_lv=2;
+  
   //init base things
   init_MPI_thread(narg,arg);
 
@@ -118,7 +121,7 @@ void simul_t::abort(int err)
 simul_t::simul_t(int narg,char **arg,void(*main_function)(int narg,char **arg))
 {
   //check immediately that it is not already started
-  if(simul_started) CRASH("simulation already started");
+  if(simul_started) CRASH_SOFTLY("simulation already started");
   
   simul=this; //because must assigned before starting
   start(narg,arg,main_function);

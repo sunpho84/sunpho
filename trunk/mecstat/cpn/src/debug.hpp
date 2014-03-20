@@ -9,7 +9,8 @@
 #include <stdio.h>
 
 #define MASTER_PRINTF(...) simul->master_fprintf(stdout,__VA_ARGS__)
-#define CRASH(...) internal_crash(__LINE__,__FILE__,__VA_ARGS__)
+#define CRASH_HARDLY(...) internal_crash(true,__LINE__,__FILE__,__VA_ARGS__)
+#define CRASH_SOFTLY(...) internal_crash(false,__LINE__,__FILE__,__VA_ARGS__)
 #define SHOUT(...) internal_shout(__LINE__,__FILE__,__VA_ARGS__)
 
 #define MAX_VERBOSITY_LV 3
@@ -37,7 +38,7 @@
 #define verbosity_lv3_master_printf(...) do{if(VERBOSITY_LV3) master_printf(__VA_ARGS__);}while(0)
 
 void signal_handler(int sig);
-void internal_crash(int line,const char *file,const char *templ,...);
+void internal_crash(bool strength,int line,const char *file,const char *templ,...);
 void internal_shout(int line,const char *file,const char *templ,...);
 
 #endif

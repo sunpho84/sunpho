@@ -22,7 +22,7 @@ public:
   
   size_t ndims(){return size();}
   void check_compatibility(const coords_t &a,const coords_t &b)
-  {if(a.size()!=b.size()) CRASH("incompatible vectors");}
+  {if(a.size()!=b.size()) CRASH_SOFTLY("incompatible vectors");}
   int total_product(){int p=1;for(std::vector<int>::iterator it=begin();it!=end();it++)p*=*it;return p;}
   
   coords_t operator+(coords_t a)
@@ -45,7 +45,6 @@ struct geometry_t
   MPI_Comm cart_comm;        //communicator
   coords_t nranks_per_dir;   //ranks per direction
   coords_t rank_coords;      //coordinates in the proc grid
-  coords_t neigh_ranks;      //neighbors ranks
   
   bool homogeneous_partitioning;         //store if each node has the same number of sites
   coords_t glb_sizes,loc_sizes;          //local dimensions
@@ -60,12 +59,13 @@ struct geometry_t
   int bulk_recip_lat_volume(coords_t R,coords_t L);
   int compute_border_variance(coords_t L,coords_t P,int factorize_processor);
 
-  coords_t glb_coords_of_origin_of_rank_coords(coords_t in_coords){return loc_comm_sizes*in_coords;}
+  coords_t glb_coords_of_origin_of_rank_coords(coords_t in_coords){return std::min(loc_comm_sizes*in_coords,glb_sizes);}
   coords_t loc_sizes_of_rank_coords(coords_t in_coords);
   void rank_and_loc_site_of_rel_glb_coords(int &rank,int &site,coords_t glb_coords)
   {rank_and_loc_site_of_glb_coords(rank,site,(glb_coords+glb_sizes)%glb_sizes);}
   void rank_and_loc_site_of_glb_coords(int &rank,int &site,coords_t coords);
 
+  void print();
   coords_t loc_coords_of_loc_site(int loc_site){return loc_coords_of_loc_site_table[loc_site];}
   int loc_site_of_loc_coords(coords_t loc_coords){return site_of_coords(loc_coords,loc_sizes);}
   int loc_site_of_glb_coords(coords_t glb_coords){return site_of_coords(glb_coords-glb_coords_of_loc_origin,loc_sizes);}
@@ -88,9 +88,11 @@ struct geometry_t
   }
 private:
   void partition_ranks_homogeneously();
+  void partition_ranks_inhomogeneously();
   coords_t coords_of_site(int loc_site,coords_t sizes);
   int site_of_coords(coords_t coords,coords_t sizes);
   geometry_t();
 };
+
 
 #endif
