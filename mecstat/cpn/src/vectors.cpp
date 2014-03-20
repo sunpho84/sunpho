@@ -78,8 +78,8 @@ void* vectors_t::allocate(const char *tag,int nel,int size_per_el,const char *ty
       //try to allocate the new vector
       vector_el_t *nv=(vector_el_t*)malloc(size+sizeof(vector_el_t));
       if(nv==NULL)
-	CRASH("could not allocate vector named \"%s\" of %d elements of type %s (total size: %d bytes) "
-	      "request on line %d of file %s",tag,nel,type,size,line,file);
+	CRASH_HARDLY("could not allocate vector named \"%s\" of %d elements of type %s (total size: %d bytes) "
+		     "request on line %d of file %s",tag,nel,type,size,line,file);
       
       //append the new vector to the list
       nv->mark_as(tag,nel,size_per_el,type,file,line);
@@ -97,7 +97,7 @@ void* vectors_t::allocate(const char *tag,int nel,int size_per_el,const char *ty
       //define returned pointer and check for its alignement
       simul->returned_malloc_ptr=last_vector->get_pointer_to_data();
       int offset=((long long int)(simul->returned_malloc_ptr))%VECTOR_ALIGNMENT;
-      if(offset!=0) CRASH("memory alignment problem, vector %s has %d offset",tag,offset);
+      if(offset!=0) CRASH_HARDLY("memory alignment problem, vector %s has %d offset",tag,offset);
         
       //Update the amount of required memory
       required_memory+=size;
@@ -150,7 +150,7 @@ void vectors_t::deallocate(void **arr,const char *file,int line)
 	  //really free
 	  free(vect);
 	}
-      else CRASH("Error, trying to delocate a NULL vector on line: %d of file: %s\n",line,file);
+      else CRASH_SOFTLY("Error, trying to delocate a NULL vector on line: %d of file: %s\n",line,file);
       
       //put to zero the array and flush the cache
       *arr=NULL;

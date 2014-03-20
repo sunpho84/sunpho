@@ -144,6 +144,7 @@ total_neighs_t::total_neighs_t(geometry_t *geometry,per_site_neighs_t &per_site_
       nsites_to_send_to_ptr++;
     }
   
+  //remove temporary list of sites to send
   if(IS_MASTER_THREAD) delete temp_nsites_to_send_to;
 }
 
