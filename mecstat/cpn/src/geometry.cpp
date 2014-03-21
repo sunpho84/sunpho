@@ -273,9 +273,9 @@ void geometry_t::partition_ranks_inhomogeneously()
 	  v_sum+=v;
 	  v_sum+=v*v;
 	  
-	  MASTER_PRINTF("  icombo %d, rank %d:\t%d",icombo,irank,rank_sizes[0]);
-	  for(size_t dim=1;dim<ndims;dim++) MASTER_PRINTF("x%d",rank_sizes[dim]);
-	  MASTER_PRINTF(" vol: %d\n",v);
+	  //MASTER_PRINTF("  icombo %d, rank %d:\t%d",icombo,irank,rank_sizes[0]);
+	  //for(size_t dim=1;dim<ndims;dim++) MASTER_PRINTF("x%d",rank_sizes[dim]);
+	  //MASTER_PRINTF(" vol: %d\n",v);
 	}
       v_sum/=simul->nranks;
       v_sum2/=simul->nranks;

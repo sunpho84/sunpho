@@ -33,7 +33,6 @@ public:
   int rank;
   int size;
   int dest;
-  int *list_from;
 };
 
 //holds the neighbors
@@ -54,6 +53,8 @@ public:
   
   rank_to_ask_t *ranks_to_ask;    //info on the ranks to ask
   rank_asking_t *ranks_asking;    //info on asking ranks
+  
+  int *list_sending;    //list of sending sites
   
   int *operator[](int isite){return neighs+isite*nneighs_per_site;}
   void mark_all_neighbors(int loc_site,coords_t glb_site_coords,per_site_neighs_t *per_site_neighs,
