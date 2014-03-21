@@ -8,6 +8,18 @@
 #include <omp.h>
 #include <stdint.h>
 
+//barriers
+void thread_barrier_internal();
+#ifdef THREAD_DEBUG
+  #define THREAD_BARRIER_FORCE() thread_barrier_internal()
+  #define THREAD_BARRIER()       thread_barrier_with_check(__FILE__,__LINE__)
+  void thread_barrier_with_check(const char *file,int line);
+#else
+ #define THREAD_BARRIER_FORCE() thread_barrier_internal()
+ #define THREAD_BARRIER()       thread_barrier_without_check()
+ void thread_barrier_without_check();
+#endif
+
 #include "debug.hpp"
 
 #define GET_THREAD_ID() uint32_t thread_id=omp_get_thread_num()
@@ -32,17 +44,5 @@ inline void thread_barrier_internal()
   (IS_MASTER_THREAD?                                                    \
   (THREAD_BARRIER(),simul->returned_malloc_ptr=A,THREAD_BARRIER(),(typeof(A))simul->returned_malloc_ptr): \
    (THREAD_BARRIER(),THREAD_BARRIER(),(typeof(A))simul->returned_malloc_ptr))
-
-//barriers
-void thread_barrier_internal();
-#ifdef THREAD_DEBUG
-  #define THREAD_BARRIER_FORCE() thread_barrier_internal()
-  #define THREAD_BARRIER()       thread_barrier_with_check(__FILE__,__LINE__)
-  void thread_barrier_with_check(const char *file,int line);
-#else
- #define THREAD_BARRIER_FORCE() thread_barrier_internal()
- #define THREAD_BARRIER()       thread_barrier_without_check()
- void thread_barrier_without_check();
-#endif
 
 #endif

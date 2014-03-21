@@ -301,89 +301,96 @@ void geometry_t::partition_ranks_inhomogeneously()
 //initialize the geometry
 void geometry_t::start(coords_t ext_glb_sizes)
 {
-  //resize all the coords
-  nranks_per_dir.resize(ndims);
-  rank_coords.resize(ndims);
-  glb_sizes.resize(ndims);
-  loc_comm_sizes.resize(ndims);
-  loc_sizes.resize(ndims);
-  glb_coords_of_loc_origin.resize(ndims);
+  GET_THREAD_ID();
   
-  //copy glb sizes and compute total volume
-  nglb_sites=1;
-  glb_sizes=ext_glb_sizes;
-  nglb_sites=glb_sizes.total_product();
-  
-  //output global size and number of ranks
-  MASTER_PRINTF("Global lattice grid:\t%d",glb_sizes[0]);
-  for(size_t dim=1;dim<ndims;dim++) MASTER_PRINTF("x%d",glb_sizes[dim]);
-  MASTER_PRINTF(" = %d\n",nglb_sites);
-  MASTER_PRINTF("Number of running ranks: %d\n",simul->nranks);
-    
-  //check that we are not using more ranks than sites
-  if(simul->nranks>nglb_sites) CRASH_SOFTLY("too many ranks!");
-  
-  //check wheter each ranks will have the same number of sites
-  homogeneous_partitioning=(nglb_sites%simul->nranks==0);
-
-  //on the base of the results, partition
-  if(homogeneous_partitioning) partition_ranks_homogeneously();
-  else partition_ranks_inhomogeneously();
-  MASTER_PRINTF("Creating ranks grid:\t%d",nranks_per_dir[0]);
-  for(size_t dim=1;dim<ndims;dim++) MASTER_PRINTF("x%d",nranks_per_dir[dim]);
-  MASTER_PRINTF("\n");
-
-  //init the mpi communicator
-  int periods[ndims];
-  int nranks_per_dir_conv[ndims];
-  for(size_t dim=0;dim<ndims;dim++)
+  THREAD_BARRIER();
+  if(IS_MASTER_THREAD)
     {
-      periods[dim]=1;
-      nranks_per_dir_conv[dim]=nranks_per_dir[dim];
-    }
-  MPI_Cart_create(MPI_COMM_WORLD,ndims,nranks_per_dir_conv,periods,1,&cart_comm);
-
-  //takes rank and coord of local rank
-  MPI_Comm_rank(cart_comm,&cart_rank);
-  int rank_coords_conv[ndims];
-  MPI_Cart_coords(cart_comm,cart_rank,ndims,rank_coords_conv);
-  for(size_t dim=0;dim<ndims;dim++) rank_coords[dim]=rank_coords_conv[dim];
-  
-  //understand the local sizes
-  nloc_sites=1;
-  for(size_t dim=0;dim<ndims;dim++) loc_comm_sizes[dim]=(int)((double)glb_sizes[dim]/nranks_per_dir[dim]+0.5);
-  glb_coords_of_loc_origin=glb_coords_of_origin_of_rank_coords(rank_coords);
-  loc_sizes=loc_sizes_of_rank_coords(rank_coords);
-  nloc_sites*=loc_sizes.total_product();
-
-  //print info on 
-  if(homogeneous_partitioning) MASTER_PRINTF("Local volume for each node: %d",loc_sizes[0]);
-  else                         MASTER_PRINTF("Common nodes local volume: %d",loc_sizes[0]);
-  for(size_t dim=1;dim<ndims;dim++) MASTER_PRINTF("x%d ",loc_sizes[dim]);
-  MASTER_PRINTF("\n");
-  
-  //write non-homogeneous partitioning
-  if(!homogeneous_partitioning)
-    {
-      for(int irank=0;irank<simul->nranks;irank++)
+      //resize all the coords
+      nranks_per_dir.resize(ndims);
+      rank_coords.resize(ndims);
+      glb_sizes.resize(ndims);
+      loc_comm_sizes.resize(ndims);
+      loc_sizes.resize(ndims);
+      glb_coords_of_loc_origin.resize(ndims);
+      
+      //copy glb sizes and compute total volume
+      nglb_sites=1;
+      glb_sizes=ext_glb_sizes;
+      nglb_sites=glb_sizes.total_product();
+      
+      //output global size and number of ranks
+      MASTER_PRINTF("Global lattice grid:\t%d",glb_sizes[0]);
+      for(size_t dim=1;dim<ndims;dim++) MASTER_PRINTF("x%d",glb_sizes[dim]);
+      MASTER_PRINTF(" = %d\n",nglb_sites);
+      MASTER_PRINTF("Number of running ranks: %d\n",simul->nranks);
+      
+      //check that we are not using more ranks than sites
+      if(simul->nranks>nglb_sites) CRASH_SOFTLY("too many ranks!");
+      
+      //check wheter each ranks will have the same number of sites
+      homogeneous_partitioning=(nglb_sites%simul->nranks==0);
+      
+      //on the base of the results, partition
+      if(homogeneous_partitioning) partition_ranks_homogeneously();
+      else partition_ranks_inhomogeneously();
+      MASTER_PRINTF("Creating ranks grid:\t%d",nranks_per_dir[0]);
+      for(size_t dim=1;dim<ndims;dim++) MASTER_PRINTF("x%d",nranks_per_dir[dim]);
+      MASTER_PRINTF("\n");
+      
+      //init the mpi communicator
+      int periods[ndims];
+      int nranks_per_dir_conv[ndims];
+      for(size_t dim=0;dim<ndims;dim++)
 	{
-	  if(simul->rank_id==irank)
-	    if(loc_sizes!=loc_comm_sizes)
-	      {
-		printf(" inhomogeneous rank %d: %d",irank,loc_sizes[0]);
-		for(size_t dim=1;dim<ndims;dim++) printf("x%d ",loc_sizes[dim]);
-		printf("= %d\n",loc_sizes.total_product());
-	      }
-	  MPI_Barrier(MPI_COMM_WORLD);
+	  periods[dim]=1;
+	  nranks_per_dir_conv[dim]=nranks_per_dir[dim];
+	}
+      MPI_Cart_create(MPI_COMM_WORLD,ndims,nranks_per_dir_conv,periods,1,&cart_comm);
+      
+      //takes rank and coord of local rank
+      MPI_Comm_rank(cart_comm,&cart_rank);
+      int rank_coords_conv[ndims];
+      MPI_Cart_coords(cart_comm,cart_rank,ndims,rank_coords_conv);
+      for(size_t dim=0;dim<ndims;dim++) rank_coords[dim]=rank_coords_conv[dim];
+      
+      //understand the local sizes
+      nloc_sites=1;
+      for(size_t dim=0;dim<ndims;dim++) loc_comm_sizes[dim]=(int)((double)glb_sizes[dim]/nranks_per_dir[dim]+0.5);
+      glb_coords_of_loc_origin=glb_coords_of_origin_of_rank_coords(rank_coords);
+      loc_sizes=loc_sizes_of_rank_coords(rank_coords);
+      nloc_sites*=loc_sizes.total_product();
+      
+      //print info on 
+      if(homogeneous_partitioning) MASTER_PRINTF("Local volume for each node: %d",loc_sizes[0]);
+      else                         MASTER_PRINTF("Common nodes local volume: %d",loc_sizes[0]);
+      for(size_t dim=1;dim<ndims;dim++) MASTER_PRINTF("x%d ",loc_sizes[dim]);
+      MASTER_PRINTF("\n");
+      
+      //write non-homogeneous partitioning
+      if(!homogeneous_partitioning)
+	{
+	  for(int irank=0;irank<simul->nranks;irank++)
+	    {
+	      if(simul->rank_id==irank)
+		if(loc_sizes!=loc_comm_sizes)
+		  {
+		    printf(" inhomogeneous rank %d: %d",irank,loc_sizes[0]);
+		    for(size_t dim=1;dim<ndims;dim++) printf("x%d ",loc_sizes[dim]);
+		    printf("= %d\n",loc_sizes.total_product());
+		  }
+	      MPI_Barrier(MPI_COMM_WORLD);
+	    }
+	}
+      
+      //fill lookup tables
+      for(int loc_site=0;loc_site<nloc_sites;loc_site++)
+	{
+	  loc_coords_of_loc_site_table.push_back(coords_of_site(loc_site,loc_sizes));
+	  glb_coords_of_loc_site_table.push_back(loc_coords_of_loc_site(loc_site)+glb_coords_of_loc_origin);
 	}
     }
-  
-  //fill lookup tables
-  for(int loc_site=0;loc_site<nloc_sites;loc_site++)
-    {
-      loc_coords_of_loc_site_table.push_back(coords_of_site(loc_site,loc_sizes));
-      glb_coords_of_loc_site_table.push_back(loc_coords_of_loc_site(loc_site)+glb_coords_of_loc_origin);
-    }
+  THREAD_BARRIER();
 }
 
 //print all the infos

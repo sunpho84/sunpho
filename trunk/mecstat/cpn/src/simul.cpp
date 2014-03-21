@@ -90,6 +90,7 @@ void simul_t::print_backtrace_list()
 //close
 void simul_t::close()
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   //print information over the maximum amount of memory used
   MASTER_PRINTF("Maximal memory used during the run: %d bytes (",vectors->max_required_memory);
   if(IS_MASTER_RANK) fprintf_friendly_filesize(stdout,vectors->max_required_memory);
