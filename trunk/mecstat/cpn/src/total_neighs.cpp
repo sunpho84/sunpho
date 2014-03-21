@@ -95,16 +95,18 @@ total_neighs_t::total_neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_
       //create the list of ranks to ask to
       nranks_to_ask=outer_sites_per_rank.size();
       ranks_to_ask=NEW_PRIVATE("ranks_to_ask") rank_to_ask_t[nranks_to_ask];
-      site_list_per_rank_t::iterator sites_per_rank=outer_sites_per_rank.begin();
+      site_list_per_rank_t::iterator sites_per_rank_map=outer_sites_per_rank.begin();
       for(int irank=0;irank<nranks_to_ask;irank++)
 	{
-	  ranks_to_ask[irank].rank=sites_per_rank->first;
-	  ranks_to_ask[irank].size=sites_per_rank->second.size();
-	  ranks_to_ask[irank].dest=(irank==0)?geometry->nloc_sites:ranks_to_ask[irank-1].dest+ranks_to_ask[irank].size;
+	  ranks_to_ask[irank].rank=sites_per_rank_map->first;
+	  ranks_to_ask[irank].size=sites_per_rank_map->second.size();
+	  if(irank==0) ranks_to_ask[irank].dest=0;
+	  else         ranks_to_ask[irank].dest=ranks_to_ask[irank-1].dest+ranks_to_ask[irank-1].size;
 	  
-	  sites_per_rank++;
+	  sites_per_rank_map++;
 	}
       
+      MASTER_PRINTF("%d\n",outer_sites_per_rank.begin()->first);
       //communicate to each rank how many elements to ask
       sites_to_send_t *temp_nsites_to_send_to=new sites_to_send_t;
       for(int delta_rank=1;delta_rank<simul->nranks;delta_rank++)
@@ -140,34 +142,34 @@ total_neighs_t::total_neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_
 	  if(irank==0) ranks_asking[irank].dest=0;
 	  else ranks_asking[irank].dest=ranks_asking[irank-1].dest+ranks_asking[irank-1].size;
 	  nsites_to_send+=ranks_asking[irank].size;
-	  SHOUT("%d/%d, %d size %d dest %d",irank,nranks_asking,ranks_asking[irank].rank,
-		ranks_asking[irank].size,ranks_asking[irank].dest);
+	  //SHOUT("%d/%d, %d size %d dest %d",irank,nranks_asking,ranks_asking[irank].rank,
+	  //ranks_asking[irank].size,ranks_asking[irank].dest);
 	  
 	  nsites_to_send_to_ptr++;
 	}
       
-      //allocate the list of sites to send and receive it
+      //allocate the list of sites to send, and receive it
       list_sending=NEW_PRIVATE("list_sending") int[nsites_to_send];
       MPI_Request requests[nranks_asking+nranks_to_ask];
       for(int irank=0;irank<nranks_asking;irank++)
 	MPI_Irecv(list_sending+ranks_asking[irank].dest,ranks_asking[irank].size,MPI_INT,
 		  ranks_asking[irank].rank,ranks_asking[irank].rank,geometry->cart_comm,requests+irank);
 
-      
       //send the lists
-      sites_per_rank=outer_sites_per_rank.begin();
+      sites_per_rank_map=outer_sites_per_rank.begin();
       int *temp_list[nranks_to_ask];
       for(int irank=0;irank<nranks_to_ask;irank++)
 	{
 	  //prepare the list
 	  temp_list[irank]=NEW_PRIVATE("temp_list") int[ranks_to_ask[irank].size];
-	  std::map<int,int>::iterator sites_list=sites_per_rank->second.begin();
+	  std::map<int,int>::iterator sites_list=sites_per_rank_map->second.begin();
 	  for(int site=0;site<ranks_to_ask[irank].size;site++)
 	    {
 	      temp_list[irank][site]=sites_list->first;
+	      MASTER_PRINTF("Asking rank %d site [%d/%d] %d\n",ranks_to_ask[irank].rank,site,sites_per_rank_map->second.size(),temp_list[irank][site]);
 	      sites_list++;
 	    }
-	  sites_per_rank++;
+	  sites_per_rank_map++;
 	  
 	  //send it
 	  MPI_Isend(temp_list[irank],ranks_to_ask[irank].size,MPI_INT,
@@ -178,27 +180,53 @@ total_neighs_t::total_neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_
       MPI_Waitall(nranks_asking+nranks_to_ask,requests,MPI_STATUS_IGNORE);
       for(int irank=0;irank<nranks_to_ask;irank++) DELETE_PRIVATE(temp_list[irank]);
       
-      for(int irank=0;irank<nranks_asking;irank++)
-        MASTER_PRINTF("rank %d dest: %d\n",irank,ranks_asking[irank].dest);
-      
-      int site_i=0;
-      for(int irank=0;irank<nranks_asking;irank++)
-	for(int site=0;site<ranks_asking[irank].size;site++)
+      //check
+      {
+	int *recv=NEW_PRIVATE("recv") int[nouter_sites];
+	int *send=NEW_PRIVATE("send") int[nsites_to_send];
+	for(size_t site=0;site<nsites_to_send;site++)
+	  send[site]=list_sending[site];
+	MPI_Request requests[nranks_to_ask+nranks_asking];
+	for(int irank=0;irank<nranks_to_ask;irank++)
+	  MPI_Irecv(recv+ranks_to_ask[irank].dest,ranks_to_ask[irank].size,MPI_INT,
+		    ranks_to_ask[irank].rank,geometry->cart_rank,geometry->cart_comm,requests+irank);
+	for(int irank=0;irank<nranks_asking;irank++)
+	  MPI_Isend(send+ranks_asking[irank].dest,ranks_asking[irank].size,MPI_INT,
+		    ranks_asking[irank].rank,ranks_asking[irank].rank,geometry->cart_comm,requests+nranks_to_ask+irank);
+	MPI_Waitall(nranks_asking+nranks_to_ask,requests,MPI_STATUS_IGNORE);
+
+	//final check
+	sites_per_rank_map=outer_sites_per_rank.begin();
+	int isite=0;
+	for(int irank=0;irank<nranks_to_ask;irank++)
 	  {
-	    MASTER_PRINTF("site %d sending: %d/%d to %d[%d]\n",site_i,list_sending[site_i],geometry->nloc_sites,ranks_asking[irank].rank,irank);
-	    site_i++;
+	    //prepare the list
+	    std::map<int,int>::iterator sites_list=sites_per_rank_map->second.begin();
+	    for(int site=0;site<ranks_to_ask[irank].size;site++)
+	      {
+		MASTER_PRINTF("rank %d site[%d] to ask: %d, obtained %d\n",irank,site,sites_list->first,recv[isite]);
+		sites_list++;
+		isite++;
+	      }
+	    sites_per_rank_map++;
 	  }
+	
+	DELETE_PRIVATE(recv);
+	DELETE_PRIVATE(send);
+      }
       
-      if(geometry->cart_rank==5)
-	{
-	  std::map<int,int>::iterator sites_list=outer_sites_per_rank.begin()->second.begin();
-	  printf("5 asking from %d: %d\n",outer_sites_per_rank.begin()->first,ranks_to_ask[0].size);
-	  for(int site=0;site<ranks_to_ask[0].size;site++)
-	    {
-	      printf("%d: %d\n",site,sites_list->first);
-	      sites_list++;
-	    }
-	}
+      //for(int irank=0;irank<nranks_asking;irank++)
+      //MASTER_PRINTF("rank %d dest: %d\n",irank,ranks_asking[irank].dest);
+      
+      //int site_i=0;
+      //for(int irank=0;irank<nranks_asking;irank++)
+      //for(int site=0;site<ranks_asking[irank].size;site++)
+      //{
+      //MASTER_PRINTF("site %d sending: %d/%d to %d[%d]\n",site_i,list_sending[site_i],geometry->nloc_sites,
+      //ranks_asking[irank].rank,irank);
+      //site_i++;
+      //}
+      
       //remove temporary list of sites to send
       delete temp_nsites_to_send_to;
     }
