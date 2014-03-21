@@ -56,11 +56,13 @@ public:
   rank_asking_t *ranks_asking;    //info on asking ranks
   
   int *operator[](int isite){return neighs+isite*nneighs_per_site;}
-  void mark_all_neighbors(int loc_site,coords_t glb_site_coords,per_site_neighs_t &per_site_neighs,
+  void mark_all_neighbors(int loc_site,coords_t glb_site_coords,per_site_neighs_t *per_site_neighs,
 			  site_list_per_rank_t &outer_sites_per_rank,bool recursive=false);
 
-  total_neighs_t(geometry_t *geometry,per_site_neighs_t &per_site_neighs);
+  total_neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_neighs);
   ~total_neighs_t();
 };
+
+void* operator new(size_t size);
 
 #endif
