@@ -1,4 +1,10 @@
+#ifdef HAVE_CONFIG_H
+ #include "config.hpp"
+#endif
+
 #include <algorithm>
+
+#include "debug.hpp"
 #include "random.hpp"
 
 //initialize
@@ -20,11 +26,16 @@ void rnd_gen_t::init(int seed)
       if(j<RAN2_NTAB) iv[j]=idum;
     }
   iy=iv[0];
+  
+  //mark to be inited
+  inited=true;
 }
 
 //standard ran2 from numerical recipes
-double rnd_gen_t::rnd_get_unif(double min,double max)
+double rnd_gen_t::get_unif(double min,double max)
 {
+  if(!inited) CRASH_SOFTLY("cannot work if not properly inited");
+  
   const int im1=2147483563,im2=2147483399,imm1=im1-1,ia1=40014,ia2=40692;
   const int iq1=53668,iq2=52774,ir1=12211,ir2=3791,ndiv=1+imm1/RAN2_NTAB;
   const double am=1.0/im1,eps=1.2e-7,rnmx=1-eps;
@@ -50,10 +61,10 @@ double rnd_gen_t::rnd_get_unif(double min,double max)
 }
 
 //return a numer between 0 and 1
-int rnd_gen_t::rnd_get_pm_one()
+int rnd_gen_t::get_pm_one()
 {
-  double r=rnd_get_unif(0,1);
-  if(r>0.5) return 1;
+  double r=get_unif(0,1);
+  if(r>=0.5) return 1;
   else return -1;
 }
 

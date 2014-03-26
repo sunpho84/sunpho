@@ -103,8 +103,8 @@ PROGRAMS = $(bin_PROGRAMS)
 am__dirstamp = $(am__leading_dot)dirstamp
 am___top_builddir__bin_cpn_OBJECTS = src/debug.$(OBJEXT) \
 	src/endianness.$(OBJEXT) src/field.$(OBJEXT) \
-	src/geometry.$(OBJEXT) src/main.$(OBJEXT) src/simul.$(OBJEXT) \
-	src/threads.$(OBJEXT) src/total_neighs.$(OBJEXT) \
+	src/geometry.$(OBJEXT) src/main.$(OBJEXT) src/neighs.$(OBJEXT) \
+	src/random.$(OBJEXT) src/simul.$(OBJEXT) src/threads.$(OBJEXT) \
 	src/utils.$(OBJEXT) src/vectors.$(OBJEXT)
 __top_builddir__bin_cpn_OBJECTS =  \
 	$(am___top_builddir__bin_cpn_OBJECTS)
@@ -294,9 +294,10 @@ __top_builddir__bin_cpn_SOURCES = \
 	src/field.cpp \
 	src/geometry.cpp \
 	src/main.cpp \
+	src/neighs.cpp \
+	src/random.cpp \
 	src/simul.cpp \
 	src/threads.cpp \
-	src/total_neighs.cpp \
 	src/utils.cpp \
 	src/vectors.cpp
 
@@ -409,10 +410,12 @@ src/field.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/geometry.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/main.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/neighs.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/random.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 src/simul.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/threads.$(OBJEXT): src/$(am__dirstamp) \
-	src/$(DEPDIR)/$(am__dirstamp)
-src/total_neighs.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/utils.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/vectors.$(OBJEXT): src/$(am__dirstamp) \
@@ -437,9 +440,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/field.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/geometry.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/main.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/neighs.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/random.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/simul.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/threads.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/total_neighs.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/utils.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/vectors.Po@am__quote@
 
@@ -821,7 +825,6 @@ update_svnversion:
 .PHONY: update_svnversion
 
 # \
-#	src/random.cpp \
 #	src/system.cpp \
 #	src/utils.cpp
 

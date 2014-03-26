@@ -3,16 +3,25 @@
 
 #define RAN2_NTAB 32
 
+#include <tr1/array>
+
 //structure for the random generator
-struct rnd_gen_t
+class rnd_gen_t
 {
+public:
+  bool inited;
+
+  void init(int seed);
+  double get_unif(double min,double max);
+  int get_pm_one();
+  
+  rnd_gen_t(): inited(0) {} //constructor
+  rnd_gen_t(int seed) {init(seed);}
+private:
   int idum;
   int idum2;
-  int iv[RAN2_NTAB];
+  std::tr1::array<int,RAN2_NTAB> iv;
   int iy;
-  void init(int seed);
-  double rnd_get_unif(double min,double max);
-  int rnd_get_pm_one();
 };
 
 #endif

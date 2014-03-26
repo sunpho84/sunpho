@@ -1,53 +1,59 @@
 #include <iostream>
 
 #include "debug.hpp"
+#include "field.hpp"
 #include "geometry.hpp"
-#include "simul.hpp"
+#include "neighs.hpp"
 #include "per_site_neighs.hpp"
-#include "total_neighs.hpp"
+#include "simul.hpp"
 
 using namespace std;
+
+int compute_energy(field_t<int> &t)
+{
+  GET_THREAD_ID();
+  
+  t.sync_outer_sites();
+
+  int E=0;
+  PARALLEL_FOR(iel,0,t.neighs_ptr->geometry->nloc_sites)
+    {
+      int s=t[iel];
+      int a=0;
+      for(size_t dir=0;dir<t.neighs_ptr->nneighs_per_site;dir++)
+	{
+	  a+=t[t.get_neigh(iel,dir)];
+	  MASTER_PRINTF("%d %d %d\n",iel,(int)dir,t[t.get_neigh(iel,dir)]);
+	}
+      E+=s*a;
+    }
+  
+  return rank_threads_reduce(E);
+}
 
 //internal main
 void in_main(int narg,char **arg)
 {
+  simul->init_glb_rnd_gen(101);
+  
   GET_THREAD_ID();
   
   //test allocate and deallocate  
-  double *v=NEW_COMMON("v") double[20];
-  DELETE_COMMON(v);
+  double *v=NEW_BLOCKING("v") double[20];
+  DELETE_BLOCKING(v);
 
-
-  geometry_t *geometry=NEW_COMMON("geometry") geometry_t(2,10);
-
-  //define first neighbors
-  per_site_neighs_t *first_neighbors_per_site=NEW_COMMON("first_neigh_per_site") per_site_neighs_t;
-
-  if(IS_MASTER_THREAD)
-    {
-      coords_t site(geometry->ndims);
-      for(size_t dim=0;dim<geometry->ndims;dim++) site[dim]=0;
-      for(int du=-1;du<=1;du+=2)
-	for(size_t dim=0;dim<geometry->ndims;dim++)
-	  {
-	    site[dim]=du;
-	    first_neighbors_per_site->add_neighbor(site);
-	    site[dim]=0;
-	  }
-    }
+  geometry_t *geometry=NEW_BLOCKING("geometry") geometry_t(2,10);
+  geometry->init_loc_rnd_gen();
+  
+  //fill a field
+  field_t<int> t("t",geometry->first_neighbors);
+  PARALLEL_FOR(iel,0,geometry->nloc_sites)
+    t[iel]=geometry->loc_rnd_gen[iel].get_pm_one();
   THREAD_BARRIER();
-
   
-  total_neighs_t *first_neighbors=NEW_COMMON("first_neighbors") total_neighs_t(geometry,first_neighbors_per_site);
+  MASTER_PRINTF("Energy: %d\n",compute_energy(t));
   
-  if(IS_MASTER_THREAD)
-    {
-      //
-    }
-  
-  DELETE_COMMON(first_neighbors_per_site);
-  DELETE_COMMON(first_neighbors);
-  DELETE_COMMON(geometry);
+  DELETE_BLOCKING(geometry);
   
   THREAD_BARRIER();
 }

@@ -39,10 +39,15 @@ inline void thread_barrier_internal()
   #pragma omp barrier
 }
 
-//cast a pointer from master thread to all the others
-#define CAST_PTR_FROM_MASTER_THREAD(A)					\
-  (IS_MASTER_THREAD?                                                    \
-  (THREAD_BARRIER(),simul->returned_malloc_ptr=A,THREAD_BARRIER(),(typeof(A))simul->returned_malloc_ptr): \
-   (THREAD_BARRIER(),THREAD_BARRIER(),(typeof(A))simul->returned_malloc_ptr))
+//parallel for
+#define CHUNK_WORKLOAD(START,CHUNK_LOAD,END,EXT_START,EXT_END,CHUNK_ID,NCHUNKS) \
+  int WORKLOAD=EXT_END-EXT_START,                                       \
+    CHUNK_LOAD=(WORKLOAD+NCHUNKS-1)/NCHUNKS,				\
+    START=EXT_START+CHUNK_ID*CHUNK_LOAD,				\
+    END=START+CHUNK_LOAD< EXT_END ? START+CHUNK_LOAD : EXT_END
+#define CHUNK_FOR(INDEX,EXT_START,EXT_END,CHUNK_ID,NCHUNKS)		\
+  for(CHUNK_WORKLOAD(START,CHUNK_LOAD,END,EXT_START,EXT_END,CHUNK_ID,NCHUNKS),INDEX=START;INDEX<END;INDEX++)
+#define PARALLEL_FOR(INDEX,START,END)				\
+  CHUNK_FOR(INDEX,START,END,thread_id,simul->nthreads)
 
 #endif

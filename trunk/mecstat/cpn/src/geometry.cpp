@@ -319,6 +319,9 @@ void geometry_t::start(coords_t ext_glb_sizes)
       glb_sizes=ext_glb_sizes;
       nglb_sites=glb_sizes.total_product();
       
+      //set not having inited loc_rnd_gen
+      loc_rnd_gen_inited=false;
+      
       //output global size and number of ranks
       MASTER_PRINTF("Global lattice grid:\t%d",glb_sizes[0]);
       for(size_t dim=1;dim<ndims;dim++) MASTER_PRINTF("x%d",glb_sizes[dim]);
@@ -388,9 +391,31 @@ void geometry_t::start(coords_t ext_glb_sizes)
 	{
 	  loc_coords_of_loc_site_table.push_back(coords_of_site(loc_site,loc_sizes));
 	  glb_coords_of_loc_site_table.push_back(loc_coords_of_loc_site(loc_site)+glb_coords_of_loc_origin);
+	  glb_site_of_loc_site_table.push_back(glb_site_of_loc_coords(loc_coords_of_loc_site_table[loc_site]));
 	}
     }
   THREAD_BARRIER();
+  
+  //start per-site first neighbors
+  per_site_neighs_t first_neighbors_per_site;
+  coords_t site(ndims);
+  for(size_t dim=0;dim<ndims;dim++) site[dim]=0;
+  for(int du=-1;du<=1;du+=2) //down then up
+    for(size_t dim=0;dim<ndims;dim++) //dimension loop
+      {
+	site[dim]=du;
+	first_neighbors_per_site.add_neighbor(site);
+	site[dim]=0;
+      }
+  
+  //initialize first neighbors
+  first_neighbors=NEW_BLOCKING("first_neighs") neighs_t(this,&first_neighbors_per_site);
+}
+
+//destructor
+geometry_t::~geometry_t()
+{
+  DELETE_NON_BLOCKING(first_neighbors);
 }
 
 //print all the infos
@@ -419,4 +444,26 @@ void geometry_t::print()
   printf("Glb_coords_of_loc_origin: %d",glb_coords_of_loc_origin[0]);
   for(size_t dim=1;dim<ndims;dim++) printf("x%d ",glb_coords_of_loc_origin[dim]);
   printf("\n");
+}
+
+//initialize the local number generators
+void geometry_t::init_loc_rnd_gen()
+{
+  GET_THREAD_ID();
+  
+  if(IS_MASTER_THREAD)
+    {
+      //resize to proper volume
+      loc_rnd_gen.resize(nloc_sites);
+      
+      //get the seed for the whole grid
+      int seed=simul->glb_rnd_gen.get_unif(0,RAND_MAX);
+      
+      //start the grid
+      for(int site=0;site<nloc_sites;site++)
+	loc_rnd_gen[site].init(seed+glb_site_of_loc_site(site));
+    }
+  THREAD_BARRIER();
+  
+  MASTER_PRINTF("%d\n",(int)loc_rnd_gen.size());
 }

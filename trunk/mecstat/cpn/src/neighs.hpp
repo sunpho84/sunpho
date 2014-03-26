@@ -15,7 +15,7 @@
 typedef std::map<int,std::map<int,int> > site_list_per_rank_t;
 
 //holds temporarily info on neighs
-typedef std::map<int,std::map<int,std::vector<int> > > temp_total_neighs_t;
+typedef std::map<int,std::map<int,std::vector<int> > > temp_neighs_t;
 
 //hold info on ranks asking id, size ans position
 class rank_to_ask_t
@@ -36,9 +36,9 @@ public:
 };
 
 //holds the neighbors
-class total_neighs_t
+class neighs_t
 {
-  total_neighs_t();
+  neighs_t();
 public:
   geometry_t *geometry;    //geometry used to create
 
@@ -60,8 +60,8 @@ public:
   void mark_all_neighbors(int loc_site,coords_t glb_site_coords,per_site_neighs_t *per_site_neighs,
 			  site_list_per_rank_t &outer_sites_per_rank,bool recursive=false);
 
-  total_neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_neighs);
-  ~total_neighs_t();
+  neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_neighs);
+  ~neighs_t();
 };
 
 void* operator new(size_t size);

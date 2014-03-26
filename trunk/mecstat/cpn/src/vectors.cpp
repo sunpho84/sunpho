@@ -66,7 +66,7 @@ vectors_t::vectors_t()
 }
 
 //alocate a vector
-void* vectors_t::allocate(int size,bool shared,const char *name,int line,const char *file)
+void* vectors_t::allocate(int size,bool blocking,const char *name,int line,const char *file)
 {
   GET_THREAD_ID();
   if(IS_MASTER_THREAD)
@@ -103,22 +103,22 @@ void* vectors_t::allocate(int size,bool shared,const char *name,int line,const c
     }
     
   //sync so we are sure that master thread allocated
-  if(shared) THREAD_BARRIER();
+  if(blocking) THREAD_BARRIER();
   void *res=simul->returned_malloc_ptr;
     
   //resync so all threads return the same pointer
-  if(shared) THREAD_BARRIER();
+  if(blocking) THREAD_BARRIER();
     
   return res;
 }
 
 //release a vector
-void vectors_t::deallocate(void **arr,bool shared,int line,const char *file)
+void vectors_t::deallocate(void **arr,bool blocking,int line,const char *file)
 {
   GET_THREAD_ID();
 
   //sync so all thread are not using the vector
-  if(shared) THREAD_BARRIER();
+  if(blocking) THREAD_BARRIER();
 
   if(IS_MASTER_THREAD)
     {
@@ -154,7 +154,7 @@ void vectors_t::deallocate(void **arr,bool shared,int line,const char *file)
     }
     
   //sync so all threads see that have deallocated
-  if(shared) THREAD_BARRIER();
+  if(blocking) THREAD_BARRIER();
 }
 
 //compute current memory usage
@@ -173,20 +173,27 @@ int vectors_t::total_memory_usage()
 }
 
 //create object shared among threads
-void *operator new(size_t size,bool shared,const char *name,int line,const char *file)
+void *operator new(size_t size,bool blocking,const char *name,int line,const char *file)
 {
-  void *ptr=simul->vectors->allocate(size,shared,name,line,file);
-  if(ptr==NULL) throw new_error(size,shared,name,line,file);
+  void *ptr=simul->vectors->allocate(size,blocking,name,line,file);
+  if(ptr==NULL) throw new_error(size,blocking,name,line,file);
   return ptr;
 }
-void *operator new[](size_t size,bool shared,const char *name,int line,const char *file)
+void *operator new[](size_t size,bool blocking,const char *name,int line,const char *file)
 {
-  void *ptr=simul->vectors->allocate(size,shared,name,line,file);
-  if(ptr==NULL) throw new_error(size,shared,name,line,file);
+  void *ptr=simul->vectors->allocate(size,blocking,name,line,file);
+  if(ptr==NULL) throw new_error(size,blocking,name,line,file);
+  return ptr;
+}
+void *operator new(size_t size,size_t size_per_el,bool blocking,const char *name,neighs_t *neighs,int line,const char *file)
+{
+  MASTER_PRINTF("Size_per_el: %d, ntot_el: %d\n",(int)size_per_el,(int)neighs->ntotal_sites);
+  void *ptr=simul->vectors->allocate(size+size_per_el*neighs->ntotal_sites,blocking,name,line,file);
+  if(ptr==NULL) throw new_error(size,blocking,name,line,file);
   return ptr;
 }
 
 //here to solve a problem
-void deallocate(void **ptr,bool shared,int line,const char *file)
-{if(*ptr!=NULL)simul->vectors->deallocate(ptr,shared,line,file);}
+void deallocate(void **ptr,bool blocking,int line,const char *file)
+{if(*ptr!=NULL)simul->vectors->deallocate(ptr,blocking,line,file);}
 

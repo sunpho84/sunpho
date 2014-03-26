@@ -5,7 +5,8 @@
  #include "config.hpp"
 #endif
 
-#include "debug.hpp"
+#include <vector>
+
 #include "geometry.hpp"
 
 //holds the neighbors
