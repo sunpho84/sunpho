@@ -4,6 +4,8 @@
 #include <mpi.h>
 #include <mpi.h>
 
+#include "per_site_neighs.hpp"
+#include "random.hpp"
 #include "threads.hpp"
 #include "vectors.hpp"
 
@@ -16,14 +18,23 @@ struct simul_t
 {
   int rank_id,nranks;    //rank and number of ranks
   int nthreads;          //number of threads
-  
+  char **thread_res_arr; //array to make reductions
+
   int verbosity_lv;      //debug variables
   bool is_little_endian; //endianness flag
   
   void *returned_malloc_ptr;   //returned global pointer
   vectors_t *vectors;          //vectors manager
+  
+  char *comm_buff;      //communication buffer
+  int comm_buff_size;   //buffer size
+  
+  per_site_neighs_t *first_neighbors_per_site;   //implement first neighbors connections
 
+  rnd_gen_t glb_rnd_gen;   //random generator
+  
 #ifdef THREAD_DEBUG
+  //used for thread barrier debugging
   char glb_barr_file[1024];
   int glb_barr_line;
 #endif
@@ -54,6 +65,7 @@ struct simul_t
   
   //start and close
   void start(int narg,char **arg,void(*main_function)(int narg,char **arg));
+  void init_glb_rnd_gen(int seed);
   void close();
   
   simul_t(int narg,char **arg,void(*main_function)(int narg,char **arg));

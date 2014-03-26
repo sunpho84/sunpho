@@ -15,13 +15,13 @@ __top_builddir__bin_cpn_SOURCES= \
 	src/field.cpp \
 	src/geometry.cpp \
 	src/main.cpp \
+	src/neighs.cpp \
+	src/random.cpp \
 	src/simul.cpp \
 	src/threads.cpp \
-	src/total_neighs.cpp \
 	src/utils.cpp \
 	src/vectors.cpp
 
 # \
-#	src/random.cpp \
 #	src/system.cpp \
 #	src/utils.cpp

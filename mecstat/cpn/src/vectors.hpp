@@ -10,10 +10,16 @@
 #define VECTOR_STRING_LENGTH 20
 #define VECTOR_ALIGNMENT 16
 
-#define NEW_COMMON(NAME) new(true,NAME,__LINE__,__FILE__)
-#define NEW_PRIVATE(NAME) new(false,NAME,__LINE__,__FILE__)
-#define DELETE_COMMON(A) destroy(A,true,__LINE__,__FILE__)
-#define DELETE_PRIVATE(A) destroy(A,false,__LINE__,__FILE__)
+#define BLOCKING true
+#define NON_BLOCKING false
+
+#define NEW(NAME,BL_FLAG) new(BL_FLAG,NAME,__LINE__,__FILE__)
+#define NEW_BLOCKING(NAME) NEW(NAME,BLOCKING)
+#define NEW_NON_BLOCKING(NAME) NEW(NAME,NON_BLOCKING)
+
+#define DELETE(A,BL_FLAG) destroy(A,BL_FLAG,__LINE__,__FILE__)
+#define DELETE_BLOCKING(A) DELETE(A,BLOCKING)
+#define DELETE_NON_BLOCKING(A) DELETE(A,NON_BLOCKING)
 
 //element vector
 struct vector_el_t
@@ -39,8 +45,8 @@ struct vectors_t
   int required_memory,max_required_memory;
   vector_el_t *main_vector,*last_vector;
   
-  void *allocate(int size,bool shared,const char *name,int line,const char *file);
-  void deallocate(void **arr,bool shared,int line,const char *file);
+  void *allocate(int size,bool blocking,const char *name,int line,const char *file);
+  void deallocate(void **arr,bool blocking,int line,const char *file);
   void print_all_contents(); //print all allocated vectors
   vectors_t();
   int total_memory_usage();
@@ -51,28 +57,30 @@ struct vectors_t
 class new_error
 {
 public:
-  new_error(size_t size,bool shared,const char *name,int line,const char *file)
+  new_error(size_t size,bool blocking,const char *name,int line,const char *file)
   {
-    const char flag[2][10]={"private","shared"};
-    internal_crash(false,line,file,"something failed creating %s object \"%s\" of size %d",flag[shared],name,(int)size);}
+    const char flag[2][20]={"non_blocking","blocking"};
+    internal_crash(false,line,file,"something failed creating %s object \"%s\" of size %d",flag[blocking],name,(int)size);}
 };
 
 //create object shared among threads
-void *operator new(size_t size,bool shared,const char *name,int line,const char *file);
-void *operator new[](size_t size,bool shared,const char *name,int line,const char *file);
+void *operator new(size_t size,bool blocking,const char *name,int line,const char *file);
+void *operator new[](size_t size,bool blocking,const char *name,int line,const char *file);
+
 //delete object
-void deallocate(void **ptr,bool shared,int line,const char *file);
-template<class T> void destroy(T *ptr,bool shared,int line,const char *file)
+void deallocate(void **ptr,bool blocking,int line,const char *file);
+template<class T> void destroy(T *ptr,bool blocking,int line,const char *file)
 {
   GET_THREAD_ID();
   
-  if(shared) THREAD_BARRIER();
+  if(blocking==BLOCKING) THREAD_BARRIER();
   if(IS_MASTER_THREAD)
     if(ptr!=NULL)
       {
 	ptr->~T();                                //call the destructor
 	deallocate((void**)&ptr,false,line,file); //deallocate
       }
+  if(blocking==BLOCKING) THREAD_BARRIER();
 }
 
 #endif

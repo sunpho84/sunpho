@@ -50,21 +50,31 @@ void simul_t::start(int narg,char **arg,void(*main_function)(int narg,char **arg
   
   //initialize the first vector
   vectors=new vectors_t();
-
+  
+  //set no communication buffer
+  comm_buff=NULL;
+  comm_buff_size=0;
+  
   //check endianness
   is_little_endian=get_little_endianness();
   if(is_little_endian) MASTER_PRINTF("System endianness: little (ordinary machine)\n");
   else MASTER_PRINTF("System endianness: big (BG, etc)\n");
+  
+  //get number of threads
+  #pragma omp parallel
+  {
+    nthreads=omp_get_num_threads();
+  }
+  MASTER_PRINTF("Using %u threads\n",nthreads);
+    
+  //init the thread array
+  thread_res_arr=NEW_NON_BLOCKING("thread_res_arr") char*[nthreads];
   
   //some init missing
   
   //now start the threads
   #pragma omp parallel
   {
-    //get the number of threads
-    nthreads=omp_get_num_threads();
-    MASTER_PRINTF("Using %u threads\n",nthreads);
-    
     //start internal main
     main_function(narg,arg);
   }
@@ -90,6 +100,12 @@ void simul_t::print_backtrace_list()
 //close
 void simul_t::close()
 {
+  //delete the thread buffer
+  DELETE_NON_BLOCKING(thread_res_arr);
+  
+  //delete communicator buff
+  DELETE_NON_BLOCKING(comm_buff);  
+
   MPI_Barrier(MPI_COMM_WORLD);
   //print information over the maximum amount of memory used
   MASTER_PRINTF("Maximal memory used during the run: %d bytes (",vectors->max_required_memory);
@@ -103,11 +119,19 @@ void simul_t::close()
       vectors->print_all_contents();
       printf("For a total of %d bytes\n",vectors->total_memory_usage());
     }
-
+  
   //final message
   MPI_Barrier(MPI_COMM_WORLD);
   MASTER_PRINTF("   Ciao!\n\n");
   MPI_Finalize();
+}
+
+//init the global random generator
+void simul_t::init_glb_rnd_gen(int seed)
+{
+  GET_THREAD_ID();
+  if(IS_MASTER_THREAD) glb_rnd_gen.init(seed);
+  THREAD_BARRIER();
 }
 
 //abort
@@ -128,4 +152,9 @@ simul_t::simul_t(int narg,char **arg,void(*main_function)(int narg,char **arg))
   start(narg,arg,main_function);
   
   close();
+}
+
+//destructor
+simul_t::~simul_t()
+{
 }

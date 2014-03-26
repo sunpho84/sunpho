@@ -4,16 +4,17 @@
 
 #include <list>
 
+#include "debug.hpp"
 #include "geometry.hpp"
 #include "simul.hpp"
 #include "threads.hpp"
-#include "total_neighs.hpp"
+#include "neighs.hpp"
 
 //hold temporarily info
 typedef std::map<int,int> sites_to_send_t;
 
 //mark the connections of the site
-void total_neighs_t::mark_all_neighbors(int loc_site,coords_t glb_site_coords,per_site_neighs_t *per_site_neighs,
+void neighs_t::mark_all_neighbors(int loc_site,coords_t glb_site_coords,per_site_neighs_t *per_site_neighs,
 					site_list_per_rank_t &outer_sites_per_rank,bool recursive)
 {
   //find glb_coords of neighbors
@@ -51,7 +52,7 @@ void total_neighs_t::mark_all_neighbors(int loc_site,coords_t glb_site_coords,pe
 }
 
 //construct using per-site mask
-total_neighs_t::total_neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_neighs) : geometry(geometry),nneighs_per_site(per_site_neighs->size())
+neighs_t::neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_neighs) : geometry(geometry),nneighs_per_site(per_site_neighs->size())
 {
   GET_THREAD_ID();
   
@@ -64,6 +65,7 @@ total_neighs_t::total_neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_
 	{
 	  //find glb_coords of neighbors
 	  coords_t glb_site_coords=geometry->glb_coords_of_loc_site(loc_site);
+	  
 	  for(per_site_neighs_t::iterator it=per_site_neighs->begin();it!=per_site_neighs->end();it++)
 	    {
 	      //convert to rank and site
@@ -88,13 +90,13 @@ total_neighs_t::total_neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_
 	  }
       
       //allocate neighbors and connect all sites
-      neighs=NEW_PRIVATE("neighs") int[ntotal_sites*nneighs_per_site];
+      neighs=NEW_NON_BLOCKING("neighs") int[ntotal_sites*nneighs_per_site];
       for(int loc_site=0;loc_site<geometry->nloc_sites;loc_site++)
 	mark_all_neighbors(loc_site,geometry->glb_coords_of_loc_site(loc_site),per_site_neighs,outer_sites_per_rank,true);
       
       //create the list of ranks to ask to
       nranks_to_ask=outer_sites_per_rank.size();
-      ranks_to_ask=NEW_PRIVATE("ranks_to_ask") rank_to_ask_t[nranks_to_ask];
+      ranks_to_ask=NEW_NON_BLOCKING("ranks_to_ask") rank_to_ask_t[nranks_to_ask];
       site_list_per_rank_t::iterator sites_per_rank_map=outer_sites_per_rank.begin();
       for(int irank=0;irank<nranks_to_ask;irank++)
 	{
@@ -106,7 +108,6 @@ total_neighs_t::total_neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_
 	  sites_per_rank_map++;
 	}
       
-      MASTER_PRINTF("%d\n",outer_sites_per_rank.begin()->first);
       //communicate to each rank how many elements to ask
       sites_to_send_t *temp_nsites_to_send_to=new sites_to_send_t;
       for(int delta_rank=1;delta_rank<simul->nranks;delta_rank++)
@@ -133,7 +134,7 @@ total_neighs_t::total_neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_
       //convert to store this into proper list
       nsites_to_send=0;
       nranks_asking=temp_nsites_to_send_to->size();
-      ranks_asking=NEW_PRIVATE("ranks_asking") rank_asking_t[nranks_asking];
+      ranks_asking=NEW_NON_BLOCKING("ranks_asking") rank_asking_t[nranks_asking];
       std::map<int,int>::iterator nsites_to_send_to_ptr=temp_nsites_to_send_to->begin();
       for(int irank=0;irank<nranks_asking;irank++)
 	{
@@ -149,7 +150,7 @@ total_neighs_t::total_neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_
 	}
       
       //allocate the list of sites to send, and receive it
-      list_sending=NEW_PRIVATE("list_sending") int[nsites_to_send];
+      list_sending=NEW_NON_BLOCKING("list_sending") int[nsites_to_send];
       MPI_Request requests[nranks_asking+nranks_to_ask];
       for(int irank=0;irank<nranks_asking;irank++)
 	MPI_Irecv(list_sending+ranks_asking[irank].dest,ranks_asking[irank].size,MPI_INT,
@@ -161,7 +162,7 @@ total_neighs_t::total_neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_
       for(int irank=0;irank<nranks_to_ask;irank++)
 	{
 	  //prepare the list
-	  temp_list[irank]=NEW_PRIVATE("temp_list") int[ranks_to_ask[irank].size];
+	  temp_list[irank]=NEW_NON_BLOCKING("temp_list") int[ranks_to_ask[irank].size];
 	  std::map<int,int>::iterator sites_list=sites_per_rank_map->second.begin();
 	  for(int site=0;site<ranks_to_ask[irank].size;site++)
 	    {
@@ -178,12 +179,12 @@ total_neighs_t::total_neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_
       
       //wait and free temp list
       MPI_Waitall(nranks_asking+nranks_to_ask,requests,MPI_STATUS_IGNORE);
-      for(int irank=0;irank<nranks_to_ask;irank++) DELETE_PRIVATE(temp_list[irank]);
+      for(int irank=0;irank<nranks_to_ask;irank++) DELETE_NON_BLOCKING(temp_list[irank]);
       
       //check
       {
-	int *recv=NEW_PRIVATE("recv") int[nouter_sites];
-	int *send=NEW_PRIVATE("send") int[nsites_to_send];
+	int *recv=NEW_NON_BLOCKING("recv") int[nouter_sites];
+	int *send=NEW_NON_BLOCKING("send") int[nsites_to_send];
 	for(size_t site=0;site<nsites_to_send;site++)
 	  send[site]=list_sending[site];
 	MPI_Request requests[nranks_to_ask+nranks_asking];
@@ -204,15 +205,18 @@ total_neighs_t::total_neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_
 	    std::map<int,int>::iterator sites_list=sites_per_rank_map->second.begin();
 	    for(int site=0;site<ranks_to_ask[irank].size;site++)
 	      {
-		MASTER_PRINTF("rank %d site[%d] to ask: %d, obtained %d\n",irank,site,sites_list->first,recv[isite]);
+		//MASTER_PRINTF("rank %d site[%d] to ask: %d, obtained %d\n",irank,site,sites_list->first,recv[isite]);
+		if(sites_list->first!=recv[isite])
+		  CRASH_SOFTLY("site %d from rank %d failed: %d!=%d",site,ranks_to_ask[irank].rank,
+			       sites_list->first,recv[isite]);
 		sites_list++;
 		isite++;
 	      }
 	    sites_per_rank_map++;
 	  }
 	
-	DELETE_PRIVATE(recv);
-	DELETE_PRIVATE(send);
+	DELETE_NON_BLOCKING(recv);
+	DELETE_NON_BLOCKING(send);
       }
       
       //for(int irank=0;irank<nranks_asking;irank++)
@@ -234,10 +238,10 @@ total_neighs_t::total_neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_
 }
 
 //deallocate
-total_neighs_t::~total_neighs_t()
+neighs_t::~neighs_t()
 {
-  DELETE_PRIVATE(neighs);
-  DELETE_PRIVATE(ranks_to_ask);
-  DELETE_PRIVATE(ranks_asking);
-  DELETE_PRIVATE(list_sending);
+  DELETE_NON_BLOCKING(neighs);
+  DELETE_NON_BLOCKING(ranks_to_ask);
+  DELETE_NON_BLOCKING(ranks_asking);
+  DELETE_NON_BLOCKING(list_sending);
 }
