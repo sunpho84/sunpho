@@ -167,7 +167,7 @@ neighs_t::neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_neighs) : ge
 	  for(int site=0;site<ranks_to_ask[irank].size;site++)
 	    {
 	      temp_list[irank][site]=sites_list->first;
-	      MASTER_PRINTF("Asking rank %d site [%d/%d] %d\n",ranks_to_ask[irank].rank,site,sites_per_rank_map->second.size(),temp_list[irank][site]);
+	      //MASTER_PRINTF("Asking rank %d site [%d/%d] %d\n",ranks_to_ask[irank].rank,site,sites_per_rank_map->second.size(),temp_list[irank][site]);
 	      sites_list++;
 	    }
 	  sites_per_rank_map++;

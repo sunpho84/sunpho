@@ -464,6 +464,4 @@ void geometry_t::init_loc_rnd_gen()
 	loc_rnd_gen[site].init(seed+glb_site_of_loc_site(site));
     }
   THREAD_BARRIER();
-  
-  MASTER_PRINTF("%d\n",(int)loc_rnd_gen.size());
 }
