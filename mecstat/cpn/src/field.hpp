@@ -11,6 +11,8 @@
 #include "reduce.hpp"
 #include "simul.hpp"
 
+#define PARALLEL_FOR_SITES_OF_FIELD(SITE,FIELD) PARALLEL_FOR(SITE,0,FIELD.neighs_ptr->geometry->nloc_sites)
+
 template <class T> class field_t
 {
 public:

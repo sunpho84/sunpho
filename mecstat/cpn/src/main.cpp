@@ -23,7 +23,7 @@ int compute_energy(field_t<int> &t)
       for(size_t dir=0;dir<t.neighs_ptr->nneighs_per_site;dir++)
 	{
 	  a+=t[t.get_neigh(iel,dir)];
-	  MASTER_PRINTF("%d %d %d\n",iel,(int)dir,t[t.get_neigh(iel,dir)]);
+	  //MASTER_PRINTF("%d %d %d\n",iel,(int)dir,t[t.get_neigh(iel,dir)]);
 	}
       E+=s*a;
     }
@@ -47,7 +47,7 @@ void in_main(int narg,char **arg)
   
   //fill a field
   field_t<int> t("t",geometry->first_neighbors);
-  PARALLEL_FOR(iel,0,geometry->nloc_sites)
+  PARALLEL_FOR_SITES_OF_FIELD(iel,t)
     t[iel]=geometry->loc_rnd_gen[iel].get_pm_one();
   THREAD_BARRIER();
   
