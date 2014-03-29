@@ -20,6 +20,17 @@ void thread_barrier_internal();
  void thread_barrier_without_check();
 #endif
 
+//parallel for
+#define CHUNK_WORKLOAD(START,CHUNK_LOAD,END,EXT_START,EXT_END,CHUNK_ID,NCHUNKS) \
+  int WORKLOAD=EXT_END-EXT_START,                                       \
+    CHUNK_LOAD=(WORKLOAD+NCHUNKS-1)/NCHUNKS,				\
+    START=EXT_START+CHUNK_ID*CHUNK_LOAD,				\
+    END=START+CHUNK_LOAD< EXT_END ? START+CHUNK_LOAD : EXT_END
+#define CHUNK_FOR(INDEX,EXT_START,EXT_END,CHUNK_ID,NCHUNKS)		\
+  for(CHUNK_WORKLOAD(START,CHUNK_LOAD,END,EXT_START,EXT_END,CHUNK_ID,NCHUNKS),INDEX=START;INDEX<END;INDEX++)
+#define PARALLEL_FOR(INDEX,START,END)				\
+  CHUNK_FOR(INDEX,START,END,thread_id,simul->nthreads)
+
 #include "debug.hpp"
 
 #define GET_THREAD_ID() uint32_t thread_id=omp_get_thread_num()
@@ -38,16 +49,5 @@ inline void thread_barrier_internal()
 {
   #pragma omp barrier
 }
-
-//parallel for
-#define CHUNK_WORKLOAD(START,CHUNK_LOAD,END,EXT_START,EXT_END,CHUNK_ID,NCHUNKS) \
-  int WORKLOAD=EXT_END-EXT_START,                                       \
-    CHUNK_LOAD=(WORKLOAD+NCHUNKS-1)/NCHUNKS,				\
-    START=EXT_START+CHUNK_ID*CHUNK_LOAD,				\
-    END=START+CHUNK_LOAD< EXT_END ? START+CHUNK_LOAD : EXT_END
-#define CHUNK_FOR(INDEX,EXT_START,EXT_END,CHUNK_ID,NCHUNKS)		\
-  for(CHUNK_WORKLOAD(START,CHUNK_LOAD,END,EXT_START,EXT_END,CHUNK_ID,NCHUNKS),INDEX=START;INDEX<END;INDEX++)
-#define PARALLEL_FOR(INDEX,START,END)				\
-  CHUNK_FOR(INDEX,START,END,thread_id,simul->nthreads)
 
 #endif

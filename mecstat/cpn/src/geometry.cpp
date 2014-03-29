@@ -396,6 +396,10 @@ void geometry_t::start(coords_t ext_glb_sizes)
     }
   THREAD_BARRIER();
   
+  //start no-neighbors
+  per_site_neighs_t no_neighbors_per_site;
+  no_neighbors=NEW_BLOCKING("no_neighs") neighs_t(this,&no_neighbors_per_site);
+  
   //start per-site first neighbors
   per_site_neighs_t first_neighbors_per_site;
   coords_t site(ndims);
@@ -415,6 +419,7 @@ void geometry_t::start(coords_t ext_glb_sizes)
 //destructor
 geometry_t::~geometry_t()
 {
+  DELETE_NON_BLOCKING(no_neighbors);
   DELETE_NON_BLOCKING(first_neighbors);
 }
 

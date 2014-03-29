@@ -12,7 +12,6 @@ bin_PROGRAMS=$(top_builddir)/bin/cpn
 __top_builddir__bin_cpn_SOURCES= \
 	src/debug.cpp \
 	src/endianness.cpp \
-	src/field.cpp \
 	src/geometry.cpp \
 	src/main.cpp \
 	src/neighs.cpp \
