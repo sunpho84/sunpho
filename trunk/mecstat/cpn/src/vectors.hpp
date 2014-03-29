@@ -13,11 +13,15 @@
 #define BLOCKING true
 #define NON_BLOCKING false
 
+#define NEW_ARRAY(NAME,BL_FLAG,TYPE,...) new_array<TYPE>(NAME,BL_FLAG,__LINE__,__FILE__,__VA_ARGS__)
+#define NEW_ARRAY_BLOCKING(NAME,TYPE,...) NEW_ARRAY(NAME,BLOCKING,TYPE,__VA_ARGS__)
+#define NEW_ARRAY_NON_BLOCKING(NAME,TYPE,...) NEW_ARRAY(NAME,NON_BLOCKING,TYPE,__VA_ARGS__)
+
 #define NEW(NAME,BL_FLAG) new(BL_FLAG,NAME,__LINE__,__FILE__)
 #define NEW_BLOCKING(NAME) NEW(NAME,BLOCKING)
 #define NEW_NON_BLOCKING(NAME) NEW(NAME,NON_BLOCKING)
 
-#define DELETE(A,BL_FLAG) destroy(A,BL_FLAG,__LINE__,__FILE__)
+#define DELETE(A,BL_FLAG) delete_destroyer(&A,BL_FLAG,__LINE__,__FILE__)
 #define DELETE_BLOCKING(A) DELETE(A,BLOCKING)
 #define DELETE_NON_BLOCKING(A) DELETE(A,NON_BLOCKING)
 
@@ -65,11 +69,18 @@ public:
 
 //create object shared among threads
 void *operator new(size_t size,bool blocking,const char *name,int line,const char *file);
-void *operator new[](size_t size,bool blocking,const char *name,int line,const char *file);
+template <class T,typename... Parameters> T* new_array(const char *name,bool blocking,int line,const char *file,int nel,Parameters... pars)
+{
+  GET_THREAD_ID();
+  T *ptr=(T*)simul->vectors->allocate(sizeof(T)*nel,blocking,name,line,file);
+  PARALLEL_FOR(i,0,nel) ptr[i]=T(pars...);
+  if(blocking) THREAD_BARRIER();
+  return ptr;
+}
 
 //delete object
 void deallocate(void **ptr,bool blocking,int line,const char *file);
-template<class T> void destroy(T *ptr,bool blocking,int line,const char *file)
+template<class T> void delete_destroyer(T **ptr,bool blocking,int line,const char *file)
 {
   GET_THREAD_ID();
   
@@ -77,10 +88,15 @@ template<class T> void destroy(T *ptr,bool blocking,int line,const char *file)
   if(IS_MASTER_THREAD)
     if(ptr!=NULL)
       {
-	ptr->~T();                                //call the destructor
-	deallocate((void**)&ptr,false,line,file); //deallocate
+	(*ptr)->~T();                            //call the destructor
+	deallocate((void**)ptr,false,line,file); //deallocate
+	ptr=NULL;
       }
   if(blocking==BLOCKING) THREAD_BARRIER();
 }
+
+//return vector of a pointer
+inline vector_el_t *get_vec(const void *ptr)
+{return (vector_el_t*)ptr-1;}
 
 #endif

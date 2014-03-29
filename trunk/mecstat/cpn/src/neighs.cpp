@@ -90,13 +90,13 @@ neighs_t::neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_neighs) : ge
 	  }
       
       //allocate neighbors and connect all sites
-      neighs=NEW_NON_BLOCKING("neighs") int[ntotal_sites*nneighs_per_site];
+      neighs=NEW_ARRAY_NON_BLOCKING("neighs",int,ntotal_sites*nneighs_per_site);
       for(int loc_site=0;loc_site<geometry->nloc_sites;loc_site++)
 	mark_all_neighbors(loc_site,geometry->glb_coords_of_loc_site(loc_site),per_site_neighs,outer_sites_per_rank,true);
       
       //create the list of ranks to ask to
       nranks_to_ask=outer_sites_per_rank.size();
-      ranks_to_ask=NEW_NON_BLOCKING("ranks_to_ask") rank_to_ask_t[nranks_to_ask];
+      ranks_to_ask=NEW_ARRAY_NON_BLOCKING("ranks_to_ask",rank_to_ask_t,nranks_to_ask);
       site_list_per_rank_t::iterator sites_per_rank_map=outer_sites_per_rank.begin();
       for(int irank=0;irank<nranks_to_ask;irank++)
 	{
@@ -134,7 +134,7 @@ neighs_t::neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_neighs) : ge
       //convert to store this into proper list
       nsites_to_send=0;
       nranks_asking=temp_nsites_to_send_to->size();
-      ranks_asking=NEW_NON_BLOCKING("ranks_asking") rank_asking_t[nranks_asking];
+      ranks_asking=NEW_ARRAY_NON_BLOCKING("ranks_asking",rank_asking_t,nranks_asking);
       std::map<int,int>::iterator nsites_to_send_to_ptr=temp_nsites_to_send_to->begin();
       for(int irank=0;irank<nranks_asking;irank++)
 	{
@@ -150,7 +150,7 @@ neighs_t::neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_neighs) : ge
 	}
       
       //allocate the list of sites to send, and receive it
-      list_sending=NEW_NON_BLOCKING("list_sending") int[nsites_to_send];
+      list_sending=NEW_ARRAY_NON_BLOCKING("list_sending",int,nsites_to_send);
       MPI_Request requests[nranks_asking+nranks_to_ask];
       for(int irank=0;irank<nranks_asking;irank++)
 	MPI_Irecv(list_sending+ranks_asking[irank].dest,ranks_asking[irank].size,MPI_INT,
@@ -162,7 +162,7 @@ neighs_t::neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_neighs) : ge
       for(int irank=0;irank<nranks_to_ask;irank++)
 	{
 	  //prepare the list
-	  temp_list[irank]=NEW_NON_BLOCKING("temp_list") int[ranks_to_ask[irank].size];
+	  temp_list[irank]=NEW_ARRAY_NON_BLOCKING("temp_list",int,ranks_to_ask[irank].size);
 	  std::map<int,int>::iterator sites_list=sites_per_rank_map->second.begin();
 	  for(int site=0;site<ranks_to_ask[irank].size;site++)
 	    {
@@ -183,8 +183,8 @@ neighs_t::neighs_t(geometry_t *geometry,per_site_neighs_t *per_site_neighs) : ge
       
       //check
       {
-	int *recv=NEW_NON_BLOCKING("recv") int[nouter_sites];
-	int *send=NEW_NON_BLOCKING("send") int[nsites_to_send];
+	int *recv=NEW_ARRAY_NON_BLOCKING("recv",int,nouter_sites);
+	int *send=NEW_ARRAY_NON_BLOCKING("send",int,nsites_to_send);
 	for(size_t site=0;site<nsites_to_send;site++)
 	  send[site]=list_sending[site];
 	MPI_Request requests[nranks_to_ask+nranks_asking];

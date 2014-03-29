@@ -102,10 +102,10 @@ am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__dirstamp = $(am__leading_dot)dirstamp
 am___top_builddir__bin_cpn_OBJECTS = src/debug.$(OBJEXT) \
-	src/endianness.$(OBJEXT) src/field.$(OBJEXT) \
-	src/geometry.$(OBJEXT) src/main.$(OBJEXT) src/neighs.$(OBJEXT) \
-	src/random.$(OBJEXT) src/simul.$(OBJEXT) src/threads.$(OBJEXT) \
-	src/utils.$(OBJEXT) src/vectors.$(OBJEXT)
+	src/endianness.$(OBJEXT) src/geometry.$(OBJEXT) \
+	src/main.$(OBJEXT) src/neighs.$(OBJEXT) src/random.$(OBJEXT) \
+	src/simul.$(OBJEXT) src/threads.$(OBJEXT) src/utils.$(OBJEXT) \
+	src/vectors.$(OBJEXT)
 __top_builddir__bin_cpn_OBJECTS =  \
 	$(am___top_builddir__bin_cpn_OBJECTS)
 __top_builddir__bin_cpn_LDADD = $(LDADD)
@@ -291,7 +291,6 @@ CLEANFILES = src/svnversion.hpp
 __top_builddir__bin_cpn_SOURCES = \
 	src/debug.cpp \
 	src/endianness.cpp \
-	src/field.cpp \
 	src/geometry.cpp \
 	src/main.cpp \
 	src/neighs.cpp \
@@ -406,7 +405,6 @@ src/$(DEPDIR)/$(am__dirstamp):
 src/debug.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/endianness.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
-src/field.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/geometry.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/main.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
@@ -437,7 +435,6 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/debug.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/endianness.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/field.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/geometry.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/neighs.Po@am__quote@

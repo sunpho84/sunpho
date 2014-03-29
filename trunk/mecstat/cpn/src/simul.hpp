@@ -7,7 +7,8 @@
 #include "per_site_neighs.hpp"
 #include "random.hpp"
 #include "threads.hpp"
-#include "vectors.hpp"
+
+class vectors_t;
 
 extern bool simul_started;
 
@@ -75,5 +76,7 @@ private:
 };
 
 extern simul_t *simul;
+
+#include "vectors.hpp"
 
 #endif

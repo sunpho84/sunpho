@@ -64,6 +64,7 @@ struct geometry_t
   bool loc_rnd_gen_inited;                    //flag for remembering if local random generator inited
   std::vector<rnd_gen_t> loc_rnd_gen;         //local random generators
   
+  neighs_t *no_neighbors;         //no neighbors
   neighs_t *first_neighbors;      //connection at first neighbors
   
   void print();

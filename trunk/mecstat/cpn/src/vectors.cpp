@@ -179,19 +179,6 @@ void *operator new(size_t size,bool blocking,const char *name,int line,const cha
   if(ptr==NULL) throw new_error(size,blocking,name,line,file);
   return ptr;
 }
-void *operator new[](size_t size,bool blocking,const char *name,int line,const char *file)
-{
-  void *ptr=simul->vectors->allocate(size,blocking,name,line,file);
-  if(ptr==NULL) throw new_error(size,blocking,name,line,file);
-  return ptr;
-}
-void *operator new(size_t size,size_t size_per_el,bool blocking,const char *name,neighs_t *neighs,int line,const char *file)
-{
-  MASTER_PRINTF("Size_per_el: %d, ntot_el: %d\n",(int)size_per_el,(int)neighs->ntotal_sites);
-  void *ptr=simul->vectors->allocate(size+size_per_el*neighs->ntotal_sites,blocking,name,line,file);
-  if(ptr==NULL) throw new_error(size,blocking,name,line,file);
-  return ptr;
-}
 
 //here to solve a problem
 void deallocate(void **ptr,bool blocking,int line,const char *file)

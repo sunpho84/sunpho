@@ -68,7 +68,7 @@ void simul_t::start(int narg,char **arg,void(*main_function)(int narg,char **arg
   MASTER_PRINTF("Using %u threads\n",nthreads);
     
   //init the thread array
-  thread_res_arr=NEW_NON_BLOCKING("thread_res_arr") char*[nthreads];
+  thread_res_arr=NEW_ARRAY_NON_BLOCKING("thread_res_arr",char*,nthreads);
   
   //some init missing
   
