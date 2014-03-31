@@ -16,7 +16,7 @@ public:
   void set_to_one(){(*this)=1;}                                            //set to 1
   
   double get_norm2(){return real()*real()+imag()*imag();}                  //return the squared norm
-  void normalize(){printf("%lg\n",get_norm2());(*this)*=1.0/sqrt(get_norm2());}                        //return it to be U1
+  void normalize(){(*this)*=1.0/sqrt(get_norm2());}                        //return it to be U1
   
   U1_t(double phase) {set_to_phase(phase);}
   U1_t() {}

@@ -15,7 +15,7 @@ public:
   double beta;
   geometry_t *geometry;
   field_t<O_n_t<N> > Zeta;
-  field_t<U1_t > Lambda;
+  field_t<std::tr1::array<U1_t,2> > Lambda;
   
   enum hot_cold{HOT,COLD}; //enumerator for condition to start
   
@@ -28,9 +28,10 @@ public:
   void set_to_hot();
   void set_to(hot_cold hc);
   
-  //return the norms
-  double get_Zeta_norm();
-  double get_Lambda_norm();
+  //return g and energy
+  double g(){return 1/(N*beta);}
+  double get_energy();
+  
 private:
   CP_N_t(const CP_N_t &in) {}
 };
@@ -40,19 +41,22 @@ template <int N> void CP_N_t<N>::set_to_hot()
 {
   GET_THREAD_ID();
   PARALLEL_FOR_SITES_OF_FIELD(site,Zeta)
-    //if(thread_id==0)
     {
       Zeta[site].set_to_rnd(geometry->loc_rnd_gen[site]);
-      Lambda[site].set_to_rnd(geometry->loc_rnd_gen[site]);
-      double r=Lambda[site].real(),i=Lambda[site].imag();
-      printf("site: %d, %lg %p %lg %lg\n",site,Lambda[site].get_norm2(),&(Lambda[site]),r,i);
+      //for(int n=0;n<N;n++)
+      //{
+      //double r=Zeta[site][n].real(),i=Zeta[site][n].imag();
+      // printf("site: %d %d, %lg %lg\n",geometry->glb_site_of_loc_site(site),n,r,i);
+      //}
+      for(int mu=0;mu<2;mu++)
+	Lambda[site][mu].set_to_rnd(geometry->loc_rnd_gen[site]);
     }
   Zeta.mark_touched();
   Lambda.mark_touched();
-  PARALLEL_FOR_SITES_OF_FIELD(site,Lambda)
-    //if(thread_id==0)
-    printf("site: %d, %lg %lg %lg\n",site,Lambda[site].get_norm2(),Lambda[site].real(),Lambda[site].imag());
-  THREAD_BARRIER();
+  //PARALLEL_FOR_SITES_OF_FIELD(site,Lambda)
+  //if(thread_id==0)
+  //printf("site: %d, %lg %lg %lg\n",site,Lambda[site].get_norm2(),Lambda[site].real(),Lambda[site].imag());
+  //THREAD_BARRIER();
 }
 
 //set as cold
@@ -62,7 +66,7 @@ template <int N> void CP_N_t<N>::set_to_cold()
   PARALLEL_FOR_SITES_OF_FIELD(site,Zeta)
     {
       Zeta[site].set_to_one();
-      Lambda[site].set_to_one();
+      for(int mu=0;mu<2;mu++) Lambda[site][mu].set_to_one();
     }
   Zeta.mark_touched();
   Lambda.mark_touched();
@@ -77,6 +81,27 @@ template <int N> void CP_N_t<N>::set_to(hot_cold hc)
     case COLD: set_to_cold();break;
     default:CRASH_SOFTLY("unknown condition");
     }
+}
+
+//compute the energy
+template <int N> double CP_N_t<N>::get_energy()
+{
+  GET_THREAD_ID();
+  
+  //sync borders
+  Zeta.sync_outer_sites();
+  Lambda.sync_outer_sites();
+  
+  //compute local energy
+  double loc_energy=0;
+  PARALLEL_FOR_SITES_OF_FIELD(site,Zeta)
+    for(size_t mu=0;mu<2;mu++)
+      {
+	int site_up=Zeta.get_neigh(site,2*mu+1);
+	for(int n=0;n<N;n++)
+	  loc_energy+=(Zeta[site][n]*conj(Zeta[site_up][n])*Lambda[site][mu]).real();
+      }
+  return -(rank_threads_reduce(loc_energy)-2*geometry->nglb_sites)/g();
 }
 
 //constructor

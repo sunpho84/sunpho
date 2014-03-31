@@ -80,6 +80,23 @@ void simul_t::start(int narg,char **arg,void(*main_function)(int narg,char **arg
   }
 }
 
+//only master rank and thread print
+int simul_t::master_fprintf(FILE *stream,const char *format,...)
+{
+  GET_THREAD_ID();
+  int ret=0;
+    
+  if(rank_id==0 && IS_MASTER_THREAD)
+    {
+      va_list ap;
+      va_start(ap,format);
+      ret=vfprintf(stream,format,ap);
+      va_end(ap);
+    }
+    
+  return ret;
+}
+
 //write the list of called routines
 void simul_t::print_backtrace_list()
 {
