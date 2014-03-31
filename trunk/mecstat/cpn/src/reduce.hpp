@@ -20,7 +20,11 @@ template <class T> T threads_reduce(T &in)
       (*out)+=(*((T*)(simul->thread_res_arr[thread_jd])));
   THREAD_BARRIER();
     
-  return *out;
+  //fetch from master
+  T ret=*out;
+  THREAD_BARRIER();
+
+  return ret;
 }
 
 //find the correct datatype
@@ -49,8 +53,12 @@ template <class T> T rank_threads_reduce(T &in)
       MPI_Allreduce(&temp,out,1,find_MPI_type(&in),MPI_SUM,MPI_COMM_WORLD);
     }
   THREAD_BARRIER();
-    
-  return *out;
+  
+  //fetch from master
+  T ret=*out;
+  THREAD_BARRIER();
+
+  return ret;
 }
 
 #endif

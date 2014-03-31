@@ -6,7 +6,6 @@
 
 #include "per_site_neighs.hpp"
 #include "random.hpp"
-#include "threads.hpp"
 
 class vectors_t;
 
@@ -46,21 +45,7 @@ struct simul_t
   void get_MPI_rank(){MPI_Comm_rank(MPI_COMM_WORLD,&rank_id);} //get rank
   
   //only master rank and thread print
-  int master_fprintf(FILE *stream,const char *format,...)
-  {
-    GET_THREAD_ID();
-    int ret=0;
-    
-    if(rank_id==0 && IS_MASTER_THREAD)
-      {
-        va_list ap;
-        va_start(ap,format);
-        ret=vfprintf(stream,format,ap);
-        va_end(ap);
-      }
-    
-    return ret;
-  }
+  int master_fprintf(FILE *stream,const char *format,...);
   void print_backtrace_list();
   void abort(int arg);
   

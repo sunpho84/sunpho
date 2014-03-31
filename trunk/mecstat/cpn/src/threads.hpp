@@ -1,5 +1,5 @@
-#ifndef _THREAD_HPP
-#define _THREAD_HPP
+#ifndef _THREADS_HPP
+#define _THREADS_HPP
 
 #ifdef HAVE_CONFIG_H
  #include "config.hpp"
@@ -36,7 +36,22 @@ void thread_barrier_internal();
 #define GET_THREAD_ID() uint32_t thread_id=omp_get_thread_num()
 #define IS_MASTER_THREAD (thread_id==0)
 
+#define MASTER_THREAD_BROADCAST(A,B) A=(IS_MASTER_THREAD?thread_broadcast(B):thread_broadcast(A))
+
 #include "simul.hpp"
+
+//get/fetch routines
+template <class T> T thread_broadcast(T get)
+{
+  GET_THREAD_ID();
+  
+  if(IS_MASTER_THREAD) simul->returned_malloc_ptr=(void*)&get;
+  THREAD_BARRIER();
+  if(!IS_MASTER_THREAD) get=(*((T*)simul->returned_malloc_ptr));
+  THREAD_BARRIER();
+  
+  return get;
+}
 
 //flush the cache
 inline void cache_flush()

@@ -34,6 +34,9 @@ int compute_energy(field_t<int> &t)
   return rank_threads_reduce(E);
 }
 
+#define N 9
+#define beta 0.8
+#define L 27
 //internal main
 void in_main(int narg,char **arg)
 {
@@ -41,21 +44,72 @@ void in_main(int narg,char **arg)
   
   simul->init_glb_rnd_gen(101);
   
-  O_n_t<3> r;
-  U1_t c(3);
-  if(IS_MASTER_THREAD) r.set_to_rnd(simul->glb_rnd_gen);
-  //r.set_to_one();
-  MASTER_PRINTF("%lg %lg\n",r[0].real(),r.get_norm());
-  
-  CP_N_t<3> u(10,3.0,CP_N_t<3>::HOT);
-  u.Zeta.normalize();
+  //initialize a CPN simulation with N, as HOT
+  CP_N_t<N> u(L,beta,CP_N_t<N>::HOT);
+  //u.Zeta.normalize();
   //u.Lambda.normalize();
-  MASTER_PRINTF("Zeta norm: %lg, Lambda norm: %lg\n",u.Zeta.get_norm2(),u.Lambda.get_norm2());
-  MASTER_PRINTF("Zeta norm: %lg, Lambda norm: %lg\n",u.Zeta.get_norm2(),u.Lambda.get_norm2());
+  //MASTER_PRINTF("Zeta norm: %lg, Lambda norm: %lg\n",u.Zeta.get_norm2(),u.Lambda.get_norm2());
   
-  //MASTER_PRINTF("Energy: %d\n",compute_energy(t));
-  
-  THREAD_BARRIER();
+  for(int iter=0;iter<1000;iter++)
+    {
+      for(int i=0;i<u.geometry->nglb_sites;i++)
+	{
+	  int rank,loc;
+	  u.geometry->rank_and_loc_site_of_glb_coords(rank,loc,u.geometry->glb_coords_of_glb_site(i));
+	  
+	  //change Zeta
+	  {	 
+	    double ori_en=u.get_energy();
+	    O_n_t<N> ori_val;
+	    if(simul->rank_id==rank && IS_MASTER_THREAD)
+	      {
+		ori_val=u.Zeta[loc];
+		u.Zeta[loc].set_to_rnd(u.geometry->loc_rnd_gen[loc]);
+	      }
+	    u.Zeta.mark_touched();
+	    double new_en=u.get_energy();
+	    double diff=new_en-ori_en;
+	    double p=exp(-diff);
+	    double e;
+	    MASTER_THREAD_BROADCAST(e,simul->glb_rnd_gen.get_unif(0,1));
+	    bool acc=(e<p);
+	    if(!acc)
+	      {
+		if(simul->rank_id==rank && IS_MASTER_THREAD) u.Zeta[loc]=ori_val;
+		u.Zeta.mark_touched();
+	      }
+	    
+	    //change Lambda
+	    for(int mu=0;mu<2;mu++)
+	      {
+		//change Zeta
+		double ori_en=u.get_energy();
+		U1_t ori_val;
+		if(simul->rank_id==rank && IS_MASTER_THREAD)
+		  {
+		    ori_val=u.Lambda[loc][mu];
+		    u.Lambda[loc][mu].set_to_rnd(u.geometry->loc_rnd_gen[loc]);
+		  }
+		u.Lambda.mark_touched();
+		double new_en=u.get_energy();
+		double diff=new_en-ori_en;
+		double p=exp(-diff);
+		double e;
+		MASTER_THREAD_BROADCAST(e,simul->glb_rnd_gen.get_unif(0,1));
+		bool acc=(e<p);
+		if(!acc)
+		  {
+		    if(simul->rank_id==rank && IS_MASTER_THREAD) u.Lambda[loc][mu]=ori_val;
+		    u.Lambda.mark_touched();
+		  }
+		
+		//MASTER_PRINTF("rank %d, thread %d, Energy: %lg %lg %lg %lg, %lg %lg, %d\n",simul->rank_id,thread_id,ori_en,new_en,diff,exp(-diff),p,e,acc);
+		THREAD_BARRIER();
+	      }
+	  }
+	}
+      MASTER_PRINTF("Energy %lg\n",u.get_energy());
+    }
 }
 
 int main(int narg,char**arg)
