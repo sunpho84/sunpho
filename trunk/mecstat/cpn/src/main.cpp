@@ -12,31 +12,10 @@
 
 using namespace std;
 
-int compute_energy(field_t<int> &t)
-{
-  GET_THREAD_ID();
-  
-  t.sync_outer_sites();
+#define N 2
+#define beta 1.1
+#define L 12
 
-  int E=0;
-  PARALLEL_FOR(iel,0,t.neighs_ptr->geometry->nloc_sites)
-    {
-      int s=t[iel];
-      int a=0;
-      for(size_t dir=0;dir<t.neighs_ptr->nneighs_per_site;dir++)
-	{
-	  a+=t[t.get_neigh(iel,dir)];
-	  //MASTER_PRINTF("%d %d %d\n",iel,(int)dir,t[t.get_neigh(iel,dir)]);
-	}
-      E+=s*a;
-    }
-  
-  return rank_threads_reduce(E);
-}
-
-#define N 9
-#define beta 0.8
-#define L 27
 //internal main
 void in_main(int narg,char **arg)
 {
@@ -59,7 +38,7 @@ void in_main(int narg,char **arg)
 	  
 	  //change Zeta
 	  {	 
-	    double ori_en=u.get_energy();
+	    double ori_ac=u.get_action();
 	    O_n_t<N> ori_val;
 	    if(simul->rank_id==rank && IS_MASTER_THREAD)
 	      {
@@ -67,8 +46,9 @@ void in_main(int narg,char **arg)
 		u.Zeta[loc].set_to_rnd(u.geometry->loc_rnd_gen[loc]);
 	      }
 	    u.Zeta.mark_touched();
-	    double new_en=u.get_energy();
-	    double diff=new_en-ori_en;
+	    double new_ac=u.get_action();
+	    double diff=new_ac-ori_ac;
+
 	    double p=exp(-diff);
 	    double e;
 	    MASTER_THREAD_BROADCAST(e,simul->glb_rnd_gen.get_unif(0,1));
@@ -83,7 +63,7 @@ void in_main(int narg,char **arg)
 	    for(int mu=0;mu<2;mu++)
 	      {
 		//change Zeta
-		double ori_en=u.get_energy();
+		double ori_ac=u.get_action();
 		U1_t ori_val;
 		if(simul->rank_id==rank && IS_MASTER_THREAD)
 		  {
@@ -91,8 +71,8 @@ void in_main(int narg,char **arg)
 		    u.Lambda[loc][mu].set_to_rnd(u.geometry->loc_rnd_gen[loc]);
 		  }
 		u.Lambda.mark_touched();
-		double new_en=u.get_energy();
-		double diff=new_en-ori_en;
+		double new_ac=u.get_action();
+		double diff=new_ac-ori_ac;
 		double p=exp(-diff);
 		double e;
 		MASTER_THREAD_BROADCAST(e,simul->glb_rnd_gen.get_unif(0,1));
@@ -108,7 +88,7 @@ void in_main(int narg,char **arg)
 	      }
 	  }
 	}
-      MASTER_PRINTF("Energy %lg\n",u.get_energy());
+      MASTER_PRINTF("Energy %lg\n",u.get_energy()/u.geometry->nglb_sites/N);
     }
 }
 

@@ -31,6 +31,9 @@ public:
   //return g and energy
   double g(){return 1/(N*beta);}
   double get_energy();
+  double get_action(){return get_energy()/g();}
+  double get_site_energy(int site);
+  double get_site_action(int site){return get_site_energy(site)/g();}
   
 private:
   CP_N_t(const CP_N_t &in) {}
@@ -99,9 +102,27 @@ template <int N> double CP_N_t<N>::get_energy()
       {
 	int site_up=Zeta.get_neigh(site,2*mu+1);
 	for(int n=0;n<N;n++)
-	  loc_energy+=(Zeta[site][n]*conj(Zeta[site_up][n])*Lambda[site][mu]).real();
+	  loc_energy+=(conj(Zeta[site_up][n])*Zeta[site][n]*Lambda[site][mu]).real();
       }
-  return -(rank_threads_reduce(loc_energy)-2*geometry->nglb_sites)/g();
+  return -(2*rank_threads_reduce(loc_energy)-2*geometry->nglb_sites*2);
+}
+
+//return the energy of a single site
+template <int N> double CP_N_t<N>::get_site_energy(int site)
+{
+  double res=0;
+  for(int mu=0;mu<2;mu++)
+    {
+      if(Zeta.get_neigh(Zeta.get_neigh(site,2*mu+0),2*mu+1)!=site) CRASH_SOFTLY("%d %d %d",mu,Zeta.get_neigh(Zeta.get_neigh(site,2*mu+0),2*mu+1),site);
+      int site_up=Zeta.get_neigh(site,2*mu+1);
+      for(int n=0;n<N;n++)
+        res+=(conj(Zeta[site_up][n])*Zeta[site][n]*Lambda[site][mu]).real();
+      int site_dw=Zeta.get_neigh(site,2*mu+0);
+      for(int n=0;n<N;n++)
+        res+=(conj(Zeta[site_dw][n])*Zeta[site][n]*conj(Lambda[site_dw][mu])).real();
+    }
+
+  return -(res-2*2);
 }
 
 //constructor

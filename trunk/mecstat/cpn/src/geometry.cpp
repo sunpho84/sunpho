@@ -404,8 +404,8 @@ void geometry_t::start(coords_t ext_glb_sizes)
   per_site_neighs_t first_neighbors_per_site;
   coords_t site(ndims);
   for(size_t dim=0;dim<ndims;dim++) site[dim]=0;
-  for(int du=-1;du<=1;du+=2) //down then up
-    for(size_t dim=0;dim<ndims;dim++) //dimension loop
+  for(size_t dim=0;dim<ndims;dim++) //dimension loop
+    for(int du=-1;du<=1;du+=2) //down then up
       {
 	site[dim]=du;
 	first_neighbors_per_site.add_neighbor(site);
