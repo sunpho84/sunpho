@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <random>
+#include <stdarg.h>
 
 #define CRASH(...) internal_crash(__LINE__,__FILE__,__VA_ARGS__)
 
@@ -408,7 +409,7 @@ void init()
   
   //Zeta and Lambda
   zeta_data=new dcomplex[N*V];
-  lambda_data=new dcomplex[V];
+  lambda_data=new dcomplex[V*ndims];
 
   //set the system to hot state
   init_system_to_hot();
@@ -458,7 +459,7 @@ void overheat_micro_update_site(int site,bool over)
   dcomplex staple[N];
   site_staple(staple,site);
   double staple_norm=get_zeta_norm(staple);
-  if(isnan(staple_norm))
+  if(std::isnan((double)staple_norm))
     {
       for(int mu=0;mu<ndims;mu++)
 	{
@@ -514,7 +515,7 @@ void overheat_micro_update_link(int site,int mu,bool over)
 
   //reunitarize
   norm_file<<lambda_unitarize(lambda(site)[mu])-1<<endl;
-  if(isnan(lambda(site)[mu].real()))
+  if(std::isnan(lambda(site)[mu].real()))
     {
       cout<<"a: "<<a<<" b: "<<b<<" c: "<<c<<" ctheta_old-1: "<<ctheta_old-1<<" chteta_new: "<<ctheta_new<<
 	" staple_energy: "<<staple_energy<<" staple_norm: "<<staple_norm<<
