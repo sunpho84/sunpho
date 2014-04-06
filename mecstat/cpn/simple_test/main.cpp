@@ -21,7 +21,7 @@ uniform_int_distribution<unsigned long long> *dis;
 //parametes
 int N=2;
 double beta=1.1;
-int L=12;
+int L=36;
 double g=1/(N*beta);
 
 //geometry
@@ -93,8 +93,12 @@ double get_lambda_norm(dcomplex &l)
 {return sqrt(norm(l));}
 
 //reunitarize a lambda
-void lambda_unitarize(dcomplex &l)
-{l*=1/get_lambda_norm(l);}
+double lambda_unitarize(dcomplex &l)
+{
+  double n=get_lambda_norm(l);
+  l*=1/n;
+  return n;
+}
 
 //return the deviation from unitarity of a lambda
 inline double check_lambda_unitarity(dcomplex &l)
@@ -162,6 +166,7 @@ double get_theta(double a,int k)
   double theta;
   double eta=0.99;
   bool acc;
+  int no=0;
   do
     {
       double chi=get_unif_double(1,true);
@@ -169,17 +174,22 @@ double get_theta(double a,int k)
 
       //reweighting
       double ptheta=fun_ptheta(theta,a,k);
-      double pacc=ptheta/ptheta0*(1+sqr(c*(theta-theta0)))/eta;
+      double pacc=ptheta/ptheta0*(1+sqr(c*(theta-theta0)))*eta;
       double extr=get_unif_double(1);
+      if(pacc>1) CRASH("pacc: %lg",pacc);
       //cerr<<extr<<" "<<theta<<" "<<theta0<<" "<<zita<<endl;
       acc=(extr<pacc);
+      if(!acc) no++;
+      if(no>1000) CRASH("k: %lg, a: %d, zita: %lg, ptheta: %lg, ptheta0: %lg, c: %lg, theta: %lg, theta0: %lg, pacc: %lg",
+			k,a,zita,ptheta,ptheta0,c,theta,theta0,pacc);
     }
   while(!acc);
   
   return theta;
 }
 
-//taken by hep-lat/9210016
+//taken by appendix C of hep-lat/9210016
+//correction done: h is returned in place of (wrong) g
 double get_theta_1(const double a)
 {
   double eps=0.001;
@@ -190,16 +200,21 @@ double get_theta_1(const double a)
   double bet=max(alp*alp/a,(cosh(M_PI*alp)-1)/(exp(2*a)-1))-1;
   double bt1=sqrt((1+bet)/(1-bet));
   
-  double h;
-  bool acc;
+  double h; //result
+  bool acc; //accepted or not
+  int no=0;
   do
     {
       double r=get_unif_double(1);
       double h1=bt1*tan((2*r-1)*atan(tanh(M_PI*alp/2)/bt1));
       h=log((1+h1)/(1-h1))/alp;
+      
+      //decite if accept or reject
       double g=exp(-a*(1-cos(h)))*(cosh(alp*h)+bet)/(1+bet);
       double p=get_unif_double(1);
       acc=(p<g);
+      if(!acc) no++;
+      if(no>1000) CRASH("%d",no);
     }
   while(!acc);
   
@@ -443,6 +458,18 @@ void overheat_micro_update_site(int site,bool over)
   dcomplex staple[N];
   site_staple(staple,site);
   double staple_norm=get_zeta_norm(staple);
+  if(isnan(staple_norm))
+    {
+      for(int mu=0;mu<ndims;mu++)
+	{
+	  int site_up=neighup(site,mu);
+	  for(int n=0;n<N;n++) cout<<zeta(site_up)[n]<<" "<<conj(lambda(site)[mu])<<endl;
+	  int site_dw=neighdw(site,mu);
+	  for(int n=0;n<N;n++) cout<<zeta(site_dw)[n]<<" "<<lambda(site_dw)[mu]<<endl;
+	}
+      for(int n=0;n<N;n++) cout<<staple[n]<<endl;
+      CRASH("%lg",staple_norm);
+    }
   double staple_energy=get_zeta_scalprod(zeta(site),staple);
   
   //extract theta and compute its cos
@@ -462,6 +489,10 @@ void overheat_micro_update_site(int site,bool over)
 //update a link using overrelaxion/heatbath or microcanonical
 void overheat_micro_update_link(int site,int mu,bool over)
 {
+  static ofstream norm_file("/tmp/norm_file");
+  static int nnn=0;
+  nnn++;
+  
   //get the staple
   dcomplex staple;
   link_staple(staple,site,mu);
@@ -478,10 +509,18 @@ void overheat_micro_update_link(int site,int mu,bool over)
   //extract remaining components
   double ctheta_old=staple_energy/staple_norm;
   double a=ctheta_new/staple_norm,b=ctheta_old/staple_norm,c=sqrt((1-sqr(ctheta_new))/(1-sqr(ctheta_old)));
+  auto term=(lambda(site)[mu]-b*staple);
   lambda(site)[mu]=a*staple-(lambda(site)[mu]-b*staple)*c;
 
   //reunitarize
-  lambda_unitarize(lambda(site)[mu]);
+  norm_file<<lambda_unitarize(lambda(site)[mu])-1<<endl;
+  if(isnan(lambda(site)[mu].real()))
+    {
+      cout<<"a: "<<a<<" b: "<<b<<" c: "<<c<<" ctheta_old-1: "<<ctheta_old-1<<" chteta_new: "<<ctheta_new<<
+	" staple_energy: "<<staple_energy<<" staple_norm: "<<staple_norm<<
+	" term: "<<term<<" nnn: "<<nnn<<endl;
+      CRASH("site: %d",site);
+    }
   //double dev=check_lambda_unitarity(lambda(site)[mu]);
   //if(dev>1.e-15) CRASH("unitarity deviates by %lg for new lambda on site %d mu %d",dev,site,mu);
 }
@@ -529,10 +568,11 @@ int main()
   ofstream energy_file("energy");
   
   //sweep with overheat-micro
-  for(int i=0;i<1000;i++)
+  for(int i=0;i<20000;i++)
     {
       overheat_micro_sweep();
-      energy_file<<energy()/V/ndims<<endl;
+      //metro_sweep();
+      //cout<<energy()/V/ndims<<endl;
     }
   
   //finalize
