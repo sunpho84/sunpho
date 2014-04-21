@@ -4,8 +4,9 @@
 //#define TWO_PTS_FIT two_pts_migrad_fit
 #define TWO_PTS_FIT two_pts_fit
 
-int njacks=180;
+int njacks=144;
 int T=32,TH=T/2;
+double disc_norm=1;
 
 int tmin_ETA=11,tmax_ETA=14;
 int tmin_ETAP=5,tmax_ETAP=6;
@@ -87,36 +88,45 @@ int main(int narg,char **arg)
     }
 
   //Disconnected ll
-  jvec Dll=jvec_load(combine("data/%s/LL_disc",arg[1]).c_str(),T,njacks,0).simmetrized(1);
+  jvec Dll=jvec_load(combine("data/%s/LL_disconn",arg[1]).c_str(),T,njacks,0).simmetrized(1)*disc_norm;
   ofstream out_Dll(combine("plots/%s/Dll.xmg",arg[1]).c_str());
   out_Dll<<"@type xydy"<<endl;
   out_Dll<<Dll<<endl;
   ofstream out_Dll_eff(combine("plots/%s/Dll_eff.xmg",arg[1]).c_str());
   out_Dll_eff<<"@type xydy"<<endl;
-  out_Dll_eff<<effective_mass(Dll)<<endl;
+  out_Dll_eff<<effective_mass(Dll)<<"&"<<endl;
   
   jack M_Pi_D,Z2_Pi_D;
   two_pts_migrad_fit(M_Pi_D,Z2_Pi_D,Dll,9,15,combine("plots/%s/Dll_fit.xmg",arg[1]).c_str());
-  cout<<"Disc pi: "<<smart_print(M_Pi_D)<<endl;
+  cout<<"Disc pi: "<<smart_print(M_Pi_D)<<"&"<<endl;
   
   //Connected ls
   jvec Cls=jvec_load(combine("data/%s/LS_conn",arg[1]).c_str(),T,njacks,0).simmetrized(1);
   ofstream out_Cls(combine("plots/%s/Cls.xmg",arg[1]).c_str());
   out_Cls<<"@type xydy"<<endl;
-  out_Cls<<Cls<<endl;
+  out_Cls<<Cls<<"&"<<endl;
   ofstream out_Cls_eff(combine("plots/%s/Cls_eff.xmg",arg[1]).c_str());
   out_Cls_eff<<"@type xydy"<<endl;
-  out_Cls_eff<<effective_mass(Cls)<<endl;
+  out_Cls_eff<<effective_mass(Cls)<<"&"<<endl;
     
   //Disconnected ls
-  jvec Dls=jvec_load(combine("data/%s/LS_disc",arg[1]).c_str(),T,njacks,0).simmetrized(1);
+  jvec Dls=jvec_load(combine("data/%s/LS_disconn",arg[1]).c_str(),T,njacks,0).simmetrized(1)*disc_norm;
   ofstream out_Dls(combine("plots/%s/Dls.xmg",arg[1]).c_str());
   out_Dls<<"@type xydy"<<endl;
   out_Dls<<Dls<<endl;
   ofstream out_Dls_eff(combine("plots/%s/Dls_eff.xmg",arg[1]).c_str());
   out_Dls_eff<<"@type xydy"<<endl;
-  out_Dls_eff<<effective_mass(Dls)<<endl;
-    
+  out_Dls_eff<<effective_mass(Dls)<<"&"<<endl;
+
+  //Disconnected sl
+  jvec Dsl=jvec_load(combine("data/%s/SL_disconn",arg[1]).c_str(),T,njacks,0).simmetrized(1)*disc_norm;
+  ofstream out_Dsl(combine("plots/%s/Dsl.xmg",arg[1]).c_str());
+  out_Dsl<<"@type xydy"<<endl;
+  out_Dsl<<Dsl<<endl;
+  ofstream out_Dsl_eff(combine("plots/%s/Dsl_eff.xmg",arg[1]).c_str());
+  out_Dsl_eff<<"@type xydy"<<endl;
+  out_Dsl_eff<<effective_mass(Dsl)<<"&"<<endl;
+
   //Connected ss
   jvec Css=jvec_load(combine("data/%s/SS_conn",arg[1]).c_str(),T,njacks,0).simmetrized(1);
   ofstream out_Css(combine("plots/%s/Css.xmg",arg[1]).c_str());
@@ -124,33 +134,72 @@ int main(int narg,char **arg)
   out_Css<<Css<<endl;
   ofstream out_Css_eff(combine("plots/%s/Css_eff.xmg",arg[1]).c_str());
   out_Css_eff<<"@type xydy"<<endl;
-  out_Css_eff<<effective_mass(Css)<<endl;
+  out_Css_eff<<effective_mass(Css)<<"&"<<endl;
   
   //Disconnected ss
-  jvec Dss=jvec_load(combine("data/%s/SS_disc",arg[1]).c_str(),T,njacks,0).simmetrized(1);  
+  jvec Dss=jvec_load(combine("data/%s/SS_disconn",arg[1]).c_str(),T,njacks,0).simmetrized(1)*disc_norm;
   ofstream out_Dss(combine("plots/%s/Dss.xmg",arg[1]).c_str());
   out_Dss<<"@type xydy"<<endl;
-  out_Dss<<Dss<<endl;
-  constant_fit(effective_mass(Dss),9,15,combine("plots/%s/Dss_eff.xmg",arg[1]).c_str());
+  out_Dss<<Dss<<"&"<<endl;
   
   //total ll
   jvec ll=Cll-2*Dll;
   ofstream out_ll(combine("plots/%s/ll.xmg",arg[1]).c_str());
   out_ll<<"@type xydy"<<endl;
-  out_ll<<ll<<endl;
+  out_ll<<ll<<"&"<<endl;
   ofstream out_ll_eff(combine("plots/%s/ll_eff.xmg",arg[1]).c_str());
   out_ll_eff<<"@type xydy"<<endl;
-  out_ll_eff<<effective_mass(ll)<<endl;
+  out_ll_eff<<effective_mass(ll)<<"&"<<endl;
   
   //total ls
   jvec ls=-sqrt(2)*Dls;
-
+  ofstream out_ls(combine("plots/%s/ls.xmg",arg[1]).c_str());
+  out_ls<<"@type xydy"<<endl;
+  out_ls<<ls<<"&"<<endl;
+  ofstream out_ls_eff(combine("plots/%s/ls_eff.xmg",arg[1]).c_str());
+  out_ls_eff<<"@type xydy"<<endl;
+  out_ls_eff<<effective_mass(ls)<<"&"<<endl;
+  
+  //total sl
+  jvec sl=-sqrt(2)*Dsl;
+  ofstream out_sl(combine("plots/%s/sl.xmg",arg[1]).c_str());
+  out_sl<<"@type xydy"<<endl;
+  out_sl<<sl<<"&"<<endl;
+  ofstream out_sl_eff(combine("plots/%s/sl_eff.xmg",arg[1]).c_str());
+  out_sl_eff<<"@type xydy"<<endl;
+  out_sl_eff<<effective_mass(sl)<<"&"<<endl;
+  
   //total ss
   jvec ss=Css-Dss;
   ofstream out_ss(combine("plots/%s/ss.xmg",arg[1]).c_str());
   out_ss<<"@type xydy"<<endl;
-  out_ss<<ss<<endl;
-  cout<<"SS disc: "<<constant_fit(effective_mass(ss),6,9,combine("plots/%s/ss_eff.xmg",arg[1]).c_str())<<endl;
+  out_ss<<ss<<"&"<<endl;
+  ofstream out_ss_eff(combine("plots/%s/ss_eff.xmg",arg[1]).c_str());
+  out_ss_eff<<"@type xydy"<<endl;
+  out_ss_eff<<effective_mass(ss)<<"&"<<endl;
+  
+  int t0=2;
+  gevp_pars_t gevp(2,144,T/2,t0);
+  gevp.data[0]=ll;
+  gevp.data[1]=gevp.data[2]=ls;
+  gevp.data[3]=ss;
+  
+  cout<<smart_print(ll[t0])<<" "<<smart_print(ls[t0])<<endl;
+  cout<<smart_print(ls[t0])<<" "<<smart_print(ss[t0])<<endl;
+  
+  cout<<smart_print(ll[t0]/ll[t0])<<" "<<smart_print(ls[t0]/sqrt(ll[t0]*ss[t0]))<<endl;
+  cout<<smart_print(ls[t0]/sqrt(ll[t0]*ss[t0]))<<" "<<smart_print(ss[t0]/ss[t0])<<endl;
+  
+  //gevp.check_orthogonality();
+  gevp.gevp();
+  gevp.reorder_eig();
+  
+  ofstream gevp_out_file(combine("plots/%s/gevp_out_eff.xmg",arg[1]).c_str());
+  gevp_out_file<<"@type xydy"<<endl;
+  gevp_out_file<<effective_mass(gevp.eig_va[0])<<endl;
+  gevp_out_file<<"&"<<endl;
+  gevp_out_file<<effective_mass(gevp.eig_va[1])<<endl;
+  gevp_out_file<<"&"<<endl;  
   
   /*
   

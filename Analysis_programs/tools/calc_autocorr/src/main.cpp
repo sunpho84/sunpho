@@ -174,9 +174,13 @@ void compute_tint(double &med_tint,double &err_tint)
       loop=false;
       if(fabs(clust_size-2*med_tint)>=4*err_tint)
 	{
-	  clust_size=int(2*med_tint+0.5);
-	  loop=true;
-	  cout<<" recomputing with cluster size: "<<clust_size<<endl;
+	  int new_clust_size=int(2*med_tint+0.5);
+	  if(new_clust_size!=clust_size)
+	    {
+	      clust_size=new_clust_size;
+	      loop=true;
+	      cout<<" recomputing with cluster size: "<<clust_size<<endl;
+	    }
 	}
     }
   while(loop && med_tint>1);
@@ -216,6 +220,7 @@ int main(int narg,char **arg)
   compute_tint(med_tint,err_tint);
 
   double tau=(2*med_tint-1)/2;
+  cout.precision(8);
   cout<<"value: "<<ave<<" +- "<<err*sqrt(2*tau+1)<<endl;
   
   free(data);

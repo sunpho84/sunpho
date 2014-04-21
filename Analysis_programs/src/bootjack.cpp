@@ -323,3 +323,6 @@ double med(TYPE x)
 
 double cov(TYPE x,TYPE y)
 {return (med(x*y)-med(x)*med(y))*(x.njack-1);}
+
+double var(TYPE x)
+{return cov(x,x);}

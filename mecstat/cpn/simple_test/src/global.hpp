@@ -1,13 +1,10 @@
-#include <algorithm>
-#include <complex>
-#include <iostream>
-#include <fstream>
-#include <random>
-#include <stdarg.h>
+#define HOT 1
+#define COLD 0
+#define TINY 1.e-13
+#define HALFWAY_PRECISION 1.e-8
 
-#define CRASH(...) internal_crash(__LINE__,__FILE__,__VA_ARGS__)
-
-using namespace std;
+//#define USE_GOOD_GENERATOR
+#define USE_SMART_EXTRACTION
 
 //types and constants
 #define ndims 2
@@ -15,14 +12,27 @@ typedef complex<double> dcomplex;
 typedef int coords[ndims];
 
 //random number generators
-random_device *rd;
-mt19937_64 *gen;
-uniform_int_distribution<unsigned long long> *dis;
+#ifdef USE_GOOD_GENERATOR
+ random_device *rd;
+ mt19937_64 *gen;
+ uniform_real_distribution<double> *dis;
+#else
+ #define RAN2_NTAB 32
+ //The structure for the random generator
+ struct rnd_gen
+ {
+   int idum;
+   int idum2;
+   int iv[RAN2_NTAB];
+   int iy;
+ };
+ rnd_gen gen;
+#endif
 
-//parametes
-int N=2;
-double beta=1.1;
-int L=36;
+//parameters
+int N=21;
+double beta=0.7;
+int L=72;
 double g=1/(N*beta);
 
 //geometry
@@ -30,6 +40,7 @@ int V;
 int *neigh_data;
 
 //system
+int init_time;
 dcomplex *zeta_data,*lambda_data;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -86,7 +97,7 @@ inline double check_zeta_unitarity(dcomplex *z)
 {return fabs(get_zeta_norm(z)-1);}
 
 //return the result of the scalar product of two lambda
-double get_lambda_scalprod(dcomplex &a,dcomplex &b)
+double get_lambda_scalprod(dcomplex a,dcomplex b)
 {return (conj(a)*b).real();}
 
 //return the norm of a lambda
@@ -133,9 +144,31 @@ inline int &neighup(int site,int mu)
 double get_unif_double(double max,bool incl=false)
 {
   double res;
+#ifdef USE_GOOD_GENERATOR
   do res=max*(*dis)(*gen)/dis->b();
   while((!incl)&&(res==max));
-
+#else
+  const int im1=2147483563,im2=2147483399,imm1=im1-1,ia1=40014,ia2=40692;
+  const int iq1=53668,iq2=52774,ir1=12211,ir2=3791,ndiv=1+imm1/RAN2_NTAB;
+  const double am=1.0/im1,eps=1.2e-7,rnmx=1-eps;
+  int j,k;
+    
+  k=gen.idum/iq1;
+  gen.idum=ia1*(gen.idum-k*iq1)-k*ir1;
+  if(gen.idum<0) gen.idum+=im1;
+    
+  k=gen.idum2/iq2;
+  gen.idum2=ia2*(gen.idum2-k*iq2)-k*ir2;
+  if(gen.idum2<0) gen.idum2+=im2;
+    
+  j=gen.iy/ndiv;
+  gen.iy=gen.iv[j]-gen.idum2;
+  gen.iv[j]=gen.idum;
+  if(gen.iy<0) gen.iy+=imm1;
+    
+  res=max*std::min(am*gen.iy,rnmx);
+#endif
+  
   return res;
 }
 
@@ -153,6 +186,7 @@ inline double fun_ptheta(double theta,double a,int k)
   return p*exp(a*cos(theta));
 }
 
+#ifdef USE_SMART_EXTRACTION
 //obtain theta
 double get_theta(double a,int k)
 {
@@ -160,7 +194,7 @@ double get_theta(double a,int k)
   double zita=(k-1)/a;
   double theta0=acos(sqrt(1+zita*zita)-zita);
   double ctheta0=cos(theta0);
-  double c=sqrt(2*(k-1)*(1-zita*ctheta0)/(1-ctheta0*ctheta0));
+  double c=sqrt(2*(k-1)*(1-zita*ctheta0)/sqr(sin(theta0)));
   double ptheta0=fun_ptheta(theta0,a,k);
   
   //extract theta
@@ -170,9 +204,9 @@ double get_theta(double a,int k)
   int no=0;
   do
     {
-      double chi=get_unif_double(1,true);
+      double chi=get_unif_double(1);
       theta=theta0+tan(chi*atan(c*(M_PI-theta0))+(chi-1)*atan(c*theta0))/c;
-
+      
       //reweighting
       double ptheta=fun_ptheta(theta,a,k);
       double pacc=ptheta/ptheta0*(1+sqr(c*(theta-theta0)))*eta;
@@ -191,14 +225,14 @@ double get_theta(double a,int k)
 
 //taken by appendix C of hep-lat/9210016
 //correction done: h is returned in place of (wrong) g
-double get_theta_1(const double a)
+double get_theta_1(double a)
 {
   double eps=0.001;
   double as=0.798953686083986;
-  double dap=max(0.0,a-as);
+  double dap=max((double)0.0,a-as);
   double del=0.35*dap+1.03*sqrt(dap);
   double alp=min(sqrt(a*(2-eps)),max(sqrt(eps*a),del));
-  double bet=max(alp*alp/a,(cosh(M_PI*alp)-1)/(exp(2*a)-1))-1;
+  double bet=max(alp*alp/a,(double)((cosh(M_PI*alp)-1)/(exp(2*a)-1)))-1;
   double bt1=sqrt((1+bet)/(1-bet));
   
   double h; //result
@@ -210,8 +244,9 @@ double get_theta_1(const double a)
       double h1=bt1*tan((2*r-1)*atan(tanh(M_PI*alp/2)/bt1));
       h=log((1+h1)/(1-h1))/alp;
       
-      //decite if accept or reject
+      //decide if accept or reject
       double g=exp(-a*(1-cos(h)))*(cosh(alp*h)+bet)/(1+bet);
+      if(g>1+TINY) CRASH("%lg",g-1);
       double p=get_unif_double(1);
       acc=(p<g);
       if(!acc) no++;
@@ -221,6 +256,49 @@ double get_theta_1(const double a)
   
   return h;
 }
+#else
+double get_theta(double a,int k)
+{
+  double th,no=exp(-fabs(a));
+  
+  int non=0;
+  bool acc;
+  do
+    {
+      th=get_unif_double(2*M_PI);
+      double pacc=no*pow(sin(th),2*(k-1))*exp(a*cos(th));
+      if(pacc>1) CRASH("a%lg",pacc);
+      double ext=get_unif_double(1);
+      acc=(ext<pacc);
+      if(!acc) non++;
+      if(non>10000) CRASH("non: %d, a: %lg",non,a);
+    }
+  while(!acc);
+  
+  return th;
+}
+
+double get_theta_1(const double a)
+{
+  double th,no=exp(-fabs(a));
+  
+  int non=0;
+  bool acc;
+  do
+    {
+      th=get_unif_double(2*M_PI);
+      double pacc=no*exp(a*cos(th));
+      if(pacc>1+TINY) CRASH("a%lg",pacc-1);
+      double ext=get_unif_double(1);
+      acc=(ext<pacc);
+      if(!acc) non++;
+      if(non>100) CRASH("non: %d",non);
+    }
+  while(!acc);
+  
+  return th;
+}
+#endif
 
 //set an U1 to random
 void set_U1_to_rnd(dcomplex &U)
@@ -249,7 +327,7 @@ void set_ON_to_rnd(dcomplex *O)
     }
 }
 
-//initialize the system
+//initialize the system to hot
 void init_system_to_hot()
 {
   for(int site=0;site<V;site++)
@@ -263,8 +341,28 @@ void init_system_to_hot()
     }
 }
 
+//initialize to cold
+void init_system_to_cold()
+{
+  for(int site=0;site<V;site++)
+    {
+      //fill the lambda
+      for(int mu=0;mu<ndims;mu++) lambda(site)[mu]=1;
+      
+      //fill the Zeta
+      for(int n=0;n<N;n++) zeta(site)[n]=(n==0);
+    }
+}
+
+//switch
+void init_system_to(int cond)
+{
+  if(cond==HOT) init_system_to_hot();
+  else          init_system_to_cold();
+}
+
 //control that each element is unitary
-void check_system_unitarity(double res=1.e-13)
+void check_system_unitarity(double res=TINY)
 {
   //check all sites
   for(int site=0;site<V;site++)
@@ -336,9 +434,9 @@ void site_staple(dcomplex *staple,int site)
   for(int mu=0;mu<ndims;mu++)
     {
       int site_up=neighup(site,mu);
-      for(int n=0;n<N;n++) staple[n]+=2.0*zeta(site_up)[n]*conj(lambda(site)[mu]);
+      for(int n=0;n<N;n++) staple[n]+=(double)2.0*zeta(site_up)[n]*conj(lambda(site)[mu]);
       int site_dw=neighdw(site,mu);
-      for(int n=0;n<N;n++) staple[n]+=2.0*zeta(site_dw)[n]*lambda(site_dw)[mu];
+      for(int n=0;n<N;n++) staple[n]+=(double)2.0*zeta(site_dw)[n]*lambda(site_dw)[mu];
     }
 }
 inline double site_staple_energy(int site,dcomplex *staple)
@@ -355,7 +453,7 @@ void link_staple(dcomplex &staple,int site,int mu)
 {
   staple=0;
   int site_up=neighup(site,mu);
-  for(int n=0;n<N;n++) staple+=2.0*conj(zeta(site)[n])*zeta(site_up)[n];
+  for(int n=0;n<N;n++) staple+=(double)2.0*conj(zeta(site)[n])*zeta(site_up)[n];
 }
 inline double link_staple_energy(int site,int mu)
 {
@@ -366,15 +464,118 @@ inline double link_staple_energy(int site,int mu)
 inline double link_staple_action(int site,int mu)
 {return link_staple_energy(site,mu)/g;}
 
-//initialize the code
-void init()
+//return inner product of zeta
+void get_P(dcomplex *P,dcomplex *z)
 {
+  for(int i=0;i<N;i++)
+    for(int j=0;j<N;j++)
+      P[i*N+j]=conj(z[i])*z[j];
+}
+
+//return the angle of scalar product between two zetas
+double arg_an(dcomplex *a,dcomplex *b)
+{
+  dcomplex res=0;
+  for(int n=0;n<N;n++) res+=conj(a[n])*b[n];
+  //cout<<log(res)<<" "<<log(conj(res))<<endl;
+  return arg(res);
+}
+dcomplex sc(dcomplex *a,dcomplex *b)
+{
+  dcomplex res=0;
+  for(int n=0;n<N;n++) res+=conj(a[n])*b[n];
+  return res;
+}
+
+//return the geometric definition of topology
+double geometric_topology_simplified()
+{
+  double topo=0;
+  for(int n=0;n<V;n++)
+    {
+      int mu=0,nu=1;
+      int nmu=neighup(n,mu);
+      int nnu=neighup(n,nu);
+      int nmu_nu=neighup(nmu,nu);
+      
+      topo+=arg(sc(zeta(nmu_nu),zeta(n))*sc(zeta(nmu),zeta(nmu_nu))*sc(zeta(n),zeta(nmu)))+
+	arg(sc(zeta(nnu),zeta(n))*sc(zeta(nmu_nu),zeta(nnu))*sc(zeta(n),zeta(nmu_nu)));
+    }
+  
+  return topo/(2*M_PI);
+}
+double geometric_topology()
+{
+  int mu=0,nu=1;
+  double topo=0;
+  for(int n=0;n<V;n++)
+    {
+      dcomplex P1[N*N],P2[N*N],P3[N*N];
+      get_P(P1,zeta(n));
+      get_P(P3,zeta(neighup(neighup(n,mu),nu)));
+
+      dcomplex c;
+      
+      c=0;
+      get_P(P2,zeta(neighup(n,mu)));
+      for(int i=0;i<N;i++)
+	for(int j=0;j<N;j++)
+	  for(int k=0;k<N;k++)
+	    c+=P3[i*N+j]*P2[j*N+k]*P1[k*N+i];
+      topo+=log(c).imag();
+      
+      c=0;
+      get_P(P2,zeta(neighup(n,nu)));
+      for(int i=0;i<N;i++)
+	for(int j=0;j<N;j++)
+	  for(int k=0;k<N;k++)
+	    c+=P2[i*N+j]*P3[j*N+k]*P1[k*N+i];
+      topo+=log(c).imag();
+    }
+  
+  return topo/(2*M_PI);
+}
+
+double topology()
+{
+  int mu=0,nu=1;
+  double topo=0;
+  for(int n=0;n<V;n++)
+    topo+=(lambda(n)[mu]*lambda(neighup(n,mu))[nu]*conj(lambda(neighup(n,nu))[mu]*lambda(n)[nu])).imag();
+  
+  return topo;
+}
+
+//initialize the code
+void init(int cond,int seed)
+{
+  init_time=time(0);
+  
+#ifdef USE_GOOD_GENERATOR
   //init the random generators
   rd=new random_device();
   gen=new mt19937_64((*rd)());
-  gen->seed(100);
-  dis=new uniform_int_distribution<unsigned long long>;
+  gen->seed(seed);
+  dis=new uniform_real_distribution<double>;
+#else
+  const int im1=2147483563,ia1=40014;
+  const int iq1=53668,ir1=12211;
+  int j,k;
   
+  //initialization
+  gen.idum=seed;
+  gen.idum=std::max(gen.idum+1,1);
+  gen.idum2=gen.idum;
+  for(j=RAN2_NTAB+7;j>=0;j--)
+    {
+      k=gen.idum/iq1;
+      gen.idum=ia1*(gen.idum-k*iq1)-k*ir1;
+      if(gen.idum<0) gen.idum+=im1;
+      if(j<RAN2_NTAB) gen.iv[j]=gen.idum;
+    }
+  gen.iy=gen.iv[0];
+#endif
+    
   //geometry
   V=1;
   for(int mu=0;mu<ndims;mu++) V*=L;
@@ -412,7 +613,7 @@ void init()
   lambda_data=new dcomplex[V*ndims];
 
   //set the system to hot state
-  init_system_to_hot();
+  init_system_to(cond);
 }
 
 //update zeta with metropolis
@@ -452,48 +653,63 @@ void metro_update_link(int site,int mu)
   if(p>t) lambda(site)[mu]=ori;
 }
 
-//update a site using overrelaxion/heatbath or microcanonical
-void overheat_micro_update_site(int site,bool over)
+//update a site using microcanonical
+void micro_update_site(int site)
 {
   //get the staple, its norm and energy
   dcomplex staple[N];
   site_staple(staple,site);
   double staple_norm=get_zeta_norm(staple);
-  if(std::isnan((double)staple_norm))
-    {
-      for(int mu=0;mu<ndims;mu++)
-	{
-	  int site_up=neighup(site,mu);
-	  for(int n=0;n<N;n++) cout<<zeta(site_up)[n]<<" "<<conj(lambda(site)[mu])<<endl;
-	  int site_dw=neighdw(site,mu);
-	  for(int n=0;n<N;n++) cout<<zeta(site_dw)[n]<<" "<<lambda(site_dw)[mu]<<endl;
-	}
-      for(int n=0;n<N;n++) cout<<staple[n]<<endl;
-      CRASH("%lg",staple_norm);
-    }
   double staple_energy=get_zeta_scalprod(zeta(site),staple);
   
-  //extract theta and compute its cos
-  double ctheta_new=cos(get_theta(beta*N*staple_norm,N));
-  
-  //extract remaining components
-  double ctheta_old=staple_energy/staple_norm;
-  double a=ctheta_new/staple_norm,b=ctheta_old/staple_norm,c=sqrt((1-sqr(ctheta_new))/(1-sqr(ctheta_old)));
-  for(int n=0;n<N;n++) zeta(site)[n]=a*staple[n]-(zeta(site)[n]-b*staple[n])*c;
-  
+  //extract site
+  for(int n=0;n<N;n++) zeta(site)[n]=2*staple_energy/sqr(staple_norm)*staple[n]-zeta(site)[n];
+
   //reunitarize
   zeta_unitarize(zeta(site));
-  //double dev_zeta=check_zeta_unitarity(zeta(site));
-  //if(dev_zeta>1.e-10) CRASH("unitarity deviates by %lg for new zeta on site %d",dev_zeta,site);
 }
 
-//update a link using overrelaxion/heatbath or microcanonical
-void overheat_micro_update_link(int site,int mu,bool over)
+//update a site using overrelaxion/heatbath
+void overheat_update_site(int site)
 {
-  static ofstream norm_file("/tmp/norm_file");
-  static int nnn=0;
-  nnn++;
+  //get the staple, its norm and energy
+  dcomplex staple[N];
+  site_staple(staple,site);
+  double staple_norm=get_zeta_norm(staple);
+  double staple_energy=get_zeta_scalprod(zeta(site),staple);
   
+  //compute theta in the simple way
+  double ctheta_old=staple_energy/staple_norm;
+  double theta_old=acos(ctheta_old);
+  
+  //if theta is too small we switch to alternative method
+  if(fabs(theta_old)<1.e-4) 
+    {
+      dcomplex diff[N];
+      for(int n=0;n<N;n++) diff[n]=zeta(site)[n]-staple[n]/staple_norm;
+      theta_old=asin(get_zeta_scalprod(diff,diff));
+    }
+  
+  //it theta is too small the algorithm is undefined
+  if(fabs(theta_old)>5.e-8)
+    {
+      //extract theta and compute its cos
+      double theta_new=get_theta(beta*N*staple_norm,N);
+      double ctheta_new=cos(theta_new);
+      
+      //extract remaining components
+      double a=ctheta_new/staple_norm,b=ctheta_old/staple_norm,c=sin(theta_new)/sin(theta_old);
+      for(int n=0;n<N;n++) zeta(site)[n]=a*staple[n]-(zeta(site)[n]-b*staple[n])*c;
+      
+      //reunitarize
+      zeta_unitarize(zeta(site));
+    }
+  else cout<<"skipping site "<<site<<": "<<theta_old<<endl;
+}
+
+//update a link using microcanonical
+void micro_update_link(int site,int mu)
+{
   //get the staple
   dcomplex staple;
   link_staple(staple,site,mu);
@@ -502,28 +718,49 @@ void overheat_micro_update_link(int site,int mu,bool over)
   double staple_norm=sqrt(norm(staple));
   double staple_energy=get_lambda_scalprod(lambda(site)[mu],staple);
   
-  //cout<<"site: "<<site<<" staple: "<<staple<<" lambda(site)[mu]: "<<lambda(site)[mu]<<endl;
-  
-  //extract theta and compute its cos
-  double ctheta_new=cos(get_theta_1(beta*N*staple_norm));
-  
-  //extract remaining components
-  double ctheta_old=staple_energy/staple_norm;
-  double a=ctheta_new/staple_norm,b=ctheta_old/staple_norm,c=sqrt((1-sqr(ctheta_new))/(1-sqr(ctheta_old)));
-  auto term=(lambda(site)[mu]-b*staple);
-  lambda(site)[mu]=a*staple-(lambda(site)[mu]-b*staple)*c;
+  //extract link
+  lambda(site)[mu]=2*staple_energy/sqr(staple_norm)*staple-lambda(site)[mu];
 
   //reunitarize
-  norm_file<<lambda_unitarize(lambda(site)[mu])-1<<endl;
-  if(std::isnan(lambda(site)[mu].real()))
+  lambda_unitarize(lambda(site)[mu]);
+}
+
+//update a link using overrelaxion/heatbath
+void overheat_update_link(int site,int mu)
+{
+  //get the staple
+  dcomplex staple;
+  link_staple(staple,site,mu);
+
+  //compute the staple norm and energy
+  double staple_norm=sqrt(norm(staple));
+  double staple_energy=get_lambda_scalprod(lambda(site)[mu],staple);
+  
+  //compute theta in the simple way
+  double ctheta_old=staple_energy/staple_norm;
+  double theta_old=acos(ctheta_old);
+  
+  //if theta is too small we switch to alternative method
+  if(fabs(theta_old)<1.e-4) 
     {
-      cout<<"a: "<<a<<" b: "<<b<<" c: "<<c<<" ctheta_old-1: "<<ctheta_old-1<<" chteta_new: "<<ctheta_new<<
-	" staple_energy: "<<staple_energy<<" staple_norm: "<<staple_norm<<
-	" term: "<<term<<" nnn: "<<nnn<<endl;
-      CRASH("site: %d",site);
+      dcomplex diff=lambda(site)[mu]-staple/staple_norm;
+      theta_old=asin(get_lambda_scalprod(diff,diff));
     }
-  //double dev=check_lambda_unitarity(lambda(site)[mu]);
-  //if(dev>1.e-15) CRASH("unitarity deviates by %lg for new lambda on site %d mu %d",dev,site,mu);
+  
+  //it theta is too small the algorithm is undefined
+  if(fabs(theta_old)>5.e-8)
+    {
+      //extract theta and compute its cos
+      double theta_new=get_theta_1(beta*N*staple_norm);
+      double ctheta_new=cos(theta_new);
+      
+      //extract remaining components  
+      double a=ctheta_new/staple_norm,b=ctheta_old/staple_norm,c=sin(theta_new)/sin(theta_old);
+      lambda(site)[mu]=a*staple-(lambda(site)[mu]-b*staple)*c;
+      
+      //reunitarize
+      lambda_unitarize(lambda(site)[mu]);
+    }
 }
 
 //sweep all the lattice
@@ -537,15 +774,43 @@ void metro_sweep()
     }
 }
 
-//sweep all the lattice
-void overheat_micro_sweep()
+//sweep all the lattice with microcanonical
+void micro_sweep()
 {
   //loop over sites
   for(int site=0;site<V;site++)
     {
-      overheat_micro_update_site(site,false);
-      for(int mu=0;mu<ndims;mu++) overheat_micro_update_link(site,mu,false);
+      micro_update_site(site);
+      for(int mu=0;mu<ndims;mu++) micro_update_link(site,mu);
     }
+}
+
+//sweep all the lattice with overrelaxation/heatbath
+void overheat_sweep()
+{
+  //loop over sites
+  for(int site=0;site<V;site++)
+    {
+      overheat_update_site(site);
+      for(int mu=0;mu<ndims;mu++) overheat_update_link(site,mu);
+    }
+}
+
+//perform a hybid monte carlo update
+void hmc_update()
+{
+  //allocate momenta
+  dcomplex *pi=new dcomplex[V*N];
+  double *omega=new double[V*ndims];
+  
+  //draw momenta
+  for(int site=0;site<V;site++)
+    {
+      
+    }
+  
+  delete[] pi;
+  delete[] omega;
 }
 
 //close the code
@@ -556,24 +821,38 @@ void close()
   
   delete[] neigh_data;
   
+#ifdef USE_GOOD_GENERATOR
   delete dis;
   delete gen;
   delete rd;
+#endif
 }
 
 int main()
 {
   //initialize
-  init();
-  
+  init(HOT,100);
+
   ofstream energy_file("energy");
+  energy_file.precision(16);
+  ofstream topology_file("topology");
   
   //sweep with overheat-micro
-  for(int i=0;i<20000;i++)
+  int nsweep=1000000;
+  for(int isweep=1;isweep<=nsweep;isweep++)
     {
-      overheat_micro_sweep();
       //metro_sweep();
-      //cout<<energy()/V/ndims<<endl;
+      for(int imicro=0;imicro<3;imicro++) micro_sweep();
+      overheat_sweep();
+      
+      double topo_sim=geometric_topology_simplified();
+      double topo_num=topology();
+      
+      energy_file<<energy()/V/ndims<<endl;
+      topology_file<<topo_sim<<" "<<topo_num<<endl;
+      
+      //write time progress
+      if(isweep%(nsweep/100)==0) cout<<isweep*100/nsweep<<"%, "<<time(0)-init_time<<" s"<<endl;
     }
   
   //finalize

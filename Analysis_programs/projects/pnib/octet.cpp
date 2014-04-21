@@ -14,9 +14,9 @@ struct mega_header_t
   double ksm,beta,ksea,musea,csw;
   double k[8];
   int sstepsrc[3];
-  static const int ext_islso=1,ext_islsi=0;
-  int iprop(int im1,int im2,int im3,int parity,int islso=ext_islso,int islsi=ext_islsi)
-  {return islso+nslsrc*(islsi+nslsink*(parity+2*(im1+nk*(im2+nk*im3))));}
+  static const int ext_islsrc=1,ext_islsink=0;
+  int icorr(int im1,int im2,int im3,int parity,int islsrc=ext_islsrc,int islsink=ext_islsink)
+  {return islsrc+nslsrc*(islsink+nslsink*(parity+2*(im1+nk*(im2+nk*im3))));}
 };
 
 int T=48,TH=24,njacks=26,clust_size=4,nconfs=njacks*clust_size;
@@ -30,10 +30,10 @@ struct hadr_t
 {
   int m1,m2,m3;
   int n1,n2,n3;
-  int a(){return mega_header.iprop(m1,m2,m3,0);}
-  int b(){return mega_header.iprop(n1,n2,n3,0);}
-  int c(){return mega_header.iprop(m1,m2,m3,1);}
-  int d(){return mega_header.iprop(n1,n2,n3,1);}
+  int a(){return mega_header.icorr(m1,m2,m3,0);}
+  int b(){return mega_header.icorr(n1,n2,n3,0);}
+  int c(){return mega_header.icorr(m1,m2,m3,1);}
+  int d(){return mega_header.icorr(n1,n2,n3,1);}
   hadr_t(int m1,int m2,int m3) : m1(m1),m2(m2),m3(m3)
     {
       n1=(m1/2)*2+!(m1%2);
@@ -157,7 +157,10 @@ struct corr_t
   ~corr_t(){free(data);}
 
   jvec operator[](hadr_t &h)
-  {cout<<h.a()<<" "<<h.b()<<" "<<h.c()<<" "<<h.d()<<" : ";return data[h.a()];}//(data[h.a()]+data[h.b()]-(data[h.c()]+data[h.d()]).simmetric()).subset(0,TH)/4;}
+  {cout<<h.a()<<" "<<h.b()<<" "<<h.c()<<" "<<h.d()<<" : ";
+    //return data[h.a()];}
+    //return data[h.a()]-data[h.c()].simmetric();}
+    return (data[h.a()]+data[h.b()]-(data[h.c()]+data[h.d()]).simmetric()).subset(0,TH)/4;}
 private:
   corr_t() {};
 };
@@ -180,7 +183,7 @@ int main(int narg,char **arg)
   cout<<"nucleon_mass_110: "<<constant_fit(aperiodic_effective_mass(direct_Lll[nuc_d_110]-exchange_Lll[nuc_d_110]),11,15,"plots/comparison_rcombo/nucleon_mass_110.xmg")<<endl;
   cout<<"nucleon_mass_111: "<<constant_fit(aperiodic_effective_mass(direct_Lll[nuc_d_111]-exchange_Lll[nuc_d_111]),11,15,"plots/comparison_rcombo/nucleon_mass_111.xmg")<<endl;
   
-  {ofstream naz("nazario_tables/direct_Lll_000");naz<<direct_Lll[nuc_d_000];}
+  {ofstream naz("nazario_tables/direct_Lll_000");naz<<aperiodic_effective_mass(direct_Lll[nuc_d_000]);}
   {ofstream naz("nazario_tables/direct_Lll_001");naz<<direct_Lll[nuc_d_001];}
   {ofstream naz("nazario_tables/direct_Lll_010");naz<<direct_Lll[nuc_d_010];}
   {ofstream naz("nazario_tables/direct_Lll_011");naz<<direct_Lll[nuc_d_011];}

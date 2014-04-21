@@ -177,16 +177,36 @@ int main()
   //cancellation between ll and 2*Dll_ine
   ofstream out_ll_cancellation("plots/ll_cancellation.xmg");
   out_ll_cancellation<<"@type xydy"<<endl;
-  out_ll_cancellation<<effective_mass(Cll)<<endl;
+  out_ll_cancellation<<Cll<<endl;
   out_ll_cancellation<<"&"<<endl;
-  out_ll_cancellation<<effective_mass(2*Dll_ine)<<endl;
+  out_ll_cancellation<<2*Dll_ine<<endl;
   out_ll_cancellation<<"&"<<endl;
+
+  ofstream out_ss_cancellation("plots/ss_cancellation.xmg");
+  out_ss_cancellation<<"@type xydy"<<endl;
+  out_ss_cancellation<<Css<<endl;
+  out_ss_cancellation<<"&"<<endl;
+  out_ss_cancellation<<Dss<<endl;
+  out_ss_cancellation<<"&"<<endl;
+
+  ofstream out_ll_cancellation_eff("plots/ll_cancellation_eff.xmg");
+  out_ll_cancellation_eff<<"@type xydy"<<endl;
+  out_ll_cancellation_eff<<effective_mass(Cll)<<endl;
+  out_ll_cancellation_eff<<"&"<<endl;
+  out_ll_cancellation_eff<<effective_mass(2*Dll_ine)<<endl;
+  out_ll_cancellation_eff<<"&"<<endl;
   
   ofstream ls_aper("plots/ls.xmg");
   ls_aper<<"@type xydy"<<endl;
-  ls_aper<<aperiodic_effective_mass(ls)<<endl;
+  ls_aper<<ls<<endl;
   ls_aper<<"&"<<endl;
-  ls_aper<<aperiodic_effective_mass(ls_exa)<<endl;
+  ls_aper<<ls_exa<<endl;
+
+  ofstream ls_aper_eff("plots/ls_eff.xmg");
+  ls_aper_eff<<"@type xydy"<<endl;
+  ls_aper_eff<<aperiodic_effective_mass(ls)<<endl;
+  ls_aper_eff<<"&"<<endl;
+  ls_aper_eff<<aperiodic_effective_mass(ls_exa)<<endl;
   
   ofstream ls_and_ss_eff_mass("plots/ls_and_ss_eff_mass.xmg");
   ls_and_ss_eff_mass<<"@type xydy"<<endl;
@@ -314,5 +334,25 @@ int main()
   cout<<"METAP_2st: "<<smart_print(METAP_2st/MPION*0.135)<<" expected -0.958"<<endl;
   cout<<"ch2: "<<smart_print(ch2)<<endl;
   
+  //////////////////// gevp test //////////////
+  
+  int t0=2;
+  gevp_pars_t gevp(2,njacks,T/2,t0);
+  gevp.data[0]=ll_ine/48/48/48;
+  gevp.data[1]=gevp.data[2]=-ls/48/48/48;
+  gevp.data[3]=ss/48/48/48;
+  cout<<gevp.data[0][t0]<<"   "<<gevp.data[1][t0]<<endl;
+  cout<<gevp.data[2][t0]<<"   "<<gevp.data[3][t0]<<endl;
+
+  //gevp.check_orthogonality();
+  gevp.gevp();
+  gevp.reorder_eig();
+
+  ofstream gevp_eff_plot("plots/gevp_eff.xmg");
+  gevp_eff_plot<<"@type xydy"<<endl;
+  gevp_eff_plot<<effective_mass(gevp.eig_va[0])<<endl;
+  gevp_eff_plot<<"&"<<endl;
+  gevp_eff_plot<<effective_mass(gevp.eig_va[1])<<endl;
+
   return 0;
 }
