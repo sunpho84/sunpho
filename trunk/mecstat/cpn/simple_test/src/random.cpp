@@ -2,7 +2,6 @@
  #include "config.hpp"
 #endif
 
-
 #include <algorithm>
 
 using namespace std;
