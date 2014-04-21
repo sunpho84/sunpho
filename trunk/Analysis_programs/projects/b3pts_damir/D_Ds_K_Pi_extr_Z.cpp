@@ -1,12 +1,12 @@
 #include "include.h"
 #include "../nf2/common_pars.cpp"
 
-int include_bound=1;
+int include_bound=0;
 int nth,nens,nth_to_use;
 const int nbeta=4,nth_max=8,nens_max=13,njacks=16;
 int ibeta[nens_max],use[nens_max];
 double lmass[nens_max];
-int deg_z=2;
+const int deg_zP=2,deg_z0=2,deg_zT=2,deg_zlist[3]={deg_zP,deg_z0,deg_zT};
 int iboot;
 int stranged;
 
@@ -14,7 +14,7 @@ double lat_internal[4]={1/2.0275,1/2.338,1/2.9657,1/3.679};
 
 const double MDstar=2.01,MD0star=2.318;
 const double MDSstar=2.1123,MD0Sstar=2.3178;
-const double MD_ph=1.8696,MK_ph=0.4937,MP_ph=0.13957;
+const double MD_ph=1.8696,MDS_ph=1.9685,MK_ph=0.4937,MP_ph=0.13957;
 const double Q2_max_ph[2]={sqr(MD_ph-MP_ph),sqr(MD_ph-MK_ph)};
 bvec Q2,FP,F0,FT,MD,MP,EP,Z;
 
@@ -283,11 +283,28 @@ int icombo(int iens,int ith)
 
 int ipar_combo(int d,int iff)
 {
-  if(d<0||d>=deg_z) crash("d");
+  if(d<0) crash("d=%d",d);
   if(iff<0||iff>=3) crash("iff");
   
-  if(d==0&&iff==0) return deg_z*1;
-  else return deg_z*iff+d;
+  int r;
+  switch(iff)
+    {
+    case 0:
+      if(d>=deg_zP) crash("d=%d",d);
+      if(d==0) r=deg_zP; //impose bound
+      else r=d;
+      break;
+    case 1:
+      if(d>=deg_z0) crash("d=%d",d);
+      r=deg_zP+d;
+      break;
+    case 2:
+      if(d>=deg_zT) crash("d=%d",d);
+      r=deg_zP+deg_z0+d;
+      break;
+    }
+  
+  return r;
 }
 
 template <class T1,class T2> void put_or_remove_pole(T1 &fP,T1 &f0,T1 &fT,T2 q2,int put_remove)
@@ -352,7 +369,7 @@ void load_iboot(int *iboot_jack,char *ens_name)
   fclose(fiboot);
 }
 
-boot fun_plot_Z_chir_cont(bvec p,double x)
+boot fun_plot_Z_chir_cont(bvec p,double x,int deg_z)
 {
   boot out=p[0];
   for(int d=1;d<deg_z;d++) out+=pow(x,d)*p[d];
@@ -360,7 +377,7 @@ boot fun_plot_Z_chir_cont(bvec p,double x)
   return out;
 }
 
-boot fun_plot_Z(bvec *p,double x,int iens)
+boot fun_plot_Z(bvec *p,double x,int iens,int deg_z)
 {
   boot out=p[0][iens];
   for(int d=1;d<deg_z;d++) out+=pow(x,d)*p[d][iens];
@@ -370,6 +387,7 @@ boot fun_plot_Z(bvec *p,double x,int iens)
 
 template <class T> T fun_fit_Z(T *p,T x,int iff)
 {
+  int deg_z=deg_zlist[iff];
   T out=p[ipar_combo(0,iff)];
   for(int d=1;d<deg_z;d++) out+=pow(x,d)*p[ipar_combo(d,iff)];
   if(include_bound) out+=pow(x,deg_z)*p[ipar_combo(deg_z-1,iff)]/(deg_z);
@@ -398,7 +416,7 @@ void fit_Z(bvec *pars_P,bvec *pars_0,bvec *pars_T)
 {
   TMinuit minu;
   minu.SetFCN(chi2_z);
-  int npars=deg_z*3;
+  int npars=deg_zP+deg_z0+deg_zT;
   //set pars
   for(int ipar=0;ipar<npars;ipar++) minu.DefineParameter(ipar,combine("P%d",ipar).c_str(),1,0.0001,0,0);
   minu.FixParameter(0);
@@ -442,15 +460,21 @@ void fit_Z(bvec *pars_P,bvec *pars_0,bvec *pars_T)
       
 	    //get back parameters
 	    double dum;
-	    double par_boot[3*deg_z];
-	    for(int d=0;d<deg_z;d++)
+	    double par_boot[deg_zP+deg_z0+deg_zT];
+	    for(int d=0;d<deg_zP;d++)
 	      {
 		minu.GetParameter(ipar_combo(d,0),pars_P[d][iens].data[iboot],dum);
+		par_boot[0*deg_zP+0*deg_z0+0*deg_zT+d]=pars_P[d][iens][iboot];
+	      }
+	    for(int d=0;d<deg_z0;d++)
+	      {
 		minu.GetParameter(ipar_combo(d,1),pars_0[d][iens].data[iboot],dum);
+		par_boot[1*deg_zP+0*deg_z0+0*deg_zT+d]=pars_0[d][iens][iboot];
+	      }
+	    for(int d=0;d<deg_zT;d++)
+	      {
 		minu.GetParameter(ipar_combo(d,2),pars_T[d][iens].data[iboot],dum);
-		par_boot[0*deg_z+d]=pars_P[d][iens][iboot];
-		par_boot[1*deg_z+d]=pars_0[d][iens][iboot];
-		par_boot[2*deg_z+d]=pars_T[d][iens][iboot];
+		par_boot[1*deg_zP+1*deg_z0+0*deg_zT+d]=pars_T[d][iens][iboot];
 	      }
 	  
 	    chi2_z(npars,NULL,C2.data[iboot],par_boot,iboot==nboot);
@@ -470,9 +494,9 @@ void fit_Z(bvec *pars_P,bvec *pars_0,bvec *pars_T)
 	for(int ipoint_plot=0;ipoint_plot<npoints_plot;ipoint_plot++)
 	  {
 	    x_plot[ipoint_plot]=Z_min+dx*ipoint_plot;
-	    y_plot_P[ipoint_plot]=fun_plot_Z(pars_P,x_plot[ipoint_plot],iens);
-	    y_plot_0[ipoint_plot]=fun_plot_Z(pars_0,x_plot[ipoint_plot],iens);
-	    y_plot_T[ipoint_plot]=fun_plot_Z(pars_T,x_plot[ipoint_plot],iens);
+	    y_plot_P[ipoint_plot]=fun_plot_Z(pars_P,x_plot[ipoint_plot],iens,deg_zP);
+	    y_plot_0[ipoint_plot]=fun_plot_Z(pars_0,x_plot[ipoint_plot],iens,deg_z0);
+	    y_plot_T[ipoint_plot]=fun_plot_Z(pars_T,x_plot[ipoint_plot],iens,deg_zT);
 	  }
 	
 	{
@@ -615,6 +639,8 @@ int main(int narg,char **arg)
     }
   fclose(an_input_file);
   
+  cout<<MD<<endl;
+  
   //define ml and ref ml
   ml=bvec(nens,nboot,njack);
   for(int iens=0;iens<nens;iens++)
@@ -633,29 +659,28 @@ int main(int narg,char **arg)
   cout<<"---"<<endl;
   
   //fit the ff as function of z
-  bvec pars_P[deg_z],pars_0[deg_z],pars_T[deg_z];
-  for(int d=0;d<deg_z;d++) pars_P[d]=pars_0[d]=pars_T[d]=bvec(nens,nboot,njack);
+  bvec pars_P[deg_zP],pars_0[deg_z0],pars_T[deg_zT];
+  for(int d=0;d<deg_zP;d++) pars_P[d]=bvec(nens,nboot,njack);
+  for(int d=0;d<deg_z0;d++) pars_0[d]=bvec(nens,nboot,njack);
+  for(int d=0;d<deg_zT;d++) pars_T[d]=bvec(nens,nboot,njack);
   fit_Z(pars_P,pars_0,pars_T);
   
   //estrapolate pars to the continuum
-  bvec pars_P_chir_cont(deg_z,nboot,njack),pars_0_chir_cont(deg_z,nboot,njack),pars_T_chir_cont(deg_z,nboot,njack);
-  for(int d=0;d<deg_z;d++)
-    {
-      int include_ml_term=1,include_a2_term=1;
-      //if(d>0) include_ml_term=0;
-      pars_P_chir_cont[d]=fit_par(ml,pars_P[d],combine("fit_in_Z/plots/pars_P_deg_%d",d).c_str(),
-				  include_ml_term,include_a2_term);
-      pars_0_chir_cont[d]=fit_par(ml,pars_0[d],combine("fit_in_Z/plots/pars_0_deg_%d",d).c_str(),
-				  include_ml_term,include_a2_term);
-      pars_T_chir_cont[d]=fit_par(ml,pars_T[d],combine("fit_in_Z/plots/pars_T_deg_%d",d).c_str(),
-				  include_ml_term,include_a2_term);
-    }
+  bvec pars_P_chir_cont(deg_zP,nboot,njack),pars_0_chir_cont(deg_z0,nboot,njack),pars_T_chir_cont(deg_zT,nboot,njack);
+  int include_ml_term=1,include_a2_term=1;
+  //if(d>0) include_ml_term=0;
+  for(int d=0;d<deg_zP;d++) pars_P_chir_cont[d]=fit_par(ml,pars_P[d],combine("fit_in_Z/plots/pars_P_deg_%d",d).c_str(),
+						       include_ml_term,include_a2_term);
+  for(int d=0;d<deg_z0;d++) pars_0_chir_cont[d]=fit_par(ml,pars_0[d],combine("fit_in_Z/plots/pars_0_deg_%d",d).c_str(),
+						       include_ml_term,include_a2_term);
+  for(int d=0;d<deg_zT;d++) pars_T_chir_cont[d]=fit_par(ml,pars_T[d],combine("fit_in_Z/plots/pars_T_deg_%d",d).c_str(),
+						       include_ml_term,include_a2_term);
     
   //max Z
   double Z_min=fun_Z(stranged?MK_ph:MP_ph,MD_ph,Q2_max_ph[stranged]);
   double Z_max=0;
   
-  if(include_bound && deg_z>2) crash(""); 
+  //if(include_bound && deg_z>2) crash(""); 
   
   //plot
   int npoints_plot=100;
@@ -665,9 +690,9 @@ int main(int narg,char **arg)
   for(int ipoint_plot=0;ipoint_plot<npoints_plot;ipoint_plot++)
     {
       Z_plot[ipoint_plot]=Z_min+dZ*ipoint_plot;
-      y_plot_P[ipoint_plot]=fun_plot_Z_chir_cont(pars_P_chir_cont,Z_plot[ipoint_plot]);
-      y_plot_0[ipoint_plot]=fun_plot_Z_chir_cont(pars_0_chir_cont,Z_plot[ipoint_plot]);
-      y_plot_T[ipoint_plot]=fun_plot_Z_chir_cont(pars_T_chir_cont,Z_plot[ipoint_plot]);
+      y_plot_P[ipoint_plot]=fun_plot_Z_chir_cont(pars_P_chir_cont,Z_plot[ipoint_plot],deg_zP);
+      y_plot_0[ipoint_plot]=fun_plot_Z_chir_cont(pars_0_chir_cont,Z_plot[ipoint_plot],deg_z0);
+      y_plot_T[ipoint_plot]=fun_plot_Z_chir_cont(pars_T_chir_cont,Z_plot[ipoint_plot],deg_zT);
       
       Q2_plot[ipoint_plot]=fun_Zone(stranged?MK_ph:MP_ph,MD_ph,Z_plot[ipoint_plot]);
       

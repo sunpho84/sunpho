@@ -17,6 +17,8 @@ public:
   gevp_pars_t(int nlevls,int njacks,int TH,int t0);
   ~gevp_pars_t();
   void reorder_eig();
+  void check_norm(int tch);
+  void check_singularity(int tch);
   void check_orthogonality();
   double scal_prod(int ijack0,int ilev1,int t1,int ijack1,int ilev2,int t2,int ijack2);
   void matr_copy(double *m,jvec *data,int t,int ijack);
@@ -83,8 +85,21 @@ void gevp_pars_t::load_raw_data(const char *raw_data_path,const char *infile,int
 	  eff_mass_raw_data<<effective_mass(data[ilev_so*nlevls+ilev_si],TH,
 					    (parity[ilev_so*nlevls+ilev_si]==1))<<"&"<<endl;
 	}
-  
-  //check the norm
+
+  //close output
+  if(raw_data_path!=NULL)
+    {
+      raw_data.close();
+      eff_mass_raw_data.close();
+    }
+
+  check_norm(tch);
+  check_singularity(tch);
+}
+
+//check the norm
+void gevp_pars_t::check_norm(int tch)
+{
   cout<<"Checking correct norm"<<endl;
   for(int ilev_so=0;ilev_so<nlevls;ilev_so++)
     {
@@ -93,8 +108,11 @@ void gevp_pars_t::load_raw_data(const char *raw_data_path,const char *infile,int
 			  sqrt(data[ilev_si*nlevls+ilev_si][tch]*data[ilev_so*nlevls+ilev_so][tch]))<<" ";
       cout<<endl;
     }
+}
   
   //check singularity
+void gevp_pars_t::check_singularity(int tch)
+{
   for(int t=0;t<=TH;t++)
     {
       bool is_sing;
@@ -112,14 +130,7 @@ void gevp_pars_t::load_raw_data(const char *raw_data_path,const char *infile,int
       is_sing=(3*sing.err()>=fabs(sing.med()));
       if(is_sing) cout<<"WARNING data matrix singular at: "<<t<<": "<<smart_print(sing)<<endl;
     }
-  
-  //close output
-  if(raw_data_path!=NULL)
-    {
-      raw_data.close();
-      eff_mass_raw_data.close();
-    }
-}
+}  
 
 gevp_pars_t::gevp_pars_t(int nlevls,int njacks,int TH,int t0) : nlevls(nlevls),njacks(njacks),TH(TH),t0(t0)
 {
