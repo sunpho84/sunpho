@@ -68,7 +68,7 @@ public:
   int tmin_two_pts_fit,tmin_three_pts_fit,tmax_three_pts_fit,tsep;
   jack M_Pi,E_Pi,M_K,F;
   jack ZWW_Pi_rest,ZWW_Pi_move,ZWW_K_rest;
-  jvec pion_rest,pion_move,kaon_rest,kp_S0_move;
+  jvec pion_rest,pion_move,kaon_rest,*kp_S0_move_d;
 };
 
 global_fit_S_t gs;
@@ -102,7 +102,7 @@ void ch2_global_S_migrad_fit(int &npar,double *fuf,double &ch,double *p,int flag
     
   //add the two points pion moving contribution
   //for(int t=gs.tmin_two_pts_fit;t<TH;t++)
-  for(int t=8;t<=22;t++)
+  for(int t=6;t<=30;t++)
     {
       double n=gs.pion_move[t][gs.ijack_fit];
       double p=fun_two_pts_migrad_fit(ZWW_Pi_move,E_Pi,t);
@@ -127,18 +127,19 @@ void ch2_global_S_migrad_fit(int &npar,double *fuf,double &ch,double *p,int flag
     }
     
   //add the three point function contribution
-  for(int t=gs.tmin_three_pts_fit;t<=gs.tmax_three_pts_fit;t++)
-    {
-      double n=gs.kp_S0_move[t][gs.ijack_fit];
-      double E_Pi_loc=E_Pi;//sqrt(M_Pi*M_Pi+3*mom_i*mom_i); //works much better using the fitted results
-      double p=F*sqrt(ZWW_K_rest*ZWW_Pi_move)*exp(-M_K*t)*exp(-E_Pi_loc*(gs.tsep-t))/(2*E_Pi_loc*2*M_K);
-      p/=(ms-mu)/(M_K*M_K-M_Pi*M_Pi);
-      double e=gs.kp_S0_move[t].err();
-      
-      ch+=sqr((n-p)/e);
-      //cout<<" t: "<<t<<" n: "<<n<<" p: "<<p<<" e: "<<e<<endl;
-      nd++;
-    }
+  for(int id=0;id<2;id++)
+    for(int t=gs.tmin_three_pts_fit;t<=gs.tmax_three_pts_fit;t++)
+      {
+	double n=gs.kp_S0_move_d[id][t][gs.ijack_fit];
+	double E_Pi_loc=E_Pi;//sqrt(M_Pi*M_Pi+3*mom_i*mom_i); //works much better using the fitted results
+	double p=F*sqrt(ZWW_K_rest*ZWW_Pi_move)*exp(-M_K*t)*exp(-E_Pi_loc*(gs.tsep-t))/(2*E_Pi_loc*2*M_K);
+	p/=(ms-mu)/(M_K*M_K-M_Pi*M_Pi);
+	double e=gs.kp_S0_move_d[id][t].err();
+	
+	ch+=sqr((n-p)/e);
+	//cout<<" t: "<<t<<" n: "<<n<<" p: "<<p<<" e: "<<e<<endl;
+	nd++;
+      }
 }
 
 void global_S_migrad_fit()
@@ -330,6 +331,8 @@ jack study_single_tsep(int tsep,ios::openmode mode=ios::out)
   jvec kp_S0_move=(load("kl3-01",icombo(tsep,2))+atw*simmetric(load("kl3-01",icombo(T-tsep,2))))/(atw+1);
   jvec kp_VK_rest=(load("kl3-00",icombo(tsep,0))+atw*simmetric(load("kl3-00",icombo(T-tsep,0))))/(atw+1);
   jvec kp_V0_rest=(load("kl3-00",icombo(tsep,1))-atw*simmetric(load("kl3-00",icombo(T-tsep,1))))/(atw+1);
+
+  jvec kp_S0_move_d[2]={load("kl3-01",icombo(tsep,2)),simmetric(load("kl3-01",icombo(T-tsep,2)))};
   
   //check that VK is 0
   simple_plot("kp_VK_move",kp_VK_move,tsep,mode);
@@ -495,80 +498,117 @@ jack study_single_tsep(int tsep,ios::openmode mode=ios::out)
   gs.pion_rest=pion_rest;
   gs.pion_move=pion_move;
   gs.kaon_rest=kaon_rest;
-  gs.kp_S0_move=kp_S0_move;
+  gs.kp_S0_move_d=kp_S0_move_d;
 
   global_S_migrad_fit();
-  
-  double ch2_total_OUR=0;
-  double ch2_total_DAVID=0;
+
+  jack ch2_total_OUR(njacks),ch2_total_DAVID(njacks);
+  ch2_total_OUR=ch2_total_DAVID=0;
   int ndof=0;
   
-  double ZpWW00=2.856264264549e+04;cout<<"ZpWW00: "<<(ZpWW00-sqrt(gs.ZWW_Pi_rest.med()))/sqrt(gs.ZWW_Pi_rest).err()<<endl;
-  double ZpWW01=2.611648993239e+04;cout<<"ZpWW01: "<<(ZpWW01-sqrt(gs.ZWW_Pi_move.med()))/sqrt(gs.ZWW_Pi_move).err()<<endl;
-  double ZkWW00=3.068272856910e+04;cout<<"ZkWW00: "<<(ZkWW00-sqrt(gs.ZWW_K_rest.med()))/sqrt(gs.ZWW_K_rest).err()<<endl;
-  double m_K=2.884916612115e-01;cout<<"m_K: "<<(m_K-gs.M_K.med())/gs.M_K.err()<<endl;
-  double m_pi=8.049277336280e-02;cout<<"m_pi: "<<(m_pi-gs.M_Pi.med())/gs.M_Pi.err()<<endl;
-  double Ep=1.559745064540e-01;cout<<"Ep: "<<(Ep-gs.E_Pi.med())/gs.E_Pi.err()<<endl;
-  double f_p=9.641367440875e-01;cout<<"f_p: "<<(f_p-gs.F.med())/gs.F.err()<<endl;
-  for(int t=DAVID_tint[tsep/4][0];t<=DAVID_tint[tsep/4][1];t++)
+  cout<<"ZpWW00: "<<(sqrt(gs.ZWW_Pi_rest))<<endl;
+  cout<<"ZpWW01: "<<(sqrt(gs.ZWW_Pi_move))<<endl;
+  cout<<"ZkWW00: "<<(sqrt(gs.ZWW_K_rest))<<endl;
+  cout<<"m_K: "<<(gs.M_K)<<endl;
+  cout<<"m_pi: "<<(gs.M_Pi)<<endl;
+  cout<<"Ep: "<<(gs.E_Pi)<<endl;
+  cout<<"f_p: "<<(gs.F)<<endl;
+  cout<<"---"<<endl;
+  
+  jack ZpWW00=fill_gauss(28554.1,56.3,0,njacks);
+  jack ZpWW01=fill_gauss(26346.2,70.3,0,njacks);
+  jack ZkWW00=fill_gauss(30733.9,50.1,0,njacks);
+  jack m_K=fill_gauss(0.288650,0.000171,0,njacks);
+  jack m_pi=fill_gauss(0.0804754,0.0001113,0,njacks);
+  jack Ep=fill_gauss(0.156852,0.000327,0,njacks);
+  jack f_p=fill_gauss(0.967734,0.003127,0,njacks);
+
+  //add the three points contribution
+  for(int id=0;id<2;id++)
     {
-      double three_pts_reco_DAVID=(m_K*m_K-m_pi*m_pi)/(ms-mu)*f_p*ZpWW01*ZkWW00*exp(-m_K*t)*exp(-Ep*(tsep-t))/(2*Ep*2*m_K);
-      double three_pts_reco_OUR=(gs.F*sqrt(gs.ZWW_K_rest*gs.ZWW_Pi_move)*exp(-gs.M_K*t)*exp(-gs.E_Pi*(gs.tsep-t))/(2*gs.E_Pi*2*gs.M_K)/((ms-mu)/(gs.M_K*gs.M_K-gs.M_Pi*gs.M_Pi))).med();
-      
-      double diff_DAVID=three_pts_reco_DAVID-kp_S0_move[t].med();
-      double diff_OUR=three_pts_reco_OUR-kp_S0_move[t].med();
-      double cchi_DAVID=sqr(diff_DAVID/kp_S0_move[t].err());
-      double cchi_OUR=sqr(diff_OUR/kp_S0_move[t].err());
-      
-      ch2_total_OUR+=cchi_OUR;
-      ch2_total_DAVID+=cchi_DAVID;
-      
-      cout<<" t: "<<t<<" reco_DAVID: "<<three_pts_reco_DAVID<<" num: "<<smart_print(kp_S0_move[t])<<" cchi_D: "<<cchi_DAVID<<" cchi_O: "<<cchi_OUR<<endl;
-      ndof++;
+      cout<<"---three points time ordering "<<id<<" contribution---"<<endl;
+      for(int t=DAVID_tint[tsep/4][0];t<=DAVID_tint[tsep/4][1];t++)
+	{
+	  jack three_pts_reco_DAVID=(m_K*m_K-m_pi*m_pi)/(ms-mu)*f_p*ZpWW01*ZkWW00*exp(-m_K*t)*exp(-Ep*(tsep-t))/(2*Ep*2*m_K);
+	  jack three_pts_reco_OUR=(gs.F*sqrt(gs.ZWW_K_rest*gs.ZWW_Pi_move)*exp(-gs.M_K*t)*exp(-gs.E_Pi*(gs.tsep-t))/(2*gs.E_Pi*2*gs.M_K)/((ms-mu)/(gs.M_K*gs.M_K-gs.M_Pi*gs.M_Pi)));
+	  
+	  jack diff_DAVID=three_pts_reco_DAVID-kp_S0_move_d[id][t].med();
+	  jack diff_OUR=three_pts_reco_OUR-kp_S0_move_d[id][t];
+	  jack cchi_DAVID=sqr(diff_DAVID/kp_S0_move_d[id][t].err());
+	  jack cchi_OUR=sqr(diff_OUR/kp_S0_move_d[id][t].err());
+	  
+	  ch2_total_OUR+=cchi_OUR;
+	  ch2_total_DAVID+=cchi_DAVID;
+	  
+	  cout<<"t: "<<t<<" "<<(cchi_OUR.med())<<"=[("<<three_pts_reco_OUR.med()<<"-"<<kp_S0_move_d[id][t].med()<<")/"<<kp_S0_move_d[id][t].err()<<"]^2"<<endl;
+	  ndof++;
+	}
     }
   
+  //add the two points pion at rest contribution
+  cout<<"---two points pion at rest contribution---"<<endl;
   for(int t=10;t<=35;t++)
     {
-      double n=gs.pion_rest[t].med();
-      double p_OUR=fun_two_pts_migrad_fit(gs.ZWW_Pi_rest.med(),gs.M_Pi.med(),t);
-      double p_DAVID=fun_two_pts_migrad_fit(ZpWW00*ZpWW00,m_pi,t);
+      jack n=gs.pion_rest[t];
+      jack p_OUR(njacks),p_DAVID(njacks);
+      for(int ijack=0;ijack<=njacks;ijack++)
+	{
+	  p_OUR[ijack]=fun_two_pts_migrad_fit(gs.ZWW_Pi_rest[ijack],gs.M_Pi[ijack],t);
+	  p_DAVID[ijack]=fun_two_pts_migrad_fit(ZpWW00[ijack]*ZpWW00[ijack],m_pi[ijack],t);
+	}
       double e=gs.pion_rest[t].err();
-      
-      ch2_total_OUR+=sqr((n-p_OUR)/e);
+      jack cchi_OUR=sqr((n-p_OUR)/e);
+      ch2_total_OUR+=cchi_OUR;
       ch2_total_DAVID+=sqr((n-p_DAVID)/e);
+      
+      cout<<"t: "<<t<<" "<<cchi_OUR.med()<<"=[("<<p_OUR.med()<<"-"<<n.med()<<")/"<<e<<"]^2"<<endl;
       ndof++;
     }
     
   //add the two points pion moving contribution
-  for(int t=8;t<=22;t++)
+  cout<<"---two points pion moving contribution---"<<endl;
+  for(int t=6;t<=30;t++)
     {
-      double n=gs.pion_move[t].med();
-      double p_OUR=fun_two_pts_migrad_fit(gs.ZWW_Pi_move.med(),gs.E_Pi.med(),t);
-      double p_DAVID=fun_two_pts_migrad_fit(ZpWW01*ZpWW01,Ep,t);
+      jack n=gs.pion_move[t];
+      jack p_OUR(njacks),p_DAVID(njacks);
+      for(int ijack=0;ijack<=njacks;ijack++)
+	{
+	  p_OUR[ijack]=fun_two_pts_migrad_fit(gs.ZWW_Pi_move[ijack],gs.E_Pi[ijack],t);
+	  p_DAVID[ijack]=fun_two_pts_migrad_fit(ZpWW01[ijack]*ZpWW01[ijack],Ep[ijack],t);
+	}
       double e=gs.pion_move[t].err();
       
-      ch2_total_OUR+=sqr((n-p_OUR)/e);
+      jack cchi_OUR=sqr((n-p_OUR)/e);
+      ch2_total_OUR+=cchi_OUR;
       ch2_total_DAVID+=sqr((n-p_DAVID)/e);
-      //cout<<" t: "<<t<<" n: "<<n<<" p: "<<p<<" e: "<<e<<endl;
+
+      cout<<"t: "<<t<<" "<<cchi_OUR.med()<<"=[("<<p_OUR.med()<<"-"<<n.med()<<")/"<<e<<"]^2"<<endl;
       ndof++;
     }
     
   //add the two points kaon at rest contribution
+  cout<<"---two points kaon at rest contribution---"<<endl;
   for(int t=10;t<=34;t++)
     {
-      double n=gs.kaon_rest[t].med();
-      double p_OUR=fun_two_pts_migrad_fit(gs.ZWW_K_rest.med(),gs.M_K.med(),t);
-      double p_DAVID=fun_two_pts_migrad_fit(ZkWW00*ZkWW00,m_K,t);
+      jack n=gs.kaon_rest[t];
+      jack p_OUR(njacks),p_DAVID(njacks);
+      for(int ijack=0;ijack<=njacks;ijack++)
+	{
+	  p_OUR[ijack]=fun_two_pts_migrad_fit(gs.ZWW_K_rest[ijack],gs.M_K[ijack],t);
+	  p_DAVID[ijack]=fun_two_pts_migrad_fit(ZkWW00[ijack]*ZkWW00[ijack],m_K[ijack],t);
+	}
       double e=gs.kaon_rest[t].err();
       
-      ch2_total_OUR+=sqr((n-p_OUR)/e);
+      jack cchi_OUR=sqr((n-p_OUR)/e);
+      ch2_total_OUR+=cchi_OUR;
       ch2_total_DAVID+=sqr((n-p_DAVID)/e);
-      //cout<<" t: "<<t<<" n: "<<n<<" p: "<<p<<" e: "<<e<<endl;
+      
+      cout<<"t: "<<t<<" "<<cchi_OUR.med()<<"=[("<<p_OUR.med()<<"-"<<n.med()<<")/"<<e<<"]^2"<<endl;
       ndof++;
     }
-  
-  cout<<"Ndof: "<<ndof<<endl;
-  cout<<"Total ch2_OUR: "<<ch2_total_OUR/(ndof-7)<<endl;
+
+  cout<<"Npoints: "<<ndof<<endl;
+  cout<<"Total ch2_OUR("<<tsep<<"): "<<smart_print(ch2_total_OUR)<<"/"<<ndof-7<<"="<<smart_print(ch2_total_OUR/(ndof-7))<<endl;
   cout<<"Total ch2_DAVID: "<<ch2_total_DAVID/(ndof-7)<<endl;  
   
   cout<<"F: "<<smart_print(gs.F)<<endl;

@@ -68,6 +68,14 @@ void TYPE::fill_gauss(double med,double sigma,int seed)
   data[N]=med;
 }
 
+#ifdef BOOT
+boot fill_gauss(double med,double sigma,int seed,int nboots,int njacks)
+{boot e(nboots,njacks);e.fill_gauss(med,sigma,seed);return e;}
+#else
+jack fill_gauss(double med,double sigma,int seed,int njacks)
+{jack e(njacks);e.fill_gauss(med,sigma,seed);return e;}
+#endif
+
 double TYPE::err()
 {
   double sx=0,s2x=0;

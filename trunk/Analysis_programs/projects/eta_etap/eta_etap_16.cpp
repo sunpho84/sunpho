@@ -4,7 +4,7 @@
 //#define TWO_PTS_FIT two_pts_migrad_fit
 #define TWO_PTS_FIT two_pts_fit
 
-int njacks=144;
+int njacks=18;
 int T=32,TH=T/2;
 double disc_norm=1;
 

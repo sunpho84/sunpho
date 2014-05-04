@@ -171,8 +171,6 @@ int main()
 	  //load the corr and divide it by dT
 	  jvec H_P5_ME_K_PV_corr=load_3pts(info,combo);
 	  
-	  H_P5_ME_K_PV_corr/=dT;
-
 	  //store "0" for TK
 	  if(i_ME==3)
 	    {
@@ -192,6 +190,8 @@ int main()
 	      else H_P5_ME_K_PV_corr-=null_VKP5;
 	    }
 	  
+	  H_P5_ME_K_PV_corr/=dT;
+
 	  int tmin_ME=tmin_VK,tmax_ME=tmax_VK;
 	  if(i_ME==1){tmin_ME=tmin_VK;tmax_ME=tmax_VK;}
 	  if(i_ME==2){tmin_ME=tmin_V0;tmax_ME=tmax_V0;}
