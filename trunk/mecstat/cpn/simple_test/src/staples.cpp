@@ -7,23 +7,23 @@
 #include "types.hpp"
 
 //compute the staple of zeta
-void site_staple(dcomplex *staple,int site)
+void site_staple(dcomplex *staple,dcomplex *z,dcomplex *l,int site)
 {
   for(int n=0;n<N;n++) staple[n]=0;
 
   for(int mu=0;mu<NDIMS;mu++)
     {
       int site_up=neighup(site,mu);
-      for(int n=0;n<N;n++) staple[n]+=(double)2.0*zeta(site_up)[n]*conj(lambda(site)[mu]);
+      for(int n=0;n<N;n++) staple[n]+=(double)2.0*z[site_up*N+n]*conj(l[site*NDIMS+mu]);
       int site_dw=neighdw(site,mu);
-      for(int n=0;n<N;n++) staple[n]+=(double)2.0*zeta(site_dw)[n]*lambda(site_dw)[mu];
+      for(int n=0;n<N;n++) staple[n]+=(double)2.0*z[site_dw*N+n]*l[site_dw*NDIMS+mu];
     }
 }
 
 //compute the staple of lambda
-void link_staple(dcomplex &staple,int site,int mu)
+void link_staple(dcomplex &staple,dcomplex *z,int site,int mu)
 {
   staple=0;
   int site_up=neighup(site,mu);
-  for(int n=0;n<N;n++) staple+=(double)2.0*conj(zeta(site)[n])*zeta(site_up)[n];
+  for(int n=0;n<N;n++) staple+=(double)2.0*conj(z[site*N+n])*z[site_up*N+n];
 }

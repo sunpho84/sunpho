@@ -16,5 +16,6 @@ __top_builddir__bin_main_SOURCES= \
         src/overheat.cpp \
         src/random.cpp \
         src/staples.cpp \
+        src/stout.cpp \
         src/topology.cpp \
         src/zeta.cpp

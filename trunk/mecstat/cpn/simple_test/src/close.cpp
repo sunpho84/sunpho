@@ -9,8 +9,17 @@
 //close the code
 void close()
 {
-  delete[] lambda_data;
-  delete[] zeta_data;
+  delete[] lambda;
+  delete[] zeta;
+  
+  delete[] lambda_old;
+  delete[] zeta_old;
+  
+  delete[] fpi;
+  delete[] fomega;
+  
+  delete[] pi;
+  delete[] omega;
   
   delete[] neigh_data;
   

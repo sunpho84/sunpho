@@ -1,17 +1,15 @@
 #ifndef _ACTION_HPP
 #define _ACTION_HPP
-
 #include "types.hpp"
-
-double energy();
-double action();
-double site_energy(int site);
-double site_action(int site);
-double link_energy(int site,int mu);
-double link_action(int site,int mu);
-double site_staple_energy(int site,dcomplex *staple);
-double site_staple_action(int site,dcomplex *staple);
-double link_staple_energy(int site,int mu);
-double link_staple_action(int site,int mu);
-
+double action(dcomplex *z,dcomplex *l);
+double energy(dcomplex *z,dcomplex *l);
+double link_action(dcomplex *z,dcomplex *l,int site,int mu);
+double link_energy(dcomplex *z,dcomplex *l,int site,int mu);
+double link_staple_action(dcomplex *z,dcomplex *l,int site,int mu);
+double link_staple_energy(dcomplex *z,dcomplex *l,int site,int mu);
+double site_action(dcomplex *z,dcomplex *l,int site);
+double site_energy(dcomplex *z,dcomplex *l,int site);
+double site_staple_action(int site,dcomplex *staple,dcomplex *z);
+double site_staple_energy(int site,dcomplex *staple,dcomplex *z);
+double topo_action(dcomplex *l);
 #endif

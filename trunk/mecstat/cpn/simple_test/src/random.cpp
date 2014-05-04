@@ -3,6 +3,7 @@
 #endif
 
 #include <algorithm>
+#include <math.h>
 
 using namespace std;
 
@@ -47,8 +48,35 @@ double get_unif_double(double max,bool incl)
   return res;
 }
 
+//extract gaussianly with *total* standard deviation 1
+dcomplex get_gauss_complex()
+{
+#ifndef M_SQRT_2
+ #define M_SQRT_2 0.707106781186547524401
+#endif
+
+  double r=M_SQRT_2*sqrt(-2*log(1-get_unif_double(1)));
+  double q=2*M_PI*get_unif_double(1);
+    
+  return dcomplex(r*cos(q),r*sin(q));
+}
+
+//return a gaussian variable with standard deviation 1
+double get_gauss_double()
+{
+  static bool flag=false;
+  static dcomplex ref;
+  
+  //at odd turns extract
+  if(flag==false) ref=get_gauss_complex();
+  flag=!flag;
+  
+  if(flag) return ref.real()*M_SQRT2;
+  else     return ref.imag()*M_SQRT2;
+}
+
 //compute p(theta)
-inline double fun_ptheta(double theta,double a,int k)
+double fun_ptheta(double theta,double a,int k)
 {
   //compute the factor
   double f=sin(theta);
@@ -209,10 +237,10 @@ void init_system_to_hot()
     {
       //fill the lambda
       for(int mu=0;mu<NDIMS;mu++)
-	set_U1_to_rnd(lambda(site)[mu]);
+	set_U1_to_rnd(lambda[site*NDIMS+mu]);
       
       //fill the Zeta
-      set_ON_to_rnd(zeta(site));
+      set_ON_to_rnd(zeta+site*N);
     }
 }
 
@@ -222,10 +250,10 @@ void init_system_to_cold()
   for(int site=0;site<V;site++)
     {
       //fill the lambda
-      for(int mu=0;mu<NDIMS;mu++) lambda(site)[mu]=1;
+      for(int mu=0;mu<NDIMS;mu++) lambda[site*NDIMS+mu]=1;
       
       //fill the Zeta
-      for(int n=0;n<N;n++) zeta(site)[n]=(n==0);
+      for(int n=0;n<N;n++) zeta[site*N+n]=(n==0);
     }
 }
 

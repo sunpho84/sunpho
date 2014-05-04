@@ -5,15 +5,24 @@
  #include "config.hpp"
 #endif
 
+#include <vector>
+
 #include "parameters.hpp"
 #include "types.hpp"
 
-extern dcomplex *zeta_data,*lambda_data;
+using namespace std;
 
-//return zeta and lambda
-inline dcomplex *zeta(int site)
-{return zeta_data+site*N;}
-inline dcomplex *lambda(int site)
-{return lambda_data+site*NDIMS;}
+#ifndef EXTERN_DATA
+ #define EXTERN_DATA extern
+#endif
+
+EXTERN_DATA dcomplex *zeta,*lambda;
+EXTERN_DATA dcomplex *zeta_old,*lambda_old;
+EXTERN_DATA dcomplex *pi,*fpi;
+EXTERN_DATA double *omega,*fomega;
+EXTERN_DATA vector<double> topo_history;
+
+void copy_zeta_conf(dcomplex *dest,dcomplex *source);
+void copy_lambda_conf(dcomplex *dest,dcomplex *source);
 
 #endif
