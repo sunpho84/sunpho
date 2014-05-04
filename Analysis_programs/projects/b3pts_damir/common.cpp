@@ -50,6 +50,7 @@ private:
 int map_pa[2]={1,-1};
 
 info_3pts S0P5("S0P5",EVN,RE);
+info_3pts S0VK("S0VK",ODD,RE);
 info_3pts VKP5("VKP5",EVN,IM);
 info_3pts V0P5("V0P5",ODD,RE);
 info_3pts TKP5("TKP5",ODD,IM);
@@ -69,8 +70,8 @@ info_3pts BJVK("BJVK",ODD,RE);
 info_3pts BKVJ("BKVJ",ODD,RE);
 info_3pts BKV0("BKV0",EVN,IM);
 
-int n_ME=19;
-info_3pts info_ME[19]={S0P5,VKP5,V0P5,TKP5,VJVK,VKVJ,P5VK,AKVK,AJVK,AKVJ,A0VK,AKV0,A0V0,TJVK,TKVJ,BKVK,BJVK,BKVJ,BKV0};
+int n_ME=20;
+info_3pts info_ME[20]={S0P5,VKP5,V0P5,TKP5,S0VK,VJVK,VKVJ,P5VK,AKVK,AJVK,AKVJ,A0VK,AKV0,A0V0,TJVK,TKVJ,BKVK,BJVK,BKVJ,BKV0};
 
 struct combo_3pts
 {

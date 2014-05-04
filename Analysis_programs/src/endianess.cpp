@@ -88,5 +88,7 @@ void floats_to_floats_changing_endianess(float *dest,float *sour,int nfloats)
       }
 }
 
+void change_endianess(double &in)
+{doubles_to_doubles_changing_endianess(&in,&in,1);}
 void ints_to_ints_changing_endianess(int *dest,int *sour,int nints)
 {floats_to_floats_changing_endianess((float*)dest,(float*)sour,nints);}

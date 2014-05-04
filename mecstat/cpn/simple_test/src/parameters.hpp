@@ -6,10 +6,10 @@
 #endif
 
 //parameters
-const int N=21;
+const int N=2;
 const int nhmc_steps=15;
 const double beta=0.7;
-const int L=72;
+const int L=2;
 const double g=1/(N*beta);
 const double th_top=1;
 #endif

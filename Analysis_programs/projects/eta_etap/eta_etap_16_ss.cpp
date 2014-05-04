@@ -4,7 +4,7 @@
 //#define TWO_PTS_FIT two_pts_migrad_fit
 #define TWO_PTS_FIT two_pts_fit
 
-int njacks=120;
+int njacks=25;
 int T=32,TH=T/2;
 
 int tmin_ETA=11,tmax_ETA=14;
@@ -81,6 +81,23 @@ jvec load_ss(int isme_so,int isme_si)
 
 int main(int narg,char **arg)
 {
+  jvec Css=jvec_load("data_only_strange/00_00/SS_conn",T,njacks,0).simmetrized(1);
+  ofstream out_Css("plots_only_strange/00_00/Css.xmg");
+  out_Css<<"@type xydy"<<endl;
+  out_Css<<Css<<endl;
+
+  //Disconnected ss
+  jvec Dss=jvec_load("data_only_strange/00_00/SS_disconn",T,njacks,0).simmetrized(1);
+  ofstream out_Dss("plots_only_strange/00_00/Dss.xmg");
+  out_Dss<<"@type xydy"<<endl;
+  out_Dss<<Dss<<"&"<<endl;
+
+  ofstream out_ss("plots_only_strange/00_00/ss.xmg");
+  out_ss<<"@type xydy"<<endl;
+  out_ss<<Css+Dss<<"&"<<endl;
+  
+  return 0;
+  
   jvec ss[16];
   for(int isme_so=0;isme_so<4;isme_so++)
     for(int isme_si=0;isme_si<4;isme_si++)
