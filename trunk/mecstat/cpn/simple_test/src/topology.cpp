@@ -11,13 +11,14 @@
 //compute the force w.r.t topological term
 void compute_topological_force(double *f,dcomplex *l)
 {
+  int sign[2]={-1,+1};
   for(int s=0;s<V;s++)
     for(int mu=0;mu<2;mu++)
       {
 	int nu=!mu;
-	f[s*NDIMS+mu]=(l[neighup(s,mu)*NDIMS+nu]*conj(l[neighup(s,nu)*NDIMS+mu]*l[s*NDIMS+nu])-
-		       conj(l[neighup(neighdw(s,nu),mu)*NDIMS+nu]*l[neighdw(s,nu)*NDIMS+mu])*l[neighdw(s,nu)*NDIMS+nu]
-		       ).real()*th_top/(2*M_PI);
+	f[s*NDIMS+mu]=sign[mu]*(l[s*NDIMS+mu]*(l[neighup(s,mu)*NDIMS+nu]*conj(l[neighup(s,nu)*NDIMS+mu]*l[s*NDIMS+nu])-
+		          conj(l[neighup(neighdw(s,nu),mu)*NDIMS+nu]*l[neighdw(s,nu)*NDIMS+mu])*l[neighdw(s,nu)*NDIMS+nu])
+		        ).real()*th_top/(2*M_PI);
       }
 }
 

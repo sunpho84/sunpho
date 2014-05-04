@@ -149,7 +149,7 @@ void update_lambda_momenta(double eps)
   //compute topological lambda forces
   compute_topological_force(fomega,lambda);
   
-  if(1||DEBUG)
+  if(DEBUG)
     {
       int site=0;
       double eps=1.e-6;
