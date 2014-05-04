@@ -19,9 +19,9 @@ void overheat_update_site(int site)
 {
   //get the staple, its norm and energy
   dcomplex staple[N];
-  site_staple(staple,site);
+  site_staple(staple,zeta,lambda,site);
   double staple_norm=get_zeta_norm(staple);
-  double staple_energy=get_zeta_scalprod(zeta(site),staple);
+  double staple_energy=get_zeta_real_scalprod(zeta+site*N,staple);
   
   //compute theta in the simple way
   double ctheta_old=staple_energy/staple_norm;
@@ -31,8 +31,8 @@ void overheat_update_site(int site)
   if(fabs(theta_old)<1.e-4) 
     {
       dcomplex diff[N];
-      for(int n=0;n<N;n++) diff[n]=zeta(site)[n]-staple[n]/staple_norm;
-      theta_old=asin(get_zeta_scalprod(diff,diff));
+      for(int n=0;n<N;n++) diff[n]=zeta[site*N+n]-staple[n]/staple_norm;
+      theta_old=asin(get_zeta_real_scalprod(diff,diff));
     }
   
   //it theta is too small the algorithm is undefined
@@ -44,10 +44,10 @@ void overheat_update_site(int site)
       
       //extract remaining components
       double a=ctheta_new/staple_norm,b=ctheta_old/staple_norm,c=sin(theta_new)/sin(theta_old);
-      for(int n=0;n<N;n++) zeta(site)[n]=a*staple[n]-(zeta(site)[n]-b*staple[n])*c;
+      for(int n=0;n<N;n++) zeta[site*N+n]=a*staple[n]-(zeta[site*N+n]-b*staple[n])*c;
       
       //reunitarize
-      zeta_unitarize(zeta(site));
+      zeta_unitarize(zeta+site*N);
     }
   else cout<<"skipping site "<<site<<": "<<theta_old<<endl;
 }
@@ -57,11 +57,11 @@ void overheat_update_link(int site,int mu)
 {
   //get the staple
   dcomplex staple;
-  link_staple(staple,site,mu);
+  link_staple(staple,zeta,site,mu);
 
   //compute the staple norm and energy
   double staple_norm=sqrt(norm(staple));
-  double staple_energy=get_lambda_scalprod(lambda(site)[mu],staple);
+  double staple_energy=get_lambda_real_scalprod(lambda[site*NDIMS+mu],staple);
   
   //compute theta in the simple way
   double ctheta_old=staple_energy/staple_norm;
@@ -70,8 +70,8 @@ void overheat_update_link(int site,int mu)
   //if theta is too small we switch to alternative method
   if(fabs(theta_old)<1.e-4) 
     {
-      dcomplex diff=lambda(site)[mu]-staple/staple_norm;
-      theta_old=asin(get_lambda_scalprod(diff,diff));
+      dcomplex diff=lambda[site*NDIMS+mu]-staple/staple_norm;
+      theta_old=asin(get_lambda_real_scalprod(diff,diff));
     }
   
   //it theta is too small the algorithm is undefined
@@ -83,10 +83,10 @@ void overheat_update_link(int site,int mu)
       
       //extract remaining components  
       double a=ctheta_new/staple_norm,b=ctheta_old/staple_norm,c=sin(theta_new)/sin(theta_old);
-      lambda(site)[mu]=a*staple-(lambda(site)[mu]-b*staple)*c;
+      lambda[site*NDIMS+mu]=a*staple-(lambda[site*NDIMS+mu]-b*staple)*c;
       
       //reunitarize
-      lambda_unitarize(lambda(site)[mu]);
+      lambda_unitarize(lambda[site*NDIMS+mu]);
     }
 }
 

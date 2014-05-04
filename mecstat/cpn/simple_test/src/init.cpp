@@ -75,9 +75,21 @@ void init(int cond,int seed)
     }
   
   //Zeta and Lambda
-  zeta_data=new dcomplex[N*V];
-  lambda_data=new dcomplex[V*NDIMS];
+  zeta=new dcomplex[N*V];
+  lambda=new dcomplex[V*NDIMS];
 
+  //Zeta and Lambda for hmc copy
+  zeta_old=new dcomplex[N*V];
+  lambda_old=new dcomplex[V*NDIMS];
+  
+  //allocate momenta
+  pi=new dcomplex[V*N];
+  omega=new double[V*NDIMS];
+  
+  //allocate force
+  fpi=new dcomplex[V*N];
+  fomega=new double[V*NDIMS];
+  
   //set the system to hot state
   init_system_to(cond);
 }

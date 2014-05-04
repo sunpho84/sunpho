@@ -7,7 +7,7 @@
 #include "types.hpp"
 
 //return the result of the scalar product of two lambda
-double get_lambda_scalprod(dcomplex a,dcomplex b)
+double get_lambda_real_scalprod(dcomplex a,dcomplex b)
 {return (conj(a)*b).real();}
 
 //return the norm of a lambda

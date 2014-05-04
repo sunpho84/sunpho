@@ -5,6 +5,8 @@
  #include "config.hpp"
 #endif
 
+#define OMELYAN_LAMBDA 0.1931833
+
 #define RAN2_NTAB 32
 
 #define NDIMS 2

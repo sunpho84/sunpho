@@ -106,7 +106,7 @@ am___top_builddir__bin_main_OBJECTS = src/action.$(OBJEXT) \
 	src/geometry.$(OBJEXT) src/hmc.$(OBJEXT) src/init.$(OBJEXT) \
 	src/lambda.$(OBJEXT) src/main.$(OBJEXT) src/metro.$(OBJEXT) \
 	src/micro.$(OBJEXT) src/overheat.$(OBJEXT) \
-	src/random.$(OBJEXT) src/staples.$(OBJEXT) \
+	src/random.$(OBJEXT) src/staples.$(OBJEXT) src/stout.$(OBJEXT) \
 	src/topology.$(OBJEXT) src/zeta.$(OBJEXT)
 __top_builddir__bin_main_OBJECTS =  \
 	$(am___top_builddir__bin_main_OBJECTS)
@@ -293,6 +293,7 @@ __top_builddir__bin_main_SOURCES = \
         src/overheat.cpp \
         src/random.cpp \
         src/staples.cpp \
+        src/stout.cpp \
         src/topology.cpp \
         src/zeta.cpp
 
@@ -417,6 +418,7 @@ src/random.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/staples.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/stout.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/topology.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/zeta.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
@@ -449,6 +451,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/overheat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/random.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/staples.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/stout.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/topology.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/zeta.Po@am__quote@
 

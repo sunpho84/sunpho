@@ -5,17 +5,31 @@
 #include "parameters.hpp"
 #include "types.hpp"
 
+#include <iostream>
+
+using namespace std;
+
 //return a scalar product between two zetas
-void get_zeta_scalprod(dcomplex &res,dcomplex *a,dcomplex *b)
+dcomplex get_zeta_compl_scalprod(dcomplex *a,dcomplex *b)
 {
-  res=0;
+  dcomplex res=0;
   for(int n=0;n<N;n++) res+=conj(a[n])*b[n];
+  return res;
 }
-double get_zeta_scalprod(dcomplex *a,dcomplex *b)
+
+//only real part
+double get_zeta_real_scalprod(dcomplex *a,dcomplex *b)
 {
-  dcomplex sc;
-  get_zeta_scalprod(sc,a,b);
-  return sc.real();
+  double res=0;
+  for(int n=0;n<N;n++) res+=a[n].real()*b[n].real()+a[n].imag()*b[n].imag();
+  return res;
+}
+
+//orthogonalize
+void zeta_orthogonalize_with(dcomplex *z,dcomplex *w)
+{
+  double norm_with=get_zeta_real_scalprod(w,z);
+  for(int n=0;n<N;n++) z[n]-=norm_with*w[n];
 }
 
 //return inner product of zeta
