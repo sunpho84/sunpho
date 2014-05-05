@@ -15,8 +15,6 @@
 
 #include <iostream>
 
-#define DEBUG 0
-
 //draw momenta
 void generate_momenta()
 {
@@ -75,23 +73,22 @@ void compute_lambda_forces()
         fomega[site*NDIMS+mu]*=-2*beta*N;
       }
   
-  if(DEBUG)
+#ifdef DEBUG_HMC
+  int site=0;
+  double eps=1.e-6;
+  double pre_act=action(zeta,lambda);
+  for(int mu=0;mu<NDIMS;mu++)
     {
-      int site=0;
-      double eps=1.e-6;
-      double pre_act=action(zeta,lambda);
-      for(int mu=0;mu<NDIMS;mu++)
-	{
-	  double pre_val=arg(lambda[site*NDIMS+mu]);
-	  lambda[site*NDIMS+mu]=exp(dcomplex(0,1)*(pre_val+eps));
-	  
-	  double post_act=action(zeta,lambda);
-	  lambda[site*NDIMS+mu]=exp(dcomplex(0,1)*pre_val);
-	  
-	  double f=-(post_act-pre_act)/eps;
-	  cout<<"mu: "<<mu<<" f: "<<f<<" "<<f/fomega[site*NDIMS+mu]<<endl;
-	}
+      double pre_val=arg(lambda[site*NDIMS+mu]);
+      lambda[site*NDIMS+mu]=exp(dcomplex(0,1)*(pre_val+eps));
+      
+      double post_act=action(zeta,lambda);
+      lambda[site*NDIMS+mu]=exp(dcomplex(0,1)*pre_val);
+      
+      double f=-(post_act-pre_act)/eps;
+      cout<<"mu: "<<mu<<" f: "<<f<<" "<<f/fomega[site*NDIMS+mu]<<endl;
     }
+#endif
 }
 
 //compute zeta forces
@@ -105,26 +102,25 @@ void compute_zeta_forces()
       for(int n=0;n<N;n++) fpi[site*N+n]*=beta*N;
     }
   
-  if(DEBUG)
+#ifdef DEBUG_HMC
+  int site=0;
+  double eps=1.e-8;
+  double pre_act=action(zeta,lambda);
+  dcomplex pre_val[N];
+  for(int m=0;m<N;m++) pre_val[m]=zeta[site*N+m];
+  for(int n=0;n<N;n++)
     {
-      int site=0;
-      double eps=1.e-8;
-      double pre_act=action(zeta,lambda);
-      dcomplex pre_val[N];
-      for(int m=0;m<N;m++) pre_val[m]=zeta[site*N+m];
-      for(int n=0;n<N;n++)
-	{
-	  for(int m=0;m<N;m++) zeta[site*N+m]=pre_val[m];
-	  zeta[site*N+n].imag(pre_val[n].imag()+eps);
-	  zeta_unitarize(zeta+site*N);    
-	  double post_act=action(zeta,lambda);
-	  
-	  double f=-(post_act-pre_act)/eps;
-	  
-	  cout<<"n: "<<n<<" f: "<<f<<" "<<f/fpi[site*N+n].imag()<<endl;
-	}
       for(int m=0;m<N;m++) zeta[site*N+m]=pre_val[m];
+      zeta[site*N+n].imag(pre_val[n].imag()+eps);
+      zeta_unitarize(zeta+site*N);    
+      double post_act=action(zeta,lambda);
+      
+      double f=-(post_act-pre_act)/eps;
+      
+      cout<<"n: "<<n<<" f: "<<f<<" "<<f/fpi[site*N+n].imag()<<endl;
     }
+  for(int m=0;m<N;m++) zeta[site*N+m]=pre_val[m];
+#endif
 }
 
 //update pi momenta
@@ -146,30 +142,14 @@ void update_lambda_momenta(double eps)
   //update momenta
   for(int site=0;site<V;site++) for(int mu=0;mu<NDIMS;mu++) omega[site*NDIMS+mu]+=fomega[site*NDIMS+mu]*eps;
   
-  //compute topological lambda forces
-  compute_topological_force(fomega,lambda);
-  
-  if(DEBUG)
+  if(use_topo_pot)
     {
-      int site=0;
-      double eps=1.e-6;
-      double pre_act=topo_action(lambda);
-      for(int mu=0;mu<NDIMS;mu++)
-        {
-	  dcomplex pre=lambda[site*NDIMS+mu];
-	  lambda[site*NDIMS+mu]*=dcomplex(cos(eps),sin(eps));
-	  
-          double post_act=topo_action(lambda);
-	  lambda[site*NDIMS+mu]=pre;
-
-          double f=-(post_act-pre_act)/eps;
-          cout<<"mu: "<<mu<<" fnu: -("<<post_act<<"-"<<pre_act<<")/"<<eps<<"="<<-(post_act-pre_act)<<"/"<<eps<<"="<<
-	    f<<" fan: "<<fomega[site*NDIMS+mu]<<" "<<fomega[site*NDIMS+mu]/f<<endl;
-        }
+      //compute topological lambda forces
+      compute_topological_force(fomega,lambda);
+      
+      //update momenta
+      for(int site=0;site<V;site++) for(int mu=0;mu<NDIMS;mu++) omega[site*NDIMS+mu]+=fomega[site*NDIMS+mu]*eps;
     }
-
-  //update momenta
-  //for(int site=0;site<V;site++) for(int mu=0;mu<NDIMS;mu++) omega[site*NDIMS+mu]+=fomega[site*NDIMS+mu]*eps;
 }
 
 //update both momenta

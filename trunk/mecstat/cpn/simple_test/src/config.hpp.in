@@ -1,5 +1,8 @@
 /* src/config.hpp.in.  Generated from configure.ac by autoheader.  */
 
+/* Enable debug hmc */
+#undef DEBUG_HMC
+
 /* Enable good generator */
 #undef GOOD_GENERATOR
 

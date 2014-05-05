@@ -26,4 +26,13 @@ AC_ARG_ENABLE(smart-extraction,
 if test "$enable_smart_extraction" == "yes";then AC_DEFINE([SMART_EXTRACTION],1,[Enable smart extraction]) fi
 AC_MSG_RESULT([enabling smart extraction... $enable_smart_extraction])
 
+#debug hmc
+AC_ARG_ENABLE(debug-hmc,
+        AS_HELP_STRING([--enable-debug-hmc],[Enable debugging of hmc]),
+        enable_debug_hmc="${enableval}",
+        enable_debug_hmc="no")
+if test "$enable_debug_hmc" == "yes";then AC_DEFINE([DEBUG_HMC],1,[Enable debug hmc]) fi
+AM_CONDITIONAL([DEBUG_HMC],[test "$enable_debug_hmc" == "yes" ],[true],[false])
+AC_MSG_RESULT([enabling debug hmc... $enable_debug_hmc])
+
 AC_OUTPUT
