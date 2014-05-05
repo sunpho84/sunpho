@@ -27,3 +27,11 @@ void link_staple(dcomplex &staple,dcomplex *z,int site,int mu)
   int site_up=neighup(site,mu);
   for(int n=0;n<N;n++) staple+=(double)2.0*conj(z[site*N+n])*z[site_up*N+n];
 }
+
+//compute the staples of the topological term
+void topo_staple(dcomplex &staple,dcomplex *l,int s,int mu)
+{
+  int nu=!mu;
+  staple=l[neighup(s,mu)*NDIMS+nu]*conj(l[neighup(s,nu)*NDIMS+mu]*l[s*NDIMS+nu])-
+    conj(l[neighup(neighdw(s,nu),mu)*NDIMS+nu]*l[neighdw(s,nu)*NDIMS+mu])*l[neighdw(s,nu)*NDIMS+nu];
+}

@@ -589,6 +589,8 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+DEBUG_HMC_FALSE
+DEBUG_HMC_TRUE
 am__fastdepCXX_FALSE
 am__fastdepCXX_TRUE
 CXXDEPMODE
@@ -686,6 +688,7 @@ enable_silent_rules
 enable_dependency_tracking
 enable_good_generator
 enable_smart_extraction
+enable_debug_hmc
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1323,6 +1326,7 @@ Optional Features:
   --enable-good-generator Enable costly generation of random variables
   --enable-smart-extraction
                           Enable smart extraction of random variables
+  --enable-debug-hmc      Enable debugging of hmc
 
 Some influential environment variables:
   CXX         C++ compiler command
@@ -3206,6 +3210,28 @@ $as_echo "#define SMART_EXTRACTION 1" >>confdefs.h
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: enabling smart extraction... $enable_smart_extraction" >&5
 $as_echo "enabling smart extraction... $enable_smart_extraction" >&6; }
 
+#debug hmc
+# Check whether --enable-debug-hmc was given.
+if test "${enable_debug_hmc+set}" = set; then :
+  enableval=$enable_debug_hmc; enable_debug_hmc="${enableval}"
+else
+  enable_debug_hmc="no"
+fi
+
+if test "$enable_debug_hmc" == "yes";then
+$as_echo "#define DEBUG_HMC 1" >>confdefs.h
+ fi
+ if test "$enable_debug_hmc" == "yes" ; then
+  DEBUG_HMC_TRUE=
+  DEBUG_HMC_FALSE='#'
+else
+  DEBUG_HMC_TRUE='#'
+  DEBUG_HMC_FALSE=
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: enabling debug hmc... $enable_debug_hmc" >&5
+$as_echo "enabling debug hmc... $enable_debug_hmc" >&6; }
+
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
 # tests run on this system so they can be shared between configure
@@ -3336,6 +3362,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${am__fastdepCXX_TRUE}" && test -z "${am__fastdepCXX_FALSE}"; then
   as_fn_error $? "conditional \"am__fastdepCXX\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${DEBUG_HMC_TRUE}" && test -z "${DEBUG_HMC_FALSE}"; then
+  as_fn_error $? "conditional \"DEBUG_HMC\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 

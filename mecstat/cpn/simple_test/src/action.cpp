@@ -27,7 +27,10 @@ double action(dcomplex *z,dcomplex *l)
 
 //return the topological action
 double topo_action(dcomplex *l)
-{return topology(l)*th_top;}
+{
+  if(use_topo_pot) return compute_theta_pot(l);
+  else return topology(l)*th_top;
+}
 
 //return the energy/action of a single site
 //NB: the total action will be half the sum of the energy of all sites!

@@ -44,13 +44,15 @@ int main()
   ofstream topology_file("topology");
   
   //sweep with overheat-micro
-  int nsweep=1000000;
+  int nsweep=100000;
   for(int isweep=1;isweep<=nsweep;isweep++)
     {
       //metro_sweep();
       //for(int imicro=0;imicro<3;imicro++) micro_sweep();
       //overheat_sweep();
+      
       hmc_update();
+      
       double topo_sim=geometric_topology_simplified(zeta);
       //double topo=geometric_topology(zeta);
       
@@ -59,6 +61,12 @@ int main()
       for(int isto=0;isto<nsto;isto++)
 	{
 	  double topo_num=topology(lambda_old);
+	  if(use_topo_pot==2 && isto==0)
+	    {
+	      chrono_topo_past_values.push_back(topo_num);
+	      chrono_topo_past_values.push_back(-topo_num);
+	      if(isweep%40==0) draw_chrono_topo_potential();
+	    }
 	  
 	  energy_file<<isweep<<" "<<isto<<" "<<energy(lambda_old,zeta)/V/NDIMS<<endl;
 	  topology_file<<isweep<<" "<<isto<<" "<<
