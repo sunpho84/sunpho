@@ -28,7 +28,7 @@ double action(dcomplex *z,dcomplex *l)
 //return the topological action
 double topo_action(dcomplex *l)
 {
-  if(use_topo_pot) return compute_theta_pot(l);
+  if(use_topo_pot==2) return compute_theta_pot(l);
   else return topology(l)*th_top;
 }
 

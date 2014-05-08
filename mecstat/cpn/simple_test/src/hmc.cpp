@@ -243,7 +243,7 @@ void hmc_update()
   generate_momenta();
   double start_mom_action=momenta_action();
   double start_theo_action=action(zeta,lambda);
-  double start_topo_action=topo_action(lambda);
+  double start_topo_action=(use_topo_pot?topo_action(lambda):0);
   double start_action=start_mom_action+start_theo_action+start_topo_action;
   
   //integrate
@@ -252,7 +252,7 @@ void hmc_update()
   //compute final action
   double final_mom_action=momenta_action();
   double final_theo_action=action(zeta,lambda);
-  double final_topo_action=topo_action(lambda);
+  double final_topo_action=(use_topo_pot?topo_action(lambda):0);
   double final_action=final_mom_action+final_theo_action+final_topo_action;
   
   //compute difference of action and print it
