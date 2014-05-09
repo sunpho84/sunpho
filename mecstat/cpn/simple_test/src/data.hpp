@@ -20,6 +20,8 @@ EXTERN_DATA dcomplex *zeta,*lambda;
 EXTERN_DATA dcomplex *zeta_old,*lambda_old;
 EXTERN_DATA dcomplex *pi,*fpi;
 EXTERN_DATA double *omega,*fomega;
+EXTERN_DATA dcomplex *topo_staples_data,*topo_staples_supp_data;
+EXTERN_DATA dcomplex **lambda_stout;
 EXTERN_DATA vector<double> topo_history;
 
 void copy_zeta_conf(dcomplex *dest,dcomplex *source);

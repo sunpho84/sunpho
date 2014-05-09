@@ -145,8 +145,7 @@ void update_lambda_momenta(double eps)
   if(use_topo_pot)
     {
       //compute topological lambda forces
-      compute_topological_force(fomega,lambda);
-      
+      compute_topological_force(fomega,stout_rho,nstout_lev,lambda);
       //update momenta
       for(int site=0;site<V;site++) for(int mu=0;mu<NDIMS;mu++) omega[site*NDIMS+mu]+=fomega[site*NDIMS+mu]*eps;
     }
@@ -243,8 +242,9 @@ void hmc_update()
   generate_momenta();
   double start_mom_action=momenta_action();
   double start_theo_action=action(zeta,lambda);
-  double start_topo_action=(use_topo_pot?topo_action(lambda):0);
+  double start_topo_action=(use_topo_pot?topo_action(stout_rho,nstout_lev,lambda):0);
   double start_action=start_mom_action+start_theo_action+start_topo_action;
+  //cout<<"Action: mom="<<start_mom_action<<", coord="<<start_theo_action<<", topo: "<<start_topo_action<<endl;
   
   //integrate
   hmc_integrate();
@@ -252,9 +252,10 @@ void hmc_update()
   //compute final action
   double final_mom_action=momenta_action();
   double final_theo_action=action(zeta,lambda);
-  double final_topo_action=(use_topo_pot?topo_action(lambda):0);
+  double final_topo_action=(use_topo_pot?topo_action(stout_rho,nstout_lev,lambda):0);
   double final_action=final_mom_action+final_theo_action+final_topo_action;
-  
+  //cout<<"Action: mom="<<final_mom_action<<", coord="<<final_theo_action<<", topo: "<<final_topo_action<<endl;
+
   //compute difference of action and print it
   double diff_action=final_action-start_action;
   

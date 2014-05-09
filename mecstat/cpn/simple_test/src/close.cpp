@@ -5,6 +5,7 @@
 #include "data.hpp"
 #include "geometry.hpp"
 #include "random.hpp"
+#include "staples.hpp"
 
 //close the code
 void close()
@@ -20,6 +21,12 @@ void close()
   
   delete[] pi;
   delete[] omega;
+  
+  delete[] topo_staples_supp_data;
+  delete[] topo_staples_data;
+  
+  for(int istout_lev=1;istout_lev<=nstout_lev;istout_lev++) delete[] lambda_stout[istout_lev];
+  delete[] lambda_stout;
   
   delete[] neigh_data;
   

@@ -7,6 +7,7 @@
 #include "data.hpp"
 #include "geometry.hpp"
 #include "random.hpp"
+#include "staples.hpp"
 
 using namespace std;
 
@@ -89,7 +90,15 @@ void init(int cond,int seed)
   //allocate force
   fpi=new dcomplex[V*N];
   fomega=new double[V*NDIMS];
+
+  //allocate topo staples
+  topo_staples_data=new dcomplex[V*NDIMS];
+  topo_staples_supp_data=new dcomplex[V*NDIMS];
   
+  //allocate stout lambda
+  lambda_stout=new dcomplex*[nstout_lev+1];
+  for(int istout_lev=1;istout_lev<=nstout_lev;istout_lev++) lambda_stout[istout_lev]=new dcomplex[V*NDIMS];
+
   //set the system to hot state
   init_system_to(cond);
 }

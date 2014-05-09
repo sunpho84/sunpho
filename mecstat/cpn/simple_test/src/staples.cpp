@@ -35,3 +35,16 @@ void topo_staple(dcomplex &staple,dcomplex *l,int s,int mu)
   staple=l[neighup(s,mu)*NDIMS+nu]*conj(l[neighup(s,nu)*NDIMS+mu]*l[s*NDIMS+nu])-
     conj(l[neighup(neighdw(s,nu),mu)*NDIMS+nu]*l[neighdw(s,nu)*NDIMS+mu])*l[neighdw(s,nu)*NDIMS+nu];
 }
+
+//compute topological staples for all sites
+void compute_topo_staples(dcomplex *staple,dcomplex *l)
+{
+  int sign[2]={-1,+1};
+  for(int s=0;s<V;s++)
+    for(int mu=0;mu<NDIMS;mu++)
+      {
+        topo_staple(staple[s*NDIMS+mu],l,s,mu);
+        staple[s*NDIMS+mu]*=sign[mu]/(2*M_PI);
+      }
+}
+
