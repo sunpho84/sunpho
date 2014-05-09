@@ -8,6 +8,7 @@
 #include "parameters.hpp"
 #include "routines.hpp"
 #include "staples.hpp"
+#include "stout.hpp"
 #include "types.hpp"
 #include "zeta.hpp"
 
@@ -136,7 +137,7 @@ void draw_chrono_topo_potential()
 }
 
 //compute the force w.r.t topological term
-void compute_topological_force(double *f,dcomplex *l)
+void compute_unsmeared_topological_derivative(dcomplex *der,dcomplex *l)
 {
   //compute potential
   double pot;
@@ -147,11 +148,25 @@ void compute_topological_force(double *f,dcomplex *l)
   for(int s=0;s<V;s++)
     for(int mu=0;mu<2;mu++)
       {
-	dcomplex staple;
-	topo_staple(staple,l,s,mu);
-	f[s*NDIMS+mu]=sign[mu]*(l[s*NDIMS+mu]*staple).real()*pot/(2*M_PI);
+	topo_staple(der[s*NDIMS+mu],l,s,mu);
+	der[s*NDIMS+mu]*=sign[mu]*pot/(2*M_PI);
       }
+}
 
+//finish computation of the force
+void finish_topological_force(double *f,dcomplex *st,dcomplex *l)
+{
+  for(int s=0;s<V;s++)
+    for(int mu=0;mu<NDIMS;mu++)
+      f[s*NDIMS+mu]=(l[s*NDIMS+mu]*st[s*NDIMS+mu]).real();
+}
+
+//compute and finish
+void compute_unsmeared_topological_force(double *f,dcomplex *l)
+{
+  compute_unsmeared_topological_derivative(topo_staples_data,l);
+  finish_topological_force(f,topo_staples_data,l);
+  
 #ifdef DEBUG_HMC
   int site=0;
   double eps=1.e-6;
@@ -169,4 +184,17 @@ void compute_topological_force(double *f,dcomplex *l)
 	f<<" fan: "<<fomega[site*NDIMS+mu]<<" "<<fomega[site*NDIMS+mu]/f<<std::endl;
     }
 #endif
+}
+
+//compute the force for topological charge, smeared or not
+void compute_topological_force(double *f,double rho,int nlev,dcomplex *l)
+{
+  if(nlev==0) compute_unsmeared_topological_force(f,l);
+  else
+    {
+      stout_lambda_whole_stack(lambda_stout,rho,nlev,l);
+      compute_unsmeared_topological_derivative(topo_staples_data,lambda_stout[nlev]);
+      stout_remap_force(topo_staples_data,rho,nlev,lambda_stout);
+      finish_topological_force(f,topo_staples_data,l);
+    }
 }

@@ -2,6 +2,7 @@
 #define _ACTION_HPP
 #include "types.hpp"
 double action(dcomplex *z,dcomplex *l);
+double topo_action(double rho,int nlev,dcomplex *l);
 double energy(dcomplex *z,dcomplex *l);
 double link_action(dcomplex *z,dcomplex *l,int site,int mu);
 double link_energy(dcomplex *z,dcomplex *l,int site,int mu);

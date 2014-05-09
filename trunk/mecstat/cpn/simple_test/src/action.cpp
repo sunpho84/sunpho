@@ -6,6 +6,7 @@
 #include "geometry.hpp"
 #include "parameters.hpp"
 #include "staples.hpp"
+#include "stout.hpp"
 #include "topology.hpp"
 #include "types.hpp"
 
@@ -31,6 +32,18 @@ double topo_action(dcomplex *l)
   if(use_topo_pot==2) return compute_theta_pot(l);
   else return topology(l)*th_top;
 }
+
+//smeared version
+double topo_action(double rho,int nlev,dcomplex *l)
+{
+  if(nlev==0) return topo_action(l);
+  else
+    {
+      stout_lambda_whole_stack(lambda_stout,rho,nlev,l);
+      return topo_action(lambda_stout[nlev]);
+    }
+}
+
 
 //return the energy/action of a single site
 //NB: the total action will be half the sum of the energy of all sites!
