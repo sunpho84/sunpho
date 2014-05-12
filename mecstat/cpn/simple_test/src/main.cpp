@@ -91,7 +91,7 @@ int main()
   ofstream topology_file("topology");
   
   //sweep with overheat-micro
-  int nsweep=10;//0000;
+  int nsweep=100000;
   for(int isweep=1;isweep<=nsweep;isweep++)
     {
       //metro_sweep();
@@ -104,6 +104,7 @@ int main()
       //double topo=geometric_topology(zeta);
       
       //compute topologycal charge and energy
+      energy_file<<isweep<<" "<<energy(lambda,zeta)/V/NDIMS<<endl;
       stout_lambda_whole_stack(lambda_stout,stout_rho,nstout_lev,lambda);
       for(int ilev=0;ilev<=nstout_lev;ilev++)
 	{
@@ -115,7 +116,6 @@ int main()
 	    if(isweep%40==0) draw_chrono_topo_potential();
 	  }
 	  
-	  //energy_file<<isweep<<" "<<ilev<<" "<<energy(lambda_stout[ilev],zeta)/V/NDIMS<<endl;
 	  topology_file<<isweep<<" "<<ilev<<" "<<
 	    //topo<<" "<<
 	  topo_sim<<" "<<
