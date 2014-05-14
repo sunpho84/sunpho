@@ -247,6 +247,7 @@ void init_system_to_hot()
 //initialize to cold
 void init_system_to_cold()
 {
+#pragma omp parallel for
   for(int site=0;site<V;site++)
     {
       //fill the lambda

@@ -24,6 +24,8 @@
 #include "types.hpp"
 #include "zeta.hpp"
 
+#include <omp.h>
+
 using namespace std;
 
 int mu_stout=1;
@@ -85,13 +87,20 @@ int main()
     overheat_sweep();
   }
 
+#pragma omp parallel
+  {
+#pragma omp single
+    cout<<omp_get_num_threads()<<" threads"<<endl;
+  }
+  
   //CRASH("");
   ofstream energy_file("energy");
   energy_file.precision(16);
   ofstream topology_file("topology");
   
   //sweep with overheat-micro
-  int nsweep=100000;
+  int nsweep=200000;
+  int init_time=time(0);
   for(int isweep=1;isweep<=nsweep;isweep++)
     {
       //metro_sweep();
@@ -111,9 +120,9 @@ int main()
 	  double topo_num=topology(lambda_stout[ilev]);
 	  if(use_topo_pot==2 && ilev==nstout_lev)
 	  {
-	    chrono_topo_past_values.push_back(topo_num);
+	    chrono_topo_past_values.push_back(+topo_num);
 	    chrono_topo_past_values.push_back(-topo_num);
-	    if(isweep%40==0) draw_chrono_topo_potential();
+	    if(isweep%500==0) draw_chrono_topo_potential();
 	  }
 	  
 	  topology_file<<isweep<<" "<<ilev<<" "<<
@@ -125,7 +134,7 @@ int main()
       //write time progress
       //if(isweep%(nsweep/100)==0) cout<<isweep*100/nsweep<<"%, "<<time(0)-init_time<<" s"<<endl;
     }
-  
+  cout<<time(0)-init_time<<" s"<<endl;
   //check_stout_force();
   
   //finalize

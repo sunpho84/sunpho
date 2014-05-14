@@ -23,6 +23,7 @@ double geometric_topology_simplified(dcomplex *z)
 {
   double topo=0;
   int mu=0,nu=1;
+#pragma omp parallel for reduction(+:topo)
   for(int n=0;n<V;n++)
     {
       int nmu=neighup(n,mu);
@@ -46,6 +47,7 @@ double geometric_topology(dcomplex *z)
 {
   int mu=0,nu=1;
   double topo=0;
+#pragma omp parallel for reduction(+:topo)
   for(int n=0;n<V;n++)
     {
       dcomplex P1[N*N],P2[N*N],P3[N*N];
@@ -79,6 +81,7 @@ double topology(dcomplex *l)
 {
   int mu=0,nu=1;
   double topo=0;
+#pragma omp parallel for reduction(+:topo)
   for(int n=0;n<V;n++)
     topo+=(l[n*NDIMS+mu]*l[neighup(n,mu)*NDIMS+nu]*conj(l[neighup(n,nu)*NDIMS+mu]*l[n*NDIMS+nu])).imag();
   
@@ -94,9 +97,13 @@ double compute_theta_pot_der(dcomplex *l)
   for(std::vector<double>::iterator it=chrono_topo_past_values.begin();it!=chrono_topo_past_values.end();it++)
     {
       double q=*it;
-      double diff=Q-q,f=diff/chrono_topo_width,cont=pref*diff*exp(-f*f/2);
-      topote+=cont;
-      //cout<<"contribution: Q="<<Q<<", q="<<q<<", "<<cont<<endl;
+      double diff=Q-q,f=diff/chrono_topo_width;
+      if(fabs(f)<5)
+	{
+	  double cont=pref*diff*exp(-f*f/2);
+	  topote+=cont;
+	  //cout<<"contribution: Q="<<Q<<", q="<<q<<", "<<cont<<endl;
+	}
     }
   
   return topote;
@@ -109,8 +116,12 @@ double compute_theta_pot(double Q)
   for(std::vector<double>::iterator it=chrono_topo_past_values.begin();it!=chrono_topo_past_values.end();it++)
     {
       double q=*it;
-      double diff=Q-q,f=diff/chrono_topo_width,cont=exp(-f*f/2);
-      topotential+=cont;
+      double diff=Q-q,f=diff/chrono_topo_width;
+      if(fabs(f)<5)
+	{
+	  double cont=exp(-f*f/2);
+	  topotential+=cont;
+	}
     }
   topotential*=chrono_topo_coeff;
     
@@ -130,10 +141,19 @@ void draw_chrono_topo_potential()
   double Q_max=*std::max_element(chrono_topo_past_values.begin(),chrono_topo_past_values.end());
   double Q_diff=Q_max-Q_min;
   int n=ceil(Q_diff/chrono_topo_width*20);
+  if(n==0) n=1;
   double dQ=Q_diff/n;
-    
-  for(double Q=Q_min;Q<=Q_max;Q+=dQ) fout<<Q<<" "<<compute_theta_pot(Q)<<endl;
+  
+  //compute 
+  double *Qy=new double[n+1];
+#pragma omp parallel
+  for(int i=0;i<=n;i++) Qy[i]=compute_theta_pot(Q_min+i*dQ);
+  
+  //write
+  for(int i=0;i<=n;i++) fout<<Q_min+i*dQ<<" "<<Qy[i]<<endl;
   fout.close();
+  
+  delete[] Qy;
 }
 
 //compute the force w.r.t topological term
@@ -145,6 +165,7 @@ void compute_unsmeared_topological_derivative(dcomplex *der,dcomplex *l)
   else pot=th_top;
 
   int sign[2]={-1,+1};
+#pragma omp parallel for
   for(int s=0;s<V;s++)
     for(int mu=0;mu<2;mu++)
       {
@@ -156,6 +177,7 @@ void compute_unsmeared_topological_derivative(dcomplex *der,dcomplex *l)
 //finish computation of the force
 void finish_topological_force(double *f,dcomplex *st,dcomplex *l)
 {
+#pragma omp parallel for
   for(int s=0;s<V;s++)
     for(int mu=0;mu<NDIMS;mu++)
       f[s*NDIMS+mu]=(l[s*NDIMS+mu]*st[s*NDIMS+mu]).real();

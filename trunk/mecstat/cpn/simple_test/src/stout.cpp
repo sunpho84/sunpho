@@ -15,23 +15,22 @@ void stout_lambda(dcomplex *ext_dest,double rho,dcomplex *source)
   if(ext_dest==source) dest=new dcomplex[V*NDIMS];
   else dest=ext_dest;
   
-  for(int mu=0;mu<2;mu++)
-    {
-      int nu=!mu;                         // EDC
-      for(int site=0;site<V;site++)       // FAB
-	{
-	  int A=site,B=neighup(A,nu);//,C=neighup(B,mu);
-	  int D=neighup(A,mu),F=neighdw(A,nu),E=neighup(F,mu);
-	  
-	  //compute the generator
-	  double Q=rho*(conj(source[A*NDIMS+mu])*(source[A*NDIMS+nu]*source[B*NDIMS+mu]*conj(source[D*NDIMS+nu])+
-						  conj(source[F*NDIMS+nu])*source[F*NDIMS+mu]*source[E*NDIMS+nu]
-						  )).imag();
-	  
-	  //set it
-	  dest[site*NDIMS+mu]=dcomplex(cos(Q),sin(Q))*source[site*NDIMS+mu];
-	}
-    }
+#pragma omp parallel for
+  for(int site=0;site<V;site++)
+    for(int mu=0;mu<2;mu++)
+      {
+	int nu=!mu;
+	int A=site,B=neighup(A,nu);//,C=neighup(B,mu);
+	int D=neighup(A,mu),F=neighdw(A,nu),E=neighup(F,mu);
+	
+	//compute the generator
+	double Q=rho*(conj(source[A*NDIMS+mu])*(source[A*NDIMS+nu]*source[B*NDIMS+mu]*conj(source[D*NDIMS+nu])+
+						conj(source[F*NDIMS+nu])*source[F*NDIMS+mu]*source[E*NDIMS+nu]
+						)).imag();
+	
+	//set it
+	dest[site*NDIMS+mu]=dcomplex(cos(Q),sin(Q))*source[site*NDIMS+mu];
+      }
   
   //if needed copy back to true dest
   if(ext_dest==source)
@@ -52,6 +51,7 @@ void stout_lambda_whole_stack(dcomplex **out,double rho,int nstout_lev,dcomplex 
 //remap the force by a single level
 void stout_remap_force(dcomplex *&f_out,dcomplex *&f_in,double rho,dcomplex *l_unsm,dcomplex *l_sm)
 {
+#pragma omp parallel for
   for(int site=0;site<V;site++)
     for(int mu=0;mu<NDIMS;mu++)
       {
