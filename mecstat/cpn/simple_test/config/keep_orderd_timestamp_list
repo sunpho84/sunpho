@@ -12,5 +12,6 @@
 ./config/missing
 ./configure
 ./configure.ac
+./src/config.hpp.in
 ./Makefile.am
 ./Makefile.in

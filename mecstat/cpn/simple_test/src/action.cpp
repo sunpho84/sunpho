@@ -14,6 +14,7 @@
 double energy(dcomplex *z,dcomplex *l)
 {
   double res=0;
+#pragma omp parallel for reduction(+:res)
   for(int site=0;site<V;site++)
     for(int mu=0;mu<NDIMS;mu++)
       {

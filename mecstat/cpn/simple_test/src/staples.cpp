@@ -40,6 +40,7 @@ void topo_staple(dcomplex &staple,dcomplex *l,int s,int mu)
 void compute_topo_staples(dcomplex *staple,dcomplex *l)
 {
   int sign[2]={-1,+1};
+#pragma omp parallel for
   for(int s=0;s<V;s++)
     for(int mu=0;mu<NDIMS;mu++)
       {

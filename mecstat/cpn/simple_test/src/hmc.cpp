@@ -39,6 +39,7 @@ void generate_momenta()
 double zeta_momenta_action()
 {
   double act=0;
+#pragma omp parallel for reduction(+:act)
   for(int site=0;site<V;site++) act+=get_zeta_real_scalprod(pi+site*N,pi+site*N);
 
   return act/2;
@@ -48,6 +49,7 @@ double zeta_momenta_action()
 double lambda_momenta_action()
 {
   double act=0;
+#pragma omp parallel for reduction(+:act)
   for(int site=0;site<V;site++) for(int mu=0;mu<NDIMS;mu++) act+=sqr(omega[site*NDIMS+mu]);
   
   return act/2;
@@ -60,6 +62,7 @@ double momenta_action()
 //compute lambda force
 void compute_lambda_forces()
 {
+#pragma omp parallel for
   for(int site=0;site<V;site++)
     for(int mu=0;mu<NDIMS;mu++)
       {
@@ -95,6 +98,7 @@ void compute_lambda_forces()
 void compute_zeta_forces()
 {
   //zeta orthogonalized spin projection
+#pragma omp parallel for
   for(int site=0;site<V;site++)
     {
       site_staple(fpi+site*N,zeta,lambda,site);
@@ -130,6 +134,7 @@ void update_zeta_momenta(double eps)
   compute_zeta_forces();
 
   //update zeta momenta
+#pragma omp parallel for
   for(int site=0;site<V;site++) for(int n=0;n<N;n++) pi[site*N+n]+=fpi[site*N+n]*eps;
 }
 
@@ -140,6 +145,7 @@ void update_lambda_momenta(double eps)
   compute_lambda_forces();
 
   //update momenta
+#pragma omp parallel for
   for(int site=0;site<V;site++) for(int mu=0;mu<NDIMS;mu++) omega[site*NDIMS+mu]+=fomega[site*NDIMS+mu]*eps;
   
   if(use_topo_pot)
@@ -147,6 +153,7 @@ void update_lambda_momenta(double eps)
       //compute topological lambda forces
       compute_topological_force(fomega,stout_rho,nstout_lev,lambda);
       //update momenta
+#pragma omp parallel for
       for(int site=0;site<V;site++) for(int mu=0;mu<NDIMS;mu++) omega[site*NDIMS+mu]+=fomega[site*NDIMS+mu]*eps;
     }
 }
@@ -161,6 +168,7 @@ void update_momenta(double eps)
 //update the zetas
 void update_zeta_positions(double eps)
 {
+#pragma omp parallel for
   for(int site=0;site<V;site++)
     {
       //compute the norm of pi, to form the matrix
@@ -188,6 +196,7 @@ void update_zeta_positions(double eps)
 void update_lambda_positions(double eps)
 {
   //update lambda
+#pragma omp parallel for
   for(int site=0;site<V;site++)
     for(int mu=0;mu<NDIMS;mu++)
       lambda[site*NDIMS+mu]*=dcomplex(cos(eps*omega[site*NDIMS+mu]),sin(eps*omega[site*NDIMS+mu]));

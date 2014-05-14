@@ -6,6 +6,7 @@
 void check_system_unitarity(double res)
 {
   //check all sites
+#pragma omp parallel for
   for(int site=0;site<V;site++)
     {
       double dev_zeta=check_zeta_unitarity(zeta(site));
