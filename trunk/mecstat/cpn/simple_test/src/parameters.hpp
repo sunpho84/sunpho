@@ -17,7 +17,7 @@ const double th_top=2;
 const int use_topo_pot=0;
 
 const int nstout_lev=3;
-const double stout_rho=0.08;
+const double stout_rho=0.15;
 
 const double chrono_topo_coeff=0.3;
 const double chrono_topo_width=0.3;

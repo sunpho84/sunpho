@@ -135,8 +135,6 @@ double compute_theta_pot(dcomplex *l)
 //draw the chronological topological potential
 void draw_chrono_topo_potential()
 {
-  ofstream fout("topo_potential");
-    
   double Q_min=*std::min_element(chrono_topo_past_values.begin(),chrono_topo_past_values.end());
   double Q_max=*std::max_element(chrono_topo_past_values.begin(),chrono_topo_past_values.end());
   double Q_diff=Q_max-Q_min;
@@ -150,6 +148,7 @@ void draw_chrono_topo_potential()
   for(int i=0;i<=n;i++) Qy[i]=compute_theta_pot(Q_min+i*dQ);
   
   //write
+  ofstream fout("topo_potential");
   for(int i=0;i<=n;i++) fout<<Q_min+i*dQ<<" "<<Qy[i]<<endl;
   fout.close();
   
