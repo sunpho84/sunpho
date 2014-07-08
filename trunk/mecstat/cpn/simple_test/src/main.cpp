@@ -7,6 +7,7 @@
 
 #include "action.hpp"
 #include "close.hpp"
+#include "corr.hpp"
 #include "data.hpp"
 #include "debug.hpp"
 #include "geometry.hpp"
@@ -113,7 +114,7 @@ int main()
       //double topo=geometric_topology(zeta);
       
       //compute topologycal charge and energy
-      energy_file<<isweep<<" "<<energy(lambda,zeta)/V/NDIMS<<endl;
+      energy_file<<isweep<<" "<<energy(zeta,lambda)/V/NDIMS<<endl;
       stout_lambda_whole_stack(lambda_stout,stout_rho,nstout_lev,lambda);
       for(int ilev=0;ilev<=nstout_lev;ilev++)
 	{
@@ -127,15 +128,17 @@ int main()
 	  
 	  topology_file<<isweep<<" "<<ilev<<" "<<
 	    //topo<<" "<<
-	  topo_sim<<" "<<
-	  topo_num<<endl;
+	    topo_sim<<" "<<
+	    topo_num<<endl;
 	}
 
-      //write time progress
-      //if(isweep%(nsweep/100)==0) cout<<isweep*100/nsweep<<"%, "<<time(0)-init_time<<" s"<<endl;
+      double corr[L];
+      compute_corr(corr,zeta);
+      for(int i=0;i<L;i++) cout<<i<<" "<<corr[i]<<endl;
     }
+  
+  //write lasted time
   cout<<time(0)-init_time<<" s"<<endl;
-  //check_stout_force();
   
   //finalize
   close();

@@ -4,6 +4,7 @@ bin_PROGRAMS=$(top_builddir)/bin/main
 __top_builddir__bin_main_SOURCES= \
         src/action.cpp \
         src/close.cpp \
+        src/corr.cpp \
         src/data.cpp \
         src/debug.cpp \
         src/geometry.cpp \

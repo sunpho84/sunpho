@@ -102,10 +102,10 @@ am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__dirstamp = $(am__leading_dot)dirstamp
 am___top_builddir__bin_main_OBJECTS = src/action.$(OBJEXT) \
-	src/close.$(OBJEXT) src/data.$(OBJEXT) src/debug.$(OBJEXT) \
-	src/geometry.$(OBJEXT) src/hmc.$(OBJEXT) src/init.$(OBJEXT) \
-	src/lambda.$(OBJEXT) src/main.$(OBJEXT) src/metro.$(OBJEXT) \
-	src/micro.$(OBJEXT) src/overheat.$(OBJEXT) \
+	src/close.$(OBJEXT) src/corr.$(OBJEXT) src/data.$(OBJEXT) \
+	src/debug.$(OBJEXT) src/geometry.$(OBJEXT) src/hmc.$(OBJEXT) \
+	src/init.$(OBJEXT) src/lambda.$(OBJEXT) src/main.$(OBJEXT) \
+	src/metro.$(OBJEXT) src/micro.$(OBJEXT) src/overheat.$(OBJEXT) \
 	src/random.$(OBJEXT) src/staples.$(OBJEXT) src/stout.$(OBJEXT) \
 	src/topology.$(OBJEXT) src/zeta.$(OBJEXT)
 __top_builddir__bin_main_OBJECTS =  \
@@ -281,6 +281,7 @@ ACLOCAL_AMFLAGS = -I m4
 __top_builddir__bin_main_SOURCES = \
         src/action.cpp \
         src/close.cpp \
+        src/corr.cpp \
         src/data.cpp \
         src/debug.cpp \
         src/geometry.cpp \
@@ -401,6 +402,7 @@ src/$(DEPDIR)/$(am__dirstamp):
 src/action.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/close.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/corr.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/data.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/debug.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/geometry.$(OBJEXT): src/$(am__dirstamp) \
@@ -439,6 +441,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/action.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/close.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/corr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/data.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/debug.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/geometry.Po@am__quote@
