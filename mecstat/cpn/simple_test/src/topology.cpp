@@ -94,17 +94,19 @@ double compute_theta_pot_der(dcomplex *l)
   double topote=0,pref=-chrono_topo_coeff/sqr(chrono_topo_width);
   double Q=topology(l);
   
-  for(std::vector<double>::iterator it=chrono_topo_past_values.begin();it!=chrono_topo_past_values.end();it++)
-    {
-      double q=*it;
-      double diff=Q-q,f=diff/chrono_topo_width;
-      if(fabs(f)<5)
-	{
-	  double cont=pref*diff*exp(-f*f/2);
-	  topote+=cont;
-	  //cout<<"contribution: Q="<<Q<<", q="<<q<<", "<<cont<<endl;
-	}
-    }
+  //put inside the barrier
+  if(Q>-chrono_topo_barr && Q<+chrono_topo_barr)
+    for(std::vector<double>::iterator it=chrono_topo_past_values.begin();it!=chrono_topo_past_values.end();it++)
+      {
+	double q=*it;
+	double diff=Q-q,f=diff/chrono_topo_width;
+	if(fabs(f)<5)
+	  {
+	    double cont=pref*diff*exp(-f*f/2);
+	    topote+=cont;
+	    //cout<<"contribution: Q="<<Q<<", q="<<q<<", "<<cont<<endl;
+	  }
+      }
   
   return topote;
 }
@@ -112,6 +114,10 @@ double compute_theta_pot_der(dcomplex *l)
 //compute the topodynamical potential using past history
 double compute_theta_pot(double Q)
 {
+  //put inside the barrier
+  if(Q<-chrono_topo_barr) Q=-chrono_topo_barr;
+  if(Q>+chrono_topo_barr) Q=+chrono_topo_barr;
+  
   double topotential=0;
   for(std::vector<double>::iterator it=chrono_topo_past_values.begin();it!=chrono_topo_past_values.end();it++)
     {
