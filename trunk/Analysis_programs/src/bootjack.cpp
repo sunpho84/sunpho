@@ -322,6 +322,16 @@ string smart_print(TYPE a)
   return o.str();
 }
 
+string raw_print(TYPE a)
+{
+  ostringstream os;
+  os.precision(16);
+  for(int i=0;i<=a.N;i++) os<<a[i]<<" ";
+  
+  return os.str();
+}
+
+
 double med(TYPE x)
 {
   double s=0;

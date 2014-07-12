@@ -20,6 +20,7 @@ EXTERN_ACTION double contr_act_equals,contr_act_diff;
 
 double compute_action_internal();
 double compute_energy_internal();
+double compute_magnetization_internal();
 double compute_action(z3_t *phi);
 int compute_N(z3_t *phi);
 int compute_N0(z3_t *phi);

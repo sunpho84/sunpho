@@ -36,7 +36,7 @@ void update_heat(int s,int itraj)
   int icase=ntypes[0]*(2*NDIMS+1)+ntypes[1];
   
   //compute transition probabilities
-  double act[3],ave_act=0;;
+  double act[3],ave_act=0;
   for(z3_t d=0;d<3;d++)
     {
       double base_act=act_contr_tab[icase][d];
@@ -130,6 +130,7 @@ int main(int narg,char **arg)
   //update
   ofstream data_file("/tmp/heat/data.xmg");
   ofstream energy_file("/tmp/heat/energy.xmg");
+  ofstream magnetization_file("/tmp/heat/magnetization.xmg");
   for(int itraj=0;itraj<ntraj;itraj++)
     {
       update_heat(itraj);
@@ -146,6 +147,7 @@ int main(int narg,char **arg)
       //write data_N
       data_file<<data_N[itraj].N<<" "<<data_N[itraj].N0<<endl;
       energy_file<<compute_energy_internal()/V<<" "<<endl;
+      magnetization_file<<compute_magnetization_internal()/V<<" "<<endl;
     }
   
   //write the histogram on N
