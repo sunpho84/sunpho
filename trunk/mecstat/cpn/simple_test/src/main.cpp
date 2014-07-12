@@ -2,8 +2,9 @@
  #include "config.hpp"
 #endif
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <stdarg.h>
 
 #include "action.hpp"
 #include "close.hpp"
