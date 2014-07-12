@@ -27,7 +27,7 @@ int T,TH,tsep;
 const int njack=16;
 
 int ibeta;
-int nh=10,nl=2,nm=nh+nl,nm_S0=3;
+int nh=10,nli=2,nm=nh+nli,nm_S0=3;
 double *mass;
 
 int nth_S0;

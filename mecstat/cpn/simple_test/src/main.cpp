@@ -32,16 +32,20 @@ using namespace std;
 int mu_stout=1;
 int site_stout=4;
 
-void gauge_transform()
+void gauge_transform(int s)
 {
-  double t=0.4;
+  double t=rand()/((double)RAND_MAX)*2*M_PI;
+  
   dcomplex et(cos(t),sin(t));
   
-  lambda[site_stout*NDIMS+0]*=et;
-  lambda[site_stout*NDIMS+1]*=et;
-  lambda[neighdw(site_stout,0)*NDIMS+0]*=conj(et);
-  lambda[neighdw(site_stout,1)*NDIMS+1]*=conj(et);
+  for(int n=0;n<N;n++) zeta[s*N+n]*=conj(et);
+  lambda[s*NDIMS+0]*=et;
+  lambda[s*NDIMS+1]*=et;
+  lambda[neighdw(s,0)*NDIMS+0]*=conj(et);
+  lambda[neighdw(s,1)*NDIMS+1]*=conj(et);
 }
+void gauge_transform()
+{for(int s=0;s<V;s++) gauge_transform(s);}
 
 //compute functional with stout
 double compute_functional()
@@ -49,7 +53,6 @@ double compute_functional()
   stout_lambda_whole_stack(lambda_stout,stout_rho,nstout_lev,lambda);
   return topology(lambda_stout[nstout_lev]);
 }
-
 
 //compute the force
 void check_stout_force()
@@ -77,44 +80,91 @@ void check_stout_force()
     f<<" fan: "<<fomega[site_check*NDIMS+mu_check]<<", ratio-1: "<<fomega[site_check*NDIMS+mu_check]/f-1<<std::endl;
 }
 
+//crash promptin error message
+void crash(const char *temp,...)
+{
+  char buffer[1024];
+  va_list args;
+
+  va_start(args,temp);
+  vsprintf(buffer,temp,args);
+  va_end(args);
+
+  cerr<<"ERROR: "<<buffer<<endl;
+  exit(1);
+}
+
+//read an element from input file
+template <class T> void read(T &out,ifstream &in,string is)
+{
+  string s;
+  if(!(in>>s)) crash("impossible to read expect string \"%s\"",is.c_str());
+  if(s!=is) crash("obtained %s while reading %s",s.c_str(),is.c_str());
+  if(!(in>>out)) crash("reading data");
+}
+
 int main()
 {
-  //initialize
-  init(HOT,100);
+  //read parameters
+  ifstream input("input");
+  if(!input.good()) crash("opening input");
+  read(N,input,"N");
+  read(L,input,"L");
+  read(beta,input,"Beta");
+  g=1/(N*beta);
+  int seed;
+  read(seed,input,"Seed");
+  int nsweep,nterm,nmicro;
+  read(nsweep,input,"NSweep");
+  read(nterm,input,"NTerm");
+  read(nmicro,input,"NMicro");
+  read(nstout_lev,input,"NStoutLev");
+  read(stout_rho,input,"StoutRho");
   
-  for(int itraj=0;itraj<10;itraj++)
+  //initialize
+  init(HOT,seed);
+  
+  //thermalization
+  for(int isweep=0;isweep<nterm;isweep++)
   {
-    for(int imicro=0;imicro<3;imicro++) micro_sweep();
+    for(int imicro=0;imicro<nmicro;imicro++) micro_sweep();
     overheat_sweep();
   }
-
+  
+  //print number of threads
 #pragma omp parallel
   {
 #pragma omp single
     cout<<omp_get_num_threads()<<" threads"<<endl;
   }
   
-  //CRASH("");
+  //open output files
   ofstream energy_file("energy");
-  energy_file.precision(16);
   ofstream topology_file("topology");
+  ofstream corr_file("corr");
+  ofstream corrd_file("corrd");
+  ofstream mag_file("mag");
+  energy_file.precision(12);
+  topology_file.precision(12);
+  corr_file.precision(12);
+  corrd_file.precision(12);
+  mag_file.precision(12);
   
   //sweep with overheat-micro
-  int nsweep=200000;
   int init_time=time(0);
   for(int isweep=1;isweep<=nsweep;isweep++)
     {
       //metro_sweep();
-      //for(int imicro=0;imicro<3;imicro++) micro_sweep();
-      //overheat_sweep();
+      for(int imicro=0;imicro<nmicro;imicro++) micro_sweep();
+      overheat_sweep();
       
-      hmc_update();
+      //hmc_update();
       
-      double topo_sim=geometric_topology_simplified(zeta);
-      //double topo=geometric_topology(zeta);
-      
-      //compute topologycal charge and energy
+      //compute energy and topological charge
       energy_file<<isweep<<" "<<energy(zeta,lambda)/V/NDIMS<<endl;
+      double topo_sim=geometric_topology_simplified(zeta);
+      
+      //compute topologycal charge
       stout_lambda_whole_stack(lambda_stout,stout_rho,nstout_lev,lambda);
       for(int ilev=0;ilev<=nstout_lev;ilev++)
 	{
@@ -131,10 +181,13 @@ int main()
 	    topo_sim<<" "<<
 	    topo_num<<endl;
 	}
-
-      double corr[L];
-      compute_corr(corr,zeta);
-      for(int i=0;i<L;i++) cout<<i<<" "<<corr[i]<<endl;
+      
+      //compute the correlation function
+      double mag0,mag1,corr[L],corrd[L];
+      compute_corr(mag0,mag1,corr,corrd,zeta);
+      for(int i=0;i<=L/2;i++) corr_file<<isweep<<" "<<i<<" "<<corr[i]<<endl;
+      for(int i=0;i<=L/2;i++) corrd_file<<isweep<<" "<<i/sqrt(2)<<" "<<corrd[i]<<endl;
+      mag_file<<isweep<<" "<<mag0<<" "<<mag1<<endl;
     }
   
   //write lasted time

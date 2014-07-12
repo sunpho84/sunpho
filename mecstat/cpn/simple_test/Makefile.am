@@ -15,6 +15,7 @@ __top_builddir__bin_main_SOURCES= \
         src/metro.cpp \
         src/micro.cpp \
         src/overheat.cpp \
+        src/parameters.cpp \
         src/random.cpp \
         src/staples.cpp \
         src/stout.cpp \

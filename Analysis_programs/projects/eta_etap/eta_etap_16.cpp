@@ -4,46 +4,14 @@
 //#define TWO_PTS_FIT two_pts_migrad_fit
 #define TWO_PTS_FIT two_pts_fit
 
-int njacks=18;
+int njacks=30;
 int T=32,TH=T/2;
 double disc_norm=1;
 
 int tmin_ETA=11,tmax_ETA=14;
 int tmin_ETAP=5,tmax_ETAP=6;
-int tmin_two_states_fit=4,tmax_two_states_fit=14;
 
 double a=1/1.75;
-
-//fit the mass and the matrix element in SS and SL combo
-double *c_two_states_fit,*e_two_states_fit;
-
-double fun_two_states_migrad_fit(double Z2ETA,double META,double Z2ETAP,double METAP,double t)
-{
-  double c1=Z2ETA*exp(-META*TH)*cosh(META*(TH-t))/META;
-  double c2=Z2ETAP*exp(-METAP*TH)*cosh(METAP*(TH-t))/METAP;
-  
-  return c1+c2;
-}
-
-void ch2_two_states_migrad_fit(int &npar,double *fuf,double &ch,double *p,int flag)
-{
-  ch=0;
-  double Z2ETA=p[0];
-  double META=p[1];
-  double Z2ETAP=p[2];
-  double METAP=p[3];
-  
-  for(int t=tmin_two_states_fit;t<=min(tmax_two_states_fit,TH);t++)
-    {
-      double num=c_two_states_fit[t];
-      double teo=fun_two_states_migrad_fit(Z2ETA,META,Z2ETAP,METAP,t);
-      double diff=num-teo;
-      double err=e_two_states_fit[t];
-      double cont=sqr(diff/err);
-      ch+=cont;
-      //if(flag==3) cout<<" t="<<t<<", diff=("<<num<<"-"<<teo<<")="<<diff<<" err="<<err<<" cont="<<cont<<endl;
-    }
-}
 
 int main(int narg,char **arg)
 {

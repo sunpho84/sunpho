@@ -5,19 +5,21 @@
  #include "config.hpp"
 #endif
 
+#ifndef EXTERN_PARAMETERS
+#define EXTERN_PARAMETERS extern
+#endif
+
 //parameters
-//const int N=21;
-//const int N=10;
-const int N=2;
 const int nhmc_steps=18;
-const double beta=1.1;
-const int L=36;
-const double g=1/(N*beta);
+EXTERN_PARAMETERS int N;
+EXTERN_PARAMETERS double beta;
+EXTERN_PARAMETERS int L;
+EXTERN_PARAMETERS double g;
 const double th_top=0;
 const int use_topo_pot=0;
 
-const int nstout_lev=2;
-const double stout_rho=0.2;
+EXTERN_PARAMETERS int nstout_lev;
+EXTERN_PARAMETERS double stout_rho;
 
 const int chrono_topo_after=300;
 const double chrono_topo_coeff=0.2;

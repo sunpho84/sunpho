@@ -130,7 +130,7 @@ int TH_two_pts_fit;
 int tmin_two_pts_fit;
 int tmax_two_pts_fit;
 
-double fun_two_pts_migrad_fit(double Z2,double M,double t)
+template <class T> T fun_two_pts_migrad_fit(T Z2,T M,double t)
 {return Z2*exp(-M*TH_two_pts_fit)*cosh(M*(TH_two_pts_fit-t))/M;}
 
 void ch2_two_pts_migrad_fit(int &npar,double *fuf,double &ch,double *p,int flag)
@@ -206,6 +206,8 @@ void two_pts_migrad_fit(jack &M,jack &Z2,jvec corr,int tmin,int tmax,const char 
 
 //fit the mass and the matrix element in SS and SL combo
 double *c_two_pts_SL_fit[2],*e_two_pts_SL_fit[2];
+double *c_two_pts_SL_fit_teo[2];
+double *c_two_pts_SL_fit_ch2_contr[2];
 int TH_two_pts_SL_fit;
 int tmin_two_pts_SL_fit[2];
 int tmax_two_pts_SL_fit[2];
@@ -223,90 +225,248 @@ void ch2_two_pts_SL_fit(int &npar,double *fuf,double &ch,double *p,int flag)
   for(int t=tmin_two_pts_SL_fit[0];t<=min(tmax_two_pts_SL_fit[0],TH_two_pts_SL_fit);t++)
     {
       double num=c_two_pts_SL_fit[0][t];
-      double teo=fun_two_pts_SL_fit(ZL,ZS,M,t);
+      double teo=c_two_pts_SL_fit_teo[0][t]=fun_two_pts_SL_fit(ZL,ZS,M,t);
       double diff=num-teo;
       double err=e_two_pts_SL_fit[0][t];
-      double cont=sqr(diff/err);
+      double cont=c_two_pts_SL_fit_ch2_contr[0][t]=sqr(diff/err);
       ch+=cont;
       if(flag==3) cout<<"SL, t="<<t<<", diff=("<<num<<"-"<<teo<<")="<<diff<<" err="<<err<<" cont="<<cont<<endl;
     }
   
   for(int t=tmin_two_pts_SL_fit[1];t<=min(tmax_two_pts_SL_fit[1],TH_two_pts_SL_fit);t++)
     {
-      double diff=c_two_pts_SL_fit[1][t]-fun_two_pts_SL_fit(ZS,ZS,M,t);
+      double num=c_two_pts_SL_fit[1][t];
+      double teo=c_two_pts_SL_fit_teo[1][t]=fun_two_pts_SL_fit(ZS,ZS,M,t);
+      double diff=num-teo;
       double err=e_two_pts_SL_fit[1][t];
-      double cont=sqr(diff/err);
+      double cont=c_two_pts_SL_fit_ch2_contr[1][t]=sqr(diff/err);
       ch+=cont;
       if(flag==3) cout<<"SS, t="<<t<<", diff="<<diff<<" err="<<err<<" cont="<<cont<<endl;
     }
 }
 
-void two_pts_SL_fit(jack &M,jack &ZL,jack &ZS,jvec corrSL,jvec corrSS,int tminL,int tmaxL,int tminS,int tmaxS,const char *path1=NULL,const char *path2=NULL)
+void two_pts_SL_fit(jack &M,jack &ZL,jack &ZS,jvec corrSL,jvec corrSS,int tminSL,int tmaxSL,int tminSS,int tmaxSS,const char *path1=NULL,const char *path2=NULL,const char *path_cls=NULL)
 {
-  jvec ecorrSL=effective_mass(corrSL);
-  jvec ecorrSS=effective_mass(corrSS);
+  //perform the fit and set an initial estimate
+  jack MSL,MSS,ZSL,ZSS;
+  two_pts_fit(MSL,ZSL,corrSL,tminSL,tmaxSL);
+  two_pts_fit(MSS,ZSS,corrSS,tminSS,tmaxSS);
   
-  jack ML=constant_fit(ecorrSL,tminL,tmaxL,NULL);
-  //jack MS=constant_fit(ecorrSS,tminS,tmaxS,NULL);
-  M=ML;//jack_weighted_average(ML,MS);
-  jvec tempSL(corrSS.nel,corrSS.njack),tempSS(corrSS.nel,corrSS.njack);
-  int TH=tempSS.nel-1;
-  for(int t=0;t<=TH;t++)
-    {
-      tempSL[t]=corrSL[t]/exp(-M*TH)/cosh(M*(TH-t))*M;
-      tempSS[t]=corrSS[t]/exp(-M*TH)/cosh(M*(TH-t))*M;
-    }
+  //get estimates for ZS and ZL
+  ZS=sqrt(ZSS);
+  ZL=ZSL/ZS;
   
-  ZS=sqrt(constant_fit(tempSS,tminS,tmaxS,NULL));
-  ZL=constant_fit(tempSL,tminL,tmaxL,NULL)/ZS;
-  
+  //define minimzer
   TMinuit minu;
   minu.SetPrintLevel(-1);
   minu.SetFCN(ch2_two_pts_SL_fit);
-  minu.DefineParameter(1,"ZL",ZL.med(),0.001,0,0);
-  minu.DefineParameter(2,"ZS",ZS.med(),0.001,0,0);
   
-  int njack=ML.njack;
+  //copy parameters
+  int njack=MSL.njack;
+  int TH=TH_two_pts_SL_fit=corrSL.nel-1;
+  tmin_two_pts_SL_fit[0]=tminSL;
+  tmin_two_pts_SL_fit[1]=tminSS;
+  tmax_two_pts_SL_fit[0]=tmaxSL;
+  tmax_two_pts_SL_fit[1]=tmaxSS;
+  
+  //define temporary structures
   c_two_pts_SL_fit[0]=new double[TH+1];
   c_two_pts_SL_fit[1]=new double[TH+1];
+  c_two_pts_SL_fit_ch2_contr[0]=new double[TH+1];
+  c_two_pts_SL_fit_ch2_contr[1]=new double[TH+1];
+  c_two_pts_SL_fit_teo[0]=new double[TH+1];
+  c_two_pts_SL_fit_teo[1]=new double[TH+1];
   e_two_pts_SL_fit[0]=new double[TH+1];
   e_two_pts_SL_fit[1]=new double[TH+1];
   
-  TH_two_pts_SL_fit=TH;
-  tmin_two_pts_SL_fit[0]=tminL;
-  tmin_two_pts_SL_fit[1]=tminS;
-  tmax_two_pts_SL_fit[0]=tmaxL;
-  tmax_two_pts_SL_fit[1]=tmaxS;
-  
+  //copy errors
   for(int iel=0;iel<=TH;iel++)
     {
       e_two_pts_SL_fit[0][iel]=corrSL[iel].err();
       e_two_pts_SL_fit[1][iel]=corrSS[iel].err();
     }
   
+  //loop over jacknife
   for(int ijack_fit=0;ijack_fit<=njack;ijack_fit++)
     {
-      minu.DefineParameter(0,"M",M[ijack_fit],0.001,0,0);
-      minu.FixParameter(0);
+      //set pars
+      minu.DefineParameter(0,"M",MSL[ijack_fit],MSL.err(),0,0);
+      minu.DefineParameter(1,"ZL",ZL[ijack_fit],ZL.err(),0,0);
+      minu.DefineParameter(2,"ZS",ZS[ijack_fit],ZS.err(),0,0);
+      
+      //copy elements
       for(int iel=0;iel<=TH;iel++)
 	{
 	  c_two_pts_SL_fit[0][iel]=corrSL[iel][ijack_fit];
 	  c_two_pts_SL_fit[1][iel]=corrSS[iel][ijack_fit];
 	}
+      
+      //minimize
       minu.Migrad();
+      
+      //get back parameters
       double dum;
       minu.GetParameter(0,M.data[ijack_fit],dum);
       minu.GetParameter(1,ZL.data[ijack_fit],dum);
       minu.GetParameter(2,ZS.data[ijack_fit],dum);
+      
+      //write down chi2
+      if(ijack_fit==njack)
+	if(path_cls!=NULL)
+	  {
+	    ofstream out(path_cls);
+	    double tot=0;
+	    int ndof=0;
+	    out<<"SS/SL t ((teo-data)/err)^2=chi2_contr"<<endl;
+	    for(int isl=0;isl<2;isl++)
+	      {
+		out<<"================================="<<endl;
+		const char SLSS[2][4]={"SL","SS"};
+		for(int it=tmin_two_pts_SL_fit[isl];it<=min(tmax_two_pts_SL_fit[isl],TH_two_pts_SL_fit);it++)
+		  {
+		    
+		    out<<SLSS[isl]<<" "<<it<<" (("<<c_two_pts_SL_fit[isl][it]<<"-"<<c_two_pts_SL_fit_teo[isl][it]<<")/"<<
+		      e_two_pts_SL_fit[isl][it]<<")^2="<<c_two_pts_SL_fit_ch2_contr[isl][it]<<endl;
+		    ndof++;
+		    tot+=c_two_pts_SL_fit_ch2_contr[isl][it];
+		  }
+	      }
+	    out<<"================================="<<endl;
+	    out<<"Total chi2: "<<tot<<"/"<<ndof-3<<"="<<tot/(ndof-3)<<endl;
+	  }
     }
   
-  double ch2,grad[3],par[3]={M[njack],ZL[njack],ZS[njack]};
-  minu.Eval(3,grad,ch2,par,3);
-  cout<<"ML: "<<smart_print(ML)<<", ch2: "<<ch2<<endl;
+  //double ch2,grad[3],par[3]={M[njack],ZL[njack],ZS[njack]};
+  //minu.Eval(3,grad,ch2,par,3);
+  //cout<<"M: "<<smart_print(M)<<", ch2: "<<ch2<<endl;
   
-  if(path1!=NULL) write_constant_fit_plot(path1,ecorrSL,M,tminL,tmaxL);
-  if(path2!=NULL) write_constant_fit_plot(path2,ecorrSS,M,tminS,tmaxS);
+  //write plots
+  if(path1!=NULL) write_constant_fit_plot(path1,effective_mass(corrSL),M,tminSL,tmaxSL);
+  if(path2!=NULL) write_constant_fit_plot(path2,effective_mass(corrSS),M,tminSS,tmaxSS);
+  
+  //delete
+  delete[] c_two_pts_SL_fit[0];
+  delete[] c_two_pts_SL_fit[1];
+  delete[] c_two_pts_SL_fit_ch2_contr[0];
+  delete[] c_two_pts_SL_fit_ch2_contr[1];
+  delete[] c_two_pts_SL_fit_teo[0];
+  delete[] c_two_pts_SL_fit_teo[1];
+  delete[] e_two_pts_SL_fit[0];
+  delete[] e_two_pts_SL_fit[1];
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+double *c_two_states_fit,*e_two_states_fit;
+int TH_two_states_fit;
+int tmin_two_states_fit;
+int tmax_two_states_fit;
+
+template <class Ti> Ti fun_two_states_migrad_fit(Ti MA,Ti MB,Ti ZA,Ti ZB,int t)
+{return fun_two_pts_migrad_fit(ZA,MA,t)+fun_two_pts_migrad_fit(ZB,MB,t);}
+
+void ch2_two_states_migrad_fit(int &npar,double *fuf,double &ch,double *p,int flag)
+{
+  ch=0;
+  double MA=p[0];
+  double MB=p[1];
+  double ZA=p[2];
+  double ZB=p[3];
+  
+  for(int t=tmin_two_states_fit;t<=min(tmax_two_states_fit,TH_two_states_fit);t++)
+    {
+      double num=c_two_states_fit[t];
+      double teo=fun_two_states_migrad_fit(MA,MB,ZA,ZB,t);
+      double diff=num-teo;
+      double err=e_two_states_fit[t];
+      double cont=sqr(diff/err);
+      ch+=cont;
+      if(flag==3)
+	cout<<" ZA: "<<ZA<<", MA: "<<MA<<"; ZB: "<<ZB<<", MB: "<<MB<<
+	  "; t="<<t<<", diff=("<<num<<"-"<<teo<<")="<<diff<<" err="<<err<<" cont="<<cont<<endl;
+    }
+}
+
+void two_states_fit(jack &MA,jack &MB,jack &ZA,jack &ZB,int tmin,int TH,jvec corr,const char *path)
+{
+  TMinuit minu;
+  minu.SetPrintLevel(-1);
+  minu.SetFCN(ch2_two_states_migrad_fit);
+  minu.DefineParameter(0,"MA",MA.med(),MA.err(),MA.med()-3*MA.err(),MA.med()+3*MA.err());
+  minu.DefineParameter(1,"MB",MB.med(),MB.err(),MB.med()-3*MB.err(),MB.med()+3*MB.err());
+  minu.DefineParameter(2,"ZA",ZA.med(),ZA.err(),ZA.med()-3*ZA.err(),ZA.med()+3*ZA.err());
+  minu.DefineParameter(3,"ZB",ZB.med(),ZB.err(),ZA.med()-3*ZB.err(),ZB.med()+3*ZB.err());
+  
+  TH_two_pts_fit=TH_two_states_fit=TH;
+  c_two_states_fit=new double[TH+1];
+  e_two_states_fit=new double[TH+1];
+  
+  tmin_two_states_fit=tmin;
+  tmax_two_states_fit=TH;
+  
+  for(int iel=0;iel<=TH;iel++) e_two_states_fit[iel]=corr[iel].err();
+  int njack=corr[0].njack;
+
+  for(int ijack_fit=0;ijack_fit<=njack;ijack_fit++)
+    {
+      for(int iel=0;iel<=TH;iel++) c_two_states_fit[iel]=corr[iel][ijack_fit];
+      minu.Migrad();
+      double dum;
+      minu.GetParameter(0,MA.data[ijack_fit],dum);
+      minu.GetParameter(1,MB.data[ijack_fit],dum);
+      minu.GetParameter(2,ZA.data[ijack_fit],dum);
+      minu.GetParameter(3,ZB.data[ijack_fit],dum);
+    }
+  
+  //separate plots
+  //summ of exponentials
+  jvec temp_fun(TH+1,njack);
+  for(int t=0;t<=TH;t++)
+    temp_fun[t]=fun_two_states_migrad_fit(MA,MB,ZA,ZB,t);
+  temp_fun=effective_mass(temp_fun);
+  
+  ofstream foutB(path);
+  //single mass
+  foutB<<"@s0 line type 1"<<endl;      
+  foutB<<"@s0 line color 8"<<endl;
+  foutB<<"@s0 fill color 8"<<endl;
+  foutB<<"@s0 fill type 1"<<endl;
+  foutB<<"@type xy"<<endl;
+  for(int i=tmin;i<TH;i++) foutB<<i<<" "<<MA.med()+MA.err()<<endl;
+  for(int i=TH-1;i>=tmin;i--) foutB<<i<<" "<<MA.med()-MA.err()<<endl;
+  foutB<<"&"<<endl;
+
+  //summ of expo
+  foutB<<"@s1 line type 1"<<endl;      
+  foutB<<"@s1 line color 7"<<endl;
+  foutB<<"@s1 fill color 7"<<endl;
+  foutB<<"@s1 fill type 1"<<endl;
+  foutB<<"@type xy"<<endl;
+  for(int t=tmin;t<TH;t++) foutB<<t<<" "<<temp_fun[t].med()+temp_fun[t].err()<<endl;
+  for(int t=TH-1;t>=tmin;t--) foutB<<t<<" "<<temp_fun[t].med()-temp_fun[t].err()<<endl;
+  foutB<<"&"<<endl;
+  //central line
+  foutB<<"@s2 line color 1"<<endl;
+  foutB<<"@type xy"<<endl;      
+  for(int i=tmin;i<TH;i++) foutB<<i<<" "<<temp_fun[i].med()<<endl;
+
+
+  //central line
+  foutB<<"@s3 line color 3"<<endl;
+  foutB<<"@type xy"<<endl;      
+  for(int i=tmin;i<TH;i++) foutB<<i<<" "<<MA.med()<<endl;
+  //plot the original data with error  
+  foutB<<"&"<<endl;
+  foutB<<"@type xydy"<<endl;      
+  foutB<<"@s4 line type 0"<<endl;      
+  foutB<<"@s4 symbol color 1"<<endl;
+  foutB<<"@s4 errorbar color 1"<<endl;
+  foutB<<"@s4 symbol 1"<<endl;
+  foutB<<effective_mass(corr);
+  foutB<<"&"<<endl;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////
 
 bvec lin_solve(double *A,bvec b)
 {

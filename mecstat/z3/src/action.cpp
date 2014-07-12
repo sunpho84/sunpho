@@ -38,25 +38,37 @@ int compute_N0(z3_t *phi)
   return N0;
 }
 
+#include <iostream>
+
+using namespace std;
+
 //compute the energy
 double compute_energy_internal()
 {
   //compute hopping part of the action
-  int ndiff=V-glb_nequals;
+  int ndiff=3*V-glb_nequals;
   double E=contr_act_equals*glb_nequals+contr_act_diff*ndiff;
   
+  //cout<<"nequals: "<<glb_nequals<<", ndiff: "<<ndiff<<", glb_ntypes[0]: "<<glb_ntypes[0]<<endl;
+  
   return E;
+}
+  
+//compute the magnetization
+double compute_magnetization_internal()
+{
+  //compute time part
+  double M=0;
+  for(int i=0;i<3;i++) M+=contr_act_re[i]*glb_ntypes[i];
+  
+  return M;
 }
   
 //use global info
 double compute_action_internal()
 {
-  //compute hopping part of the action
   double E=compute_energy_internal();
-  
-  //compute time part
-  double M=0;
-  for(int i=0;i<3;i++) M+=contr_act_re[i]*glb_ntypes[i];
+  double M=compute_magnetization_internal();
   
   return -tau*(E+kappa*M);
 } 

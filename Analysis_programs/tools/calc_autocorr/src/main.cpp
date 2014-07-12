@@ -7,6 +7,7 @@
 #include <fstream>
 #include <string>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <fftw3.h>
 #include <math.h>
 
@@ -19,6 +20,20 @@ int jackniffed_size;
 int njacks;
 int buf_size,size;
 double *data;
+
+//exit with error message
+void crash(const char *temp,...)
+{
+  char buffer[1024];
+  va_list args;
+
+  va_start(args,temp);
+  vsprintf(buffer,temp,args);
+  va_end(args);
+
+  cerr<<"ERROR: "<<buffer<<endl;
+  exit(1);
+}
 
 //read allocating
 void read(const char *path)
@@ -119,7 +134,6 @@ void autocorr(double *ave_corr,double *jck_corr,double *err_corr)
 void compute_tint(double &med_tint,double &err_tint)
 {
   //adjust clust_size so to reach consistency
-  clust_size=1;
   bool loop;
   do
     {
@@ -175,7 +189,7 @@ void compute_tint(double &med_tint,double &err_tint)
       if(fabs(clust_size-2*med_tint)>=4*err_tint)
 	{
 	  int new_clust_size=int(2*med_tint+0.5);
-	  if(new_clust_size!=clust_size)
+	  if(new_clust_size!=clust_size && new_clust_size!=0)
 	    {
 	      clust_size=new_clust_size;
 	      loop=true;
@@ -188,20 +202,17 @@ void compute_tint(double &med_tint,double &err_tint)
 
 int main(int narg,char **arg)
 {
-  if(narg<2)
-    {
-      cerr<<"Use: "<<arg[0]<<" filein"<<endl;
-      exit(1);
-    }
+  if(narg<2) crash("Use: %s filein [clust_size]",arg[0]);
   
   //load
   read(arg[1]);
-  if(buf_size==0)
-    {
-      cerr<<"empty file"<<endl;
-      exit(1);
-    }
-
+  if(buf_size==0) crash("empty file %s",arg[1]);
+  
+  if(narg<3) clust_size=1;
+  else clust_size=atoi(arg[2]);
+  if(clust_size<0) crash("suggested negative clust_size %d",clust_size);
+  if(clust_size>=buf_size) crash("suggested too large clust_size %d>buf_size %d",clust_size,buf_size);
+  
   //compute ave and non adjusted err
   double ave=0,err=0;
   for(int i=0;i<buf_size;i++)

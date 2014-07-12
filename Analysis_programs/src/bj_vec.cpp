@@ -4,6 +4,7 @@
 #include <functional>
 #include <iostream>
 #include <fstream>
+#include <TMatrixD.h>
 
 using namespace std;
 
@@ -160,6 +161,8 @@ void VTYPE::print_to_file(const char *format,...)
   va_end(args);
 
   ofstream fout(buffer);
+  if(!fout.good()) crash("opening %s",buffer);
+  
   fout<<"@type xydy"<<endl;
   fout<<(*this);
   fout.close();
@@ -481,6 +484,39 @@ VTYPE VTYPE::shifted(int am)
   return a;
 }  
 
+VTYPE paste(VTYPE a,VTYPE b)
+{
+#ifdef BVEC
+  bvec c(a.nel+b.nel,a.nboot,a.njack);
+#else
+  jvec c(a.nel+b.nel,a.njack);
+#endif
+  
+  for(int iel=0;iel<a.nel;iel++)
+    c[iel]=a[iel];
+  for(int iel=0;iel<b.nel;iel++)
+    c[a.nel+iel]=b[iel];
+  
+  return c;
+}  
+
+VTYPE interleave(VTYPE a,VTYPE b)
+{
+  if(a.nel!=b.nel) crash("impossible to interleave");
+#ifdef BVEC
+  bvec c(a.nel+b.nel,a.nboot,a.njack);
+#else
+  jvec c(a.nel+b.nel,a.njack);
+#endif
+  
+  for(int iel=0;iel<a.nel;iel++)
+    c[2*iel+0]=a[iel];
+  for(int iel=0;iel<b.nel;iel++)
+    c[2*iel+1]=b[iel];
+  
+  return c;
+}  
+
 string write_constant_fit_plot(VTYPE in,TYPE y,int tin,int tfin,int iset=0)
 {
   ostringstream out;
@@ -514,12 +550,13 @@ string write_constant_fit_plot(VTYPE in,TYPE y,int tin,int tfin,int iset=0)
 void write_constant_fit_plot(const char *path,VTYPE in,TYPE y,int tin,int tfin,int iset=0)
 {
   ofstream out(path);
+  if(!out.good()) crash("opening %s",path);
   out<<"@page size 800,600"<<endl;
   out<<write_constant_fit_plot(in,y,tin,tfin,iset);
   out.close();
 }
 
-TYPE constant_fit(VTYPE in,int tin,int tfin,const char *path=NULL)
+TYPE constant_fit(VTYPE in,int tin,int tfin,const char *path=NULL,const char *path_ch2=NULL)
 {
   TYPE E(in.data[0]);
 
@@ -539,12 +576,65 @@ TYPE constant_fit(VTYPE in,int tin,int tfin,const char *path=NULL)
 	}
     }
   
-  //take simply average
+  //take simply average in the other case
   if(norm==0)
     for(int iel=max(tin,0);iel<=min(tfin,in.nel-1);iel++)
       {
 	norm=norm+1;
 	E+=in.data[iel];
+      }
+  
+  //normalize
+  E/=norm;
+  
+  if(path!=NULL) write_constant_fit_plot(path,in,E,tin,tfin);
+  if(path_ch2!=NULL)
+    {
+      ofstream out(path_ch2);
+      out<<"t ((teo-data)/err)^2=chi2_contr"<<endl;
+      out<<"================================="<<endl;
+      double tot=0;
+      int ndof=0;
+      for(int iel=max(tin,0);iel<=min(tfin,in.nel-1);iel++)
+	{
+	  double contr=sqr((in.data[iel].med()-E.med())/in.data[iel].err());
+	  tot+=contr;
+	  ndof++;
+	  out<<iel<<" (("<<in.data[iel].med()<<"-"<<E.med()<<")/"<<in.data[iel].err()<<")^2="<<contr<<endl;
+	}
+      out<<"================================="<<endl;
+      out<<"Total chi2: "<<tot<<"/"<<ndof-1<<"="<<tot/(ndof-1)<<endl;
+    }
+  
+  return E;
+}
+
+TYPE correlated_constant_fit(VTYPE in,int tin,int tfin,const char *path=NULL)
+{
+  tin=max(tin,0);
+  tfin=min(tfin,in.nel);
+  
+  //build covariance matrix
+  int nel=tfin-tin;
+  TMatrixD cova(nel,nel);
+  for(int i=0;i<nel;i++)
+    for(int j=0;j<nel;j++)
+      cova(i,j)=cov(in[i+tin],in[j+tin]);
+  
+  //take the inverse
+  TMatrixD inv_cova=cova.Invert();
+  
+  TYPE E(in.data[0]),norm(in.data[0]);
+  norm=E=0;
+  
+  //take weighted average
+  for(int i=0;i<nel;i++)
+    for(int j=0;j<nel;j++)
+      {
+	TYPE y=(in.data[i+tin]+in.data[j+tin])/2;
+	
+	E+=y*inv_cova(i,j);
+	norm+=inv_cova(i,j);
       }
   
   //normalize

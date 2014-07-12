@@ -1,6 +1,6 @@
 #pragma once
 
-#define debug 1
+#define debug_in 1
 
 //return the three coefficient of the parabola passing for the three passed points
 template <class T> void parabolic_spline(T &a,T &b,T &c,double *xin,T *yd)

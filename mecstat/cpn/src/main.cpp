@@ -14,7 +14,7 @@ using namespace std;
 
 #define N 2
 #define beta 1.1
-#define L 12
+#define L 36
 
 //internal main
 void in_main(int narg,char **arg)
