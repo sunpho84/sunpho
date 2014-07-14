@@ -115,10 +115,32 @@ int main()
   g=1/(N*beta);
   int seed;
   read(seed,input,"Seed");
-  int nsweep,nterm,nmicro;
+  int use_hmc,nsweep,nterm,nmicro;
   read(nsweep,input,"NSweep");
   read(nterm,input,"NTerm");
-  read(nmicro,input,"NMicro");
+  read(use_hmc,input,"UseHMC");
+  if(!use_hmc) read(nmicro,input,"NMicro");
+  else
+    {
+      nmicro=3;
+      read(nhmc_steps,input,"NhmcSteps");
+    }
+  read(use_topo_pot,input,"UseTopoPot");
+  switch(use_topo_pot)
+    {
+    case 0:
+      break;
+    case 1:
+      read(th_top,input,"ThTop");
+      break;
+    case 2:
+      if(!use_hmc) crash("must use hmc");
+      read(chrono_topo_after,input,"ChronoTopoAfter");
+      read(chrono_topo_coeff,input,"ChronoTopoCoeff");
+      read(chrono_topo_width,input,"ChronoTopoWidth");
+      read(chrono_topo_barr,input,"ChronoTopoBarr");
+      break;
+    }
   read(nstout_lev,input,"NStoutLev");
   read(stout_rho,input,"StoutRho");
   
@@ -152,20 +174,33 @@ int main()
   mag_file.precision(12);
   
   //sweep with overheat-micro
-  int init_time=time(0);
+  timing_t tot_time,sweep_time,energy_time,geo_topo_time,topo_time,corr_time;
+  
+  tot_time.start();
   for(int isweep=1;isweep<=nsweep;isweep++)
     {
-      //metro_sweep();
-      for(int imicro=0;imicro<nmicro;imicro++) micro_sweep();
-      overheat_sweep();
+      //sweep
+      sweep_time.start();
+      if(use_hmc) hmc_update();
+      else
+	{
+	  for(int imicro=0;imicro<nmicro;imicro++) micro_sweep();
+	  overheat_sweep();
+	}
+      sweep_time.stop();
       
-      //hmc_update();
-      
-      //compute energy and topological charge
-      energy_file<<isweep<<" "<<energy(zeta,lambda)/V/NDIMS<<endl;
+      //compute geometrical topological charge
+      geo_topo_time.start();
       double topo_sim=geometric_topology_simplified(zeta);
+      geo_topo_time.stop();
+
+      //compute energy
+      energy_time.start();
+      energy_file<<isweep<<" "<<energy(zeta,lambda)/V/NDIMS<<endl;
+      energy_time.stop();
       
       //compute topologycal charge
+      topo_time.start();
       stout_lambda_whole_stack(lambda_stout,stout_rho,nstout_lev,lambda);
       for(int ilev=0;ilev<=nstout_lev;ilev++)
 	{
@@ -182,17 +217,26 @@ int main()
 	    topo_sim<<" "<<
 	    topo_num<<endl;
 	}
+      topo_time.stop();
       
       //compute the correlation function
+      corr_time.start();
       double mag0,mag1,corr[L],corrd[L];
       compute_corr(mag0,mag1,corr,corrd,zeta);
       for(int i=0;i<=L/2;i++) corr_file<<isweep<<" "<<i<<" "<<corr[i]<<endl;
       for(int i=0;i<=L/2;i++) corrd_file<<isweep<<" "<<i/sqrt(2)<<" "<<corrd[i]<<endl;
       mag_file<<isweep<<" "<<mag0<<" "<<mag1<<endl;
+      corr_time.stop();
     }
+  tot_time.stop();
   
   //write lasted time
-  cout<<time(0)-init_time<<" s"<<endl;
+  cout<<"Tot time: "<<tot_time<<endl;
+  cout<<"Sweep time: "<<sweep_time<<endl;
+  cout<<"Geo topo time: "<<geo_topo_time<<endl;
+  cout<<"Topo time: "<<topo_time<<endl;
+  cout<<"Energy time: "<<energy_time<<endl;
+  cout<<"Corr time: "<<corr_time<<endl;
   
   //finalize
   close();
