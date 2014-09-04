@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <stdarg.h>
+#include <stdarg.h>
 
 #include "action.hpp"
 #include "close.hpp"
@@ -139,6 +140,8 @@ int main()
       read(chrono_topo_coeff,input,"ChronoTopoCoeff");
       read(chrono_topo_width,input,"ChronoTopoWidth");
       read(chrono_topo_barr,input,"ChronoTopoBarr");
+      read(chrono_topo_force_out,input,"ChronoTopoForceOut");
+      read(chrono_topo_well_tempering,input,"ChronoTopoWellTempering");
       break;
     }
   read(nstout_lev,input,"NStoutLev");
@@ -163,10 +166,12 @@ int main()
   
   //open output files
   ofstream energy_file("energy");
+  ofstream weight_file("topo_weight");
   ofstream topology_file("topology");
   ofstream corr_file("corr");
   ofstream corrd_file("corrd");
   ofstream mag_file("mag");
+  weight_file.precision(12);
   energy_file.precision(12);
   topology_file.precision(12);
   corr_file.precision(12);
@@ -206,11 +211,15 @@ int main()
 	{
 	  double topo_num=topology(lambda_stout[ilev]);
 	  if(use_topo_pot==2 && ilev==nstout_lev)
-	  {
-	    chrono_topo_past_values.push_back(+topo_num);
-	    chrono_topo_past_values.push_back(-topo_num);
-	    if(isweep%500==0) draw_chrono_topo_potential();
-	  }
+	    {
+	      double Vt=0.375*topo_num*topo_num;
+	      double chrono_tempered_weight=exp(-(compute_theta_pot(+topo_num)-Vt)/chrono_topo_well_tempering);
+	      cout<<"Weight: "<<chrono_tempered_weight<<endl;
+	      weight_file<<chrono_tempered_weight<<endl;
+	      chrono_topo_past_weight.push_back(chrono_tempered_weight);	    
+	      chrono_topo_past_values.push_back(+topo_num);
+	      if(isweep%500==0) draw_chrono_topo_potential();
+	    }
 	  
 	  topology_file<<isweep<<" "<<ilev<<" "<<
 	    //topo<<" "<<

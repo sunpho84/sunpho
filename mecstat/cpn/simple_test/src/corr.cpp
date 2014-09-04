@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include <fftw3.h>
+#include <omp.h>
 
 using namespace std;
 
@@ -20,6 +21,9 @@ void init_fftw()
 {
   if(init_fftw_flag==false)
     {
+      fftw_init_threads();
+      fftw_plan_with_nthreads(omp_get_max_threads());
+      
       //forward
       P_fftw=new dcomplex[N*N*V];
       int rank=2,sizes[2]={L,L};
