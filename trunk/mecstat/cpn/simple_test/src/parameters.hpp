@@ -23,5 +23,7 @@ EXTERN_PARAMETERS int chrono_topo_after;//=300;
 EXTERN_PARAMETERS double chrono_topo_coeff;//=0.2;
 EXTERN_PARAMETERS double chrono_topo_width;//=0.3;
 EXTERN_PARAMETERS double chrono_topo_barr;//=5;
+EXTERN_PARAMETERS double chrono_topo_force_out;
+EXTERN_PARAMETERS double chrono_topo_well_tempering;
 
 #endif

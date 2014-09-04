@@ -234,9 +234,15 @@ void hmc_integrate()
       update_positions(dth);
       //     Compute H(t+dt) i.e. v(t+dt)=v2+a[r(t+dt)]*lambda*dt (at last step) or *2*lambda*dt
       update_momenta(last_dt);
-        
-      //normalize the configuration
-      //lx_conf_unitarize_maximal_trace_projecting(lx_conf);
+    }
+  
+  //normalize the configuration
+#pragma omp parallel for
+  for(int site=0;site<V;site++)
+    {
+      zeta_unitarize(zeta+site*N);
+      for(int mu=0;mu<NDIMS;mu++)
+	lambda_unitarize(lambda[site*NDIMS+mu]);
     }
 }
 

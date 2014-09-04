@@ -17,6 +17,7 @@
 #include <algorithm>
 
 std::vector<double> chrono_topo_past_values;
+std::vector<double> chrono_topo_past_weight;
 
 //return the geometric definition of topology
 double geometric_topology_simplified(dcomplex *z)
@@ -91,47 +92,68 @@ double topology(dcomplex *l)
 //compute the topological potential according t
 double compute_theta_pot_der(dcomplex *l)
 {
-  double topote=0,pref=-chrono_topo_coeff/sqr(chrono_topo_width);
+  double topote_der=0;
+  double pref=-chrono_topo_coeff/sqr(chrono_topo_width);
   double Q=topology(l);
   
-  //put inside the barrier
+  //inside the barrier
+  int nchrono=chrono_topo_past_values.size();
   if(Q>-chrono_topo_barr && Q<+chrono_topo_barr)
-    for(std::vector<double>::iterator it=chrono_topo_past_values.begin();it!=chrono_topo_past_values.end();it++)
-      {
-	double q=*it;
-	double diff=Q-q,f=diff/chrono_topo_width;
-	if(fabs(f)<5)
-	  {
-	    double cont=pref*diff*exp(-f*f/2);
-	    topote+=cont;
-	    //cout<<"contribution: Q="<<Q<<", q="<<q<<", "<<cont<<endl;
-	  }
-      }
+    {
+#pragma omp parallel for reduction(+:topote_der)
+      for(int i=0;i<nchrono;i++)
+	{
+	  double q=chrono_topo_past_values[i];
+	  double w=chrono_topo_past_weight[i];
+	  double diff=Q-q,f=diff/chrono_topo_width;
+	  double cont=pref*diff*w*exp(-f*f/2);
+	  topote_der+=cont;
+	}
+    }
   
-  return topote;
+  //parabolic
+  if(Q<-chrono_topo_barr) topote_der=-chrono_topo_force_out*(-Q-chrono_topo_barr);
+  if(Q>+chrono_topo_barr) topote_der=+chrono_topo_force_out*(+Q-chrono_topo_barr);
+  
+  //linear
+  //if(Q<-chrono_topo_barr) topote_der=-chrono_topo_force_out;
+  //if(Q>+chrono_topo_barr) topote_der=+chrono_topo_force_out;
+  
+  return topote_der;
 }
 
 //compute the topodynamical potential using past history
 double compute_theta_pot(double Q)
 {
+  //compute 
+  double harm=0;
+  
+  //parabolic
+  if(Q<-chrono_topo_barr) harm=chrono_topo_force_out*sqr(-Q-chrono_topo_barr)/2;
+  if(Q>+chrono_topo_barr) harm=chrono_topo_force_out*sqr(+Q-chrono_topo_barr)/2;
+  
+  //linear
+  //if(Q<-chrono_topo_barr) harm=chrono_topo_force_out*(-Q-chrono_topo_barr);
+  //if(Q>+chrono_topo_barr) harm=chrono_topo_force_out*(+Q-chrono_topo_barr);
+  
   //put inside the barrier
   if(Q<-chrono_topo_barr) Q=-chrono_topo_barr;
   if(Q>+chrono_topo_barr) Q=+chrono_topo_barr;
   
   double topotential=0;
-  for(std::vector<double>::iterator it=chrono_topo_past_values.begin();it!=chrono_topo_past_values.end();it++)
+  int nchrono=chrono_topo_past_values.size();
+#pragma omp parallel for reduction(+:topotential)
+  for(int i=0;i<nchrono;i++)
     {
-      double q=*it;
+      double q=chrono_topo_past_values[i];
+      double w=chrono_topo_past_weight[i];
       double diff=Q-q,f=diff/chrono_topo_width;
-      if(fabs(f)<5)
-	{
-	  double cont=exp(-f*f/2);
-	  topotential+=cont;
-	}
+      double cont=exp(-f*f/2);
+      topotential+=cont*w;
     }
   topotential*=chrono_topo_coeff;
-    
-  return topotential;
+  
+  return topotential+harm;
 }
 
 //compute the topodynamical potential using past history
@@ -150,7 +172,7 @@ void draw_chrono_topo_potential()
   
   //compute 
   double *Qy=new double[n+1];
-#pragma omp parallel
+#pragma omp parallel for
   for(int i=0;i<=n;i++) Qy[i]=compute_theta_pot(Q_min+i*dQ);
   
   //write
