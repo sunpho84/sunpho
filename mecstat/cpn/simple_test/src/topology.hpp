@@ -4,7 +4,6 @@
 #include <vector>
 
 extern std::vector<double> chrono_topo_past_values;
-extern std::vector<double> chrono_topo_past_weight;
 
 void draw_chrono_topo_potential();
 void compute_unsmeared_topological_force(double *fpi,dcomplex *l);
