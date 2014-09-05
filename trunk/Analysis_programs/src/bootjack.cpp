@@ -275,51 +275,8 @@ string smart_print(TYPE a)
 {
   double m=a.med();
   double e=a.err();
-  int s=0;
-  ostringstream o;
   
-  if(e==0) o<<m<<"(0)";
-  else
-    if(e<1)
-      {
-	//print 1 digit of error or 2 if err starts with 1 or 2
-	while(int(e)<=3)
-	  {
-	    e*=10;
-	    m*=10;
-	    s--;
-	  }
-	
-	char t[1000];
-	sprintf(t,"%.*f",(unsigned int)abs(s),a.med());
-	
-	o<<t<<"("<<int(e+0.5)<<")";
-      }
-    else
-      {
-	if(e>=3)
-	  {
-	    //count the numbr of digits to truncate
-	    int s=0;
-	    /*
-	      while(int(e)>=30)
-	      {
-	      m/=10;
-	      e/=10;
-	      s++;
-	      }
-	    */
-	    o<<(int)(m+0.5)*pow(10,s)<<"("<<(int)(e+0.5)*pow(10,s)<<")";
-	  }
-	else
-	  {
-	    char t[1000];
-	    sprintf(t,"%.1f(%.1f)",m,e);
-	    o<<t;
-	  }
-      }
-  
-  return o.str();
+  return smart_print(m,e);
 }
 
 string raw_print(TYPE a)

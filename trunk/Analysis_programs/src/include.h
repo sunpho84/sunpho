@@ -12,6 +12,7 @@
 using namespace std;
 
 #include "tools.cpp"
+#include "auto.cpp"
 
 #include "endianess.cpp"
 #include "functions.cpp"

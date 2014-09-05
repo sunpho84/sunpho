@@ -11,6 +11,7 @@ double lat_med[4]={0.486508,0.422773,0.335339,0.268402};
 double th[4]={1.10,1,1.04,0.98};
 int *op_map;
 int tfit_impr_min,tfit_impr_max;
+int tfit_3pts_fexc_min,tfit_3pts_fexc_max;
 int tfit_PP_min,tfit_PP_max;
 int tfit_VV_min,tfit_VV_max;
 int tfit_op;
@@ -69,6 +70,10 @@ void scan_input(const char *path)
   //interval to fit V
   read_formatted_from_file_expecting((char*)&tfit_VV_min,fin,"%d","tfit_VV");
   read_formatted_from_file((char*)&tfit_VV_max,fin,"%d","tfit_VV");
+  
+  //interval to fit first excited matrix element
+  read_formatted_from_file_expecting((char*)&tfit_3pts_fexc_min,fin,"%d","tfit_3pts_fexc");
+  read_formatted_from_file((char*)&tfit_3pts_fexc_max,fin,"%d","tfit_3pts_fexc");
   
   fclose(fin);
   

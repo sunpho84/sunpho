@@ -160,3 +160,15 @@ void read_set_pars(const char *path)
   fclose(set_pars_file);
 }
 
+void stamp(string outpath,jvec in)
+{
+  ofstream out(outpath.c_str());
+  out.precision(16);
+  
+  for(int t=0;t<in.nel;t++)
+    {
+      for(int ijack=0;ijack<njack;ijack++) out<<(ijack==0?"":"\t")<<in[t][ijack];
+      out<<endl;
+    }
+}
+

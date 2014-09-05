@@ -6,7 +6,7 @@ int main(int narg,char **arg)
   scan_input(arg[1]);
   
   //load 3pts
-  jvec three_pts[nlevls];
+  jvec *three_pts=new jvec[nlevls];
   int three_pts_par[3]={+1,-1,+1};
   ofstream three_pts_plot("three_pts_corr.xmg");
   three_pts_plot<<"@type xydy"<<endl;
@@ -150,7 +150,7 @@ int main(int narg,char **arg)
   //check if slope in three pts is the good one
   cout<<endl;
   ofstream three_pts_slope_plots("three_pts_slope.xmg");
-  jack three_pts_slope[nlevls];
+  jvec three_pts_slope(nlevls,njacks);
   for(int iop=0;iop<nlevls;iop++)
     {
       int tslope_min=3,tslope_max=5;
@@ -167,7 +167,7 @@ int main(int narg,char **arg)
   ofstream ground_state_dt_plots("ground_state_dt_plots.xmg");
   ground_state_me_plots<<"@type xydy"<<endl;
   ground_state_dt_plots<<"@type xydy"<<endl;
-  jvec ground_dT[nlevls];
+  jvec *ground_dT=new jvec[nlevls];
   
   for(int iop=0;iop<nlevls;iop++)
     {
@@ -195,6 +195,7 @@ int main(int narg,char **arg)
     }
 
   //try the improved one
+  jvec *impr_corr=new jvec[nlevls];
   ofstream opt_state_me_plots("opt_state_me_plots.xmg");
   ofstream test("/tmp/test.xmg");
   opt_state_me_plots<<"@type xydy"<<endl;
@@ -213,10 +214,10 @@ int main(int narg,char **arg)
 	  impr_three_pts+=three_pts[iop]*w;
 	}
       
-      jvec impr_corr=-impr_three_pts/impr_dT/glb_coeff;
+      impr_corr[ilev]=-impr_three_pts/impr_dT/glb_coeff;
       for(int t=0;t<=tsep;t++)
-	if(fabs(impr_corr[t].med())>impr_corr[t].err() && fabs(impr_corr[t].med())<3)
-	  opt_state_me_plots<<t<<" "<<impr_corr[t]<<endl;
+	if(fabs(impr_corr[ilev][t].med())>impr_corr[ilev][t].err() && fabs(impr_corr[ilev][t].med())<3)
+	  opt_state_me_plots<<t<<" "<<impr_corr[ilev][t]<<endl;
       opt_state_me_plots<<"&"<<endl;
       test<<fabs(impr_dT)<<fabs(impr_three_pts)<<"&"<<endl;
       
@@ -226,6 +227,9 @@ int main(int narg,char **arg)
       cout<<"Slope determined from improved three pts: "<<smart_print(three_pts_slope[ilev])
           <<", expected from two pts: "<<smart_print(E_V-M_P_impr[ilev])<<endl;
     }
+  
+  jack fmel=constant_fit(impr_corr[1],tfit_3pts_fexc_min,tfit_3pts_fexc_max,"first_state_mel.xmg");
+  cout<<"First excited state matrix element: "<<fmel<<endl;
   
   return 0;
 }
