@@ -17,7 +17,6 @@
 #include <algorithm>
 
 std::vector<double> chrono_topo_past_values;
-std::vector<double> chrono_topo_past_weight;
 
 //return the geometric definition of topology
 double geometric_topology_simplified(dcomplex *z)
@@ -104,9 +103,9 @@ double compute_theta_pot_der(dcomplex *l)
       for(int i=0;i<nchrono;i++)
 	{
 	  double q=chrono_topo_past_values[i];
-	  double w=chrono_topo_past_weight[i];
 	  double diff=Q-q,f=diff/chrono_topo_width;
-	  double cont=pref*diff*w*exp(-f*f/2);
+	  double cont=(pref*diff-chrono_topo_coeff*chrono_topo_bend*Q)*
+	    exp(-f*f/2+chrono_topo_bend*Q*Q/2);
 	  topote_der+=cont;
 	}
     }
@@ -146,10 +145,9 @@ double compute_theta_pot(double Q)
   for(int i=0;i<nchrono;i++)
     {
       double q=chrono_topo_past_values[i];
-      double w=chrono_topo_past_weight[i];
       double diff=Q-q,f=diff/chrono_topo_width;
-      double cont=exp(-f*f/2);
-      topotential+=cont*w;
+      double cont=exp(-f*f/2+chrono_topo_bend*Q*Q/2);
+      topotential+=cont;
     }
   topotential*=chrono_topo_coeff;
   

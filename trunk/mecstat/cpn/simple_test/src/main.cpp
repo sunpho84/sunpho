@@ -119,6 +119,7 @@ int main()
   int use_hmc,nsweep,nterm,nmicro;
   read(nsweep,input,"NSweep");
   read(nterm,input,"NTerm");
+  read(compute_corr_each,input,"ComputeCorrEach");
   read(use_hmc,input,"UseHMC");
   if(!use_hmc) read(nmicro,input,"NMicro");
   else
@@ -141,6 +142,7 @@ int main()
       read(chrono_topo_width,input,"ChronoTopoWidth");
       read(chrono_topo_barr,input,"ChronoTopoBarr");
       read(chrono_topo_force_out,input,"ChronoTopoForceOut");
+      read(chrono_topo_bend,input,"ChronoTopoBend");
       read(chrono_topo_well_tempering,input,"ChronoTopoWellTempering");
       break;
     }
@@ -166,12 +168,10 @@ int main()
   
   //open output files
   ofstream energy_file("energy");
-  ofstream weight_file("topo_weight");
   ofstream topology_file("topology");
   ofstream corr_file("corr");
   ofstream corrd_file("corrd");
   ofstream mag_file("mag");
-  weight_file.precision(12);
   energy_file.precision(12);
   topology_file.precision(12);
   corr_file.precision(12);
@@ -212,11 +212,6 @@ int main()
 	  double topo_num=topology(lambda_stout[ilev]);
 	  if(use_topo_pot==2 && ilev==nstout_lev)
 	    {
-	      double Vt=0.375*topo_num*topo_num;
-	      double chrono_tempered_weight=exp(-(compute_theta_pot(+topo_num)-Vt)/chrono_topo_well_tempering);
-	      cout<<"Weight: "<<chrono_tempered_weight<<endl;
-	      weight_file<<chrono_tempered_weight<<endl;
-	      chrono_topo_past_weight.push_back(chrono_tempered_weight);	    
 	      chrono_topo_past_values.push_back(+topo_num);
 	      if(isweep%500==0) draw_chrono_topo_potential();
 	    }
@@ -229,13 +224,16 @@ int main()
       topo_time.stop();
       
       //compute the correlation function
-      corr_time.start();
-      double mag0,mag1,corr[L],corrd[L];
-      compute_corr(mag0,mag1,corr,corrd,zeta);
-      for(int i=0;i<=L/2;i++) corr_file<<isweep<<" "<<i<<" "<<corr[i]<<endl;
-      for(int i=0;i<=L/2;i++) corrd_file<<isweep<<" "<<i/sqrt(2)<<" "<<corrd[i]<<endl;
-      mag_file<<isweep<<" "<<mag0<<" "<<mag1<<endl;
-      corr_time.stop();
+      if(isweep%compute_corr_each==0)
+	{
+	  corr_time.start();
+	  double mag0,mag1,corr[L],corrd[L];
+	  compute_corr(mag0,mag1,corr,corrd,zeta);
+	  for(int i=0;i<=L/2;i++) corr_file<<isweep<<" "<<i<<" "<<corr[i]<<endl;
+	  for(int i=0;i<=L/2;i++) corrd_file<<isweep<<" "<<i/sqrt(2)<<" "<<corrd[i]<<endl;
+	  mag_file<<isweep<<" "<<mag0<<" "<<mag1<<endl;
+	  corr_time.stop();
+	}
     }
   tot_time.stop();
   
