@@ -1,5 +1,7 @@
 #pragma once
 
+int debug_fit=1;
+
 //jack-vec version
 jvec effective_mass(jvec a,int TH=-1,int par=1)
 {
@@ -89,6 +91,16 @@ jvec numerical_derivative(jvec a)
   return b;
 }
 
+jvec simmetric_derivative(jvec a)
+{
+  jvec b(a.nel,a.njack);
+  
+  for(int iel=1;iel<a.nel-1;iel++) b[iel]=(a[iel+1]-a[iel-1])/2;
+  b[0]=b[a.nel-1]=0;
+  
+  return b;
+}
+
 //jack-vec
 jvec aperiodic_effective_mass(const jvec a)
 {
@@ -121,7 +133,7 @@ void two_pts_fit(jack &E,jack &Z2,jvec corr,int tmin,int tmax,const char *path1=
   else          for(int t=0;t<=TH;t++) temp[t]=corr[t]/exp(-E*TH)/sinh(E*(TH-t))*E;
   Z2=constant_fit(temp,tmin,tmax,path2);
   
-  cout<<"E: "<<E<<endl;
+  if(debug_fit) cout<<"E: "<<E<<endl;
 }
 
 //fit the mass and the matrix element in SS and SL combo
@@ -198,7 +210,7 @@ void two_pts_migrad_fit(jack &M,jack &Z2,jvec corr,int tmin,int tmax,const char 
   
   double ch2,grad[2],par[2]={M[njack],Z2[njack]};
   minu.Eval(2,grad,ch2,par,3);
-  cout<<"M: "<<M<<", ch2: "<<ch2<<endl;
+  if(debug_fit) cout<<"M: "<<M<<", ch2: "<<ch2<<endl;
   
   if(path!=NULL) write_constant_fit_plot(path,ecorr,M,tmin,tmax);
 }

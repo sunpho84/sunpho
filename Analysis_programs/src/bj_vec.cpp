@@ -45,6 +45,7 @@ public:
   VTYPE load(FILE *,int);
   VTYPE load_naz(const char *,int);
   void print_to_file(const char *,...);
+  void print_rel_err_to_file(const char *,...);
   
   TYPE& operator[](int i){return data[i];}
   VTYPE operator=(double in){for(int iel=0;iel<nel;iel++) data[iel]=in;return *this;}
@@ -55,6 +56,7 @@ public:
   VTYPE subset(int,int);
   VTYPE first_half();
   VTYPE simmetric();
+  VTYPE inverted();
   VTYPE simmetrized(int parity);
   VTYPE shifted(int);
   VTYPE write_to_binfile(FILE *);
@@ -165,6 +167,23 @@ void VTYPE::print_to_file(const char *format,...)
   
   fout<<"@type xydy"<<endl;
   fout<<(*this);
+  fout.close();
+}
+
+void VTYPE::print_rel_err_to_file(const char *format,...)
+{
+  char buffer[1024];
+  va_list args;
+
+  va_start(args,format);
+  vsprintf(buffer,format,args);
+  va_end(args);
+
+  ofstream fout(buffer);
+  if(!fout.good()) crash("opening %s",buffer);
+  
+  fout<<"@type xy"<<endl;
+  for(int t=0;t<this->nel;t++) fout<<(*this)[t].med()/(*this)[t].err()<<endl;
   fout.close();
 }
 
@@ -399,7 +418,7 @@ VTYPE pow(const VTYPE &a,double b){return pair_operator(a,b,pow);}
 
 VTYPE VTYPE::subset(int tmin,int tmax)
 {
-  if(tmin<0||tmin>=nel||tmax<0||tmax>=nel)
+  if(tmin<0||tmin>nel||tmax<0||tmax>nel)
     {
       cerr<<"Error, required impossible interval ["<<tmin<<","<<tmax<<"] of a "<<nel<<"long vector!"<<endl;
       exit(1);
@@ -438,6 +457,20 @@ VTYPE VTYPE::simmetric()
   
   for(int iel=0;iel<nel;iel++)
     c.data[iel]=data[(nel-iel)%nel];
+
+  return c;
+}
+
+VTYPE VTYPE::inverted()
+{
+#ifdef BVEC
+  bvec c(nel,nboot,njack);
+#else
+  jvec c(nel,njack);
+#endif
+  
+  for(int iel=0;iel<nel;iel++)
+    c.data[iel]=data[nel-iel-1];
 
   return c;
 }
@@ -502,7 +535,7 @@ VTYPE paste(VTYPE a,VTYPE b)
 
 VTYPE interleave(VTYPE a,VTYPE b)
 {
-  if(a.nel!=b.nel) crash("impossible to interleave");
+  if(a.nel!=b.nel) crash("impossible to interleave %d and %d",a.nel,b.nel);
 #ifdef BVEC
   bvec c(a.nel+b.nel,a.nboot,a.njack);
 #else
@@ -510,9 +543,10 @@ VTYPE interleave(VTYPE a,VTYPE b)
 #endif
   
   for(int iel=0;iel<a.nel;iel++)
-    c[2*iel+0]=a[iel];
-  for(int iel=0;iel<b.nel;iel++)
-    c[2*iel+1]=b[iel];
+    {
+      c[2*iel+0]=a[iel];
+      c[2*iel+1]=b[iel];
+    }
   
   return c;
 }  

@@ -67,7 +67,7 @@ int switch_gr_string(const gr_string *list,int nel,const char *in)
 int switch_color(const char* col)
 {
   const int ngr_col=16;
-  const gr_string gr_col[ngr_col]={"white","black","red","green","blue","yellow","brown","grey","violet","cyan","magenta","orange","indigo","maroon","turquoise","green4"};
+  const gr_string gr_col[ngr_col]={"white","black","red","green","blue","brown","grey","violet","cyan","magenta","orange","indigo","maroon","turquoise","green4","yellow"};
 
   return switch_gr_string(gr_col,ngr_col,col);
 }
