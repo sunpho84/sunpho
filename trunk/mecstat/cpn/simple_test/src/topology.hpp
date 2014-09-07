@@ -6,6 +6,7 @@
 extern std::vector<double> chrono_topo_past_values;
 
 void draw_chrono_topo_potential();
+void draw_chrono_topo_force();
 void compute_unsmeared_topological_force(double *fpi,dcomplex *l);
 void compute_topological_force(double *fpi,double rho,int nlev,dcomplex *l);
 double compute_theta_pot(dcomplex *l);
