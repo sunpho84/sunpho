@@ -89,14 +89,17 @@ double topology(dcomplex *l)
 }
 
 //compute the topological potential according t
-double compute_theta_pot_der(dcomplex *l)
+double compute_theta_pot_der(double Q)
 {
-  double topote_der=0;
-  double pref=-chrono_topo_coeff/sqr(chrono_topo_width);
-  double Q=topology(l);
+  //define prefactors
+  double pref_gauss=-chrono_topo_coeff/sqr(chrono_topo_width);
+  double pref_bend=chrono_topo_coeff*chrono_topo_bend;
   
-  //inside the barrier
+  //set to zero results and compute total number of contributions
+  double topote_der=0;
   int nchrono=chrono_topo_past_values.size();
+
+  //inside the barrier
   if(Q>-chrono_topo_barr && Q<+chrono_topo_barr)
     {
 #pragma omp parallel for reduction(+:topote_der)
@@ -104,54 +107,51 @@ double compute_theta_pot_der(dcomplex *l)
 	{
 	  double q=chrono_topo_past_values[i];
 	  double diff=Q-q,f=diff/chrono_topo_width;
-	  double cont=(pref*diff-chrono_topo_coeff*chrono_topo_bend*Q)*
-	    exp(-f*f/2+chrono_topo_bend*Q*Q/2);
+	  double cont=(pref_gauss*diff+pref_bend*Q)*exp(-f*f/2+chrono_topo_bend*Q*Q/2);
 	  topote_der+=cont;
 	}
     }
   
-  //parabolic
+  //compute parabolic barrier (overwrite gausian piece because it must be set to zero)
   if(Q<-chrono_topo_barr) topote_der=-chrono_topo_force_out*(-Q-chrono_topo_barr);
   if(Q>+chrono_topo_barr) topote_der=+chrono_topo_force_out*(+Q-chrono_topo_barr);
   
-  //linear
-  //if(Q<-chrono_topo_barr) topote_der=-chrono_topo_force_out;
-  //if(Q>+chrono_topo_barr) topote_der=+chrono_topo_force_out;
-  
   return topote_der;
 }
+//wrapper
+double compute_theta_pot_der(dcomplex *l)
+{return compute_theta_pot_der(topology(l));}
 
 //compute the topodynamical potential using past history
 double compute_theta_pot(double Q)
 {
-  //compute 
-  double harm=0;
+  //compute parabolic barrier derivative
+  double harm_potential=0;
+  if(Q<-chrono_topo_barr) harm_potential=chrono_topo_force_out*sqr(-Q-chrono_topo_barr)/2;
+  if(Q>+chrono_topo_barr) harm_potential=chrono_topo_force_out*sqr(+Q-chrono_topo_barr)/2;
   
-  //parabolic
-  if(Q<-chrono_topo_barr) harm=chrono_topo_force_out*sqr(-Q-chrono_topo_barr)/2;
-  if(Q>+chrono_topo_barr) harm=chrono_topo_force_out*sqr(+Q-chrono_topo_barr)/2;
-  
-  //linear
-  //if(Q<-chrono_topo_barr) harm=chrono_topo_force_out*(-Q-chrono_topo_barr);
-  //if(Q>+chrono_topo_barr) harm=chrono_topo_force_out*(+Q-chrono_topo_barr);
-  
-  //put inside the barrier
+  //put inside the barrier in any case
   if(Q<-chrono_topo_barr) Q=-chrono_topo_barr;
   if(Q>+chrono_topo_barr) Q=+chrono_topo_barr;
   
-  double topotential=0;
+  //set to zero results and compute total number of contributions
+  double gauss_topotential=0;
   int nchrono=chrono_topo_past_values.size();
-#pragma omp parallel for reduction(+:topotential)
+  
+  //inside the barrier
+#pragma omp parallel for reduction(+:gauss_topotential)
   for(int i=0;i<nchrono;i++)
     {
       double q=chrono_topo_past_values[i];
       double diff=Q-q,f=diff/chrono_topo_width;
       double cont=exp(-f*f/2+chrono_topo_bend*Q*Q/2);
-      topotential+=cont;
+      gauss_topotential+=cont;
     }
-  topotential*=chrono_topo_coeff;
   
-  return topotential+harm;
+  //add correct normalization
+  gauss_topotential*=chrono_topo_coeff;
+  
+  return gauss_topotential+harm_potential;
 }
 
 //compute the topodynamical potential using past history
@@ -179,6 +179,37 @@ void draw_chrono_topo_potential()
   fout.close();
   
   delete[] Qy;
+}
+
+//draw the chronological topological force
+void draw_chrono_topo_force()
+{
+  double Q_min=*std::min_element(chrono_topo_past_values.begin(),chrono_topo_past_values.end());
+  double Q_max=*std::max_element(chrono_topo_past_values.begin(),chrono_topo_past_values.end());
+  double Q_diff=Q_max-Q_min;
+  int n=ceil(Q_diff/chrono_topo_width*20);
+  if(n==0) n=1;
+  double dQ=Q_diff/n;
+  
+  //compute 
+  double *Qy=new double[n+1];
+  double *Qz=new double[n+1];
+#pragma omp parallel for
+  for(int i=0;i<=n;i++)
+    {
+      Qy[i]=compute_theta_pot_der(Q_min+i*dQ);
+      Qz[i]=(compute_theta_pot(Q_min+i*dQ+dQ/10)-compute_theta_pot(Q_min+i*dQ-dQ/10))/(dQ/5);
+    }
+  
+  //write
+  ofstream fout("topo_force");
+  for(int i=0;i<=n;i++) fout<<Q_min+i*dQ<<" "<<Qy[i]<<endl;
+  fout<<"&"<<endl;
+  for(int i=0;i<=n;i++) fout<<Q_min+i*dQ<<" "<<Qz[i]<<endl;
+  fout.close();
+  
+  delete[] Qy;
+  delete[] Qz;
 }
 
 //compute the force w.r.t topological term

@@ -214,10 +214,10 @@ int main()
 	    {
 	      chrono_topo_past_values.push_back(+topo_num);
 	      if(isweep%500==0) draw_chrono_topo_potential();
+	      //if(isweep%500==0) draw_chrono_topo_force();
 	    }
 	  
 	  topology_file<<isweep<<" "<<ilev<<" "<<
-	    //topo<<" "<<
 	    topo_sim<<" "<<
 	    topo_num<<endl;
 	}
