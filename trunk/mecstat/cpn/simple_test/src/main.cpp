@@ -168,11 +168,13 @@ int main()
   
   //open output files
   ofstream energy_file("energy");
+  ofstream weight_file("topo_weight");
   ofstream topology_file("topology");
   ofstream corr_file("corr");
   ofstream corrd_file("corrd");
   ofstream mag_file("mag");
   energy_file.precision(12);
+  weight_file.precision(12);
   topology_file.precision(12);
   corr_file.precision(12);
   corrd_file.precision(12);
@@ -212,7 +214,10 @@ int main()
 	  double topo_num=topology(lambda_stout[ilev]);
 	  if(use_topo_pot==2 && ilev==nstout_lev)
 	    {
+	      double w=exp(-chrono_topo_well_tempering*compute_theta_pot(+topo_num));
 	      chrono_topo_past_values.push_back(+topo_num);
+	      chrono_topo_past_weight.push_back(w);
+	      weight_file<<w<<endl;
 	      if(isweep%500==0) draw_chrono_topo_potential();
 	      //if(isweep%500==0) draw_chrono_topo_force();
 	    }
