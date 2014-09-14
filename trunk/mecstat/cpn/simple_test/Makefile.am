@@ -19,5 +19,6 @@ __top_builddir__bin_main_SOURCES= \
         src/random.cpp \
         src/staples.cpp \
         src/stout.cpp \
+        src/tools.cpp \
         src/topology.cpp \
         src/zeta.cpp
