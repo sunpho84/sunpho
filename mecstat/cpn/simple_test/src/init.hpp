@@ -1,7 +1,22 @@
 #ifndef _INIT_HPP
 #define _INIT_HPP
 
-extern int init_time;
-void init(int cond,int seed);
+#ifndef EXTERN_INIT
+ #define EXTERN_INIT extern
+#endif
+
+enum start_cond_t{COLD,HOT,LOAD};
+
+struct read_pars_t
+{
+  int seed;
+  start_cond_t start_cond;
+  int nterm,nsweep,nmicro,use_hmc;
+};
+
+void read_input(read_pars_t &read_pars,const char *path);
+void init(read_pars_t &read_pars);
+
+EXTERN_INIT int init_time;
 
 #endif

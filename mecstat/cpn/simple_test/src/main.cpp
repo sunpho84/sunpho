@@ -4,8 +4,6 @@
 
 #include <fstream>
 #include <iostream>
-#include <stdarg.h>
-#include <stdarg.h>
 
 #include "action.hpp"
 #include "close.hpp"
@@ -24,147 +22,26 @@
 #include "staples.hpp"
 #include "stout.hpp"
 #include "topology.hpp"
+#include "tools.hpp"
 #include "types.hpp"
 #include "zeta.hpp"
 
-#include <omp.h>
-
 using namespace std;
-
-int mu_stout=1;
-int site_stout=4;
-
-void gauge_transform(int s)
-{
-  double t=rand()/((double)RAND_MAX)*2*M_PI;
-  
-  dcomplex et(cos(t),sin(t));
-  
-  for(int n=0;n<N;n++) zeta[s*N+n]*=conj(et);
-  lambda[s*NDIMS+0]*=et;
-  lambda[s*NDIMS+1]*=et;
-  lambda[neighdw(s,0)*NDIMS+0]*=conj(et);
-  lambda[neighdw(s,1)*NDIMS+1]*=conj(et);
-}
-void gauge_transform()
-{for(int s=0;s<V;s++) gauge_transform(s);}
-
-//compute functional with stout
-double compute_functional()
-{
-  stout_lambda_whole_stack(lambda_stout,stout_rho,nstout_lev,lambda);
-  return topology(lambda_stout[nstout_lev]);
-}
-
-//compute the force
-void check_stout_force()
-{
-  int site_check=site_stout;
-  int mu_check=mu_stout;
-  
-  cout<<lambda[site_check*NDIMS+mu_check]<<endl;  
-  //gauge_transform();
-  cout<<lambda[site_check*NDIMS+mu_check]<<endl;
-  compute_topological_force(fomega,stout_rho,nstout_lev,lambda);
-  
-  double pre_act=compute_functional();
-  
-  //change
-  dcomplex pre=lambda[site_check*NDIMS+mu_check];
-  double eps=1.e-6;
-  lambda[site_check*NDIMS+mu_check]*=dcomplex(cos(eps),sin(eps));
-  
-  double post_act=compute_functional();
-  lambda[site_check*NDIMS+mu_check]=pre;
-      
-  double f=-(post_act-pre_act)/eps;
-  std::cout<<"mu: "<<mu_check<<" fnu: -("<<post_act<<"-"<<pre_act<<")/"<<eps<<"="<<-(post_act-pre_act)<<"/"<<eps<<"="<<
-    f<<" fan: "<<fomega[site_check*NDIMS+mu_check]<<", ratio-1: "<<fomega[site_check*NDIMS+mu_check]/f-1<<std::endl;
-}
-
-//crash promptin error message
-void crash(const char *temp,...)
-{
-  char buffer[1024];
-  va_list args;
-
-  va_start(args,temp);
-  vsprintf(buffer,temp,args);
-  va_end(args);
-
-  cerr<<"ERROR: "<<buffer<<endl;
-  exit(1);
-}
-
-//read an element from input file
-template <class T> void read(T &out,ifstream &in,string is)
-{
-  string s;
-  if(!(in>>s)) crash("impossible to read expect string \"%s\"",is.c_str());
-  if(s!=is) crash("obtained %s while reading %s",s.c_str(),is.c_str());
-  if(!(in>>out)) crash("reading data");
-}
 
 int main()
 {
-  //read parameters
-  ifstream input("input");
-  if(!input.good()) crash("opening input");
-  read(N,input,"N");
-  read(L,input,"L");
-  read(beta,input,"Beta");
-  g=1/(N*beta);
-  int seed;
-  read(seed,input,"Seed");
-  int use_hmc,nsweep,nterm,nmicro;
-  read(nsweep,input,"NSweep");
-  read(nterm,input,"NTerm");
-  read(compute_corr_each,input,"ComputeCorrEach");
-  read(use_hmc,input,"UseHMC");
-  if(!use_hmc) read(nmicro,input,"NMicro");
-  else
-    {
-      nmicro=3;
-      read(nhmc_steps,input,"NhmcSteps");
-    }
-  read(use_topo_pot,input,"UseTopoPot");
-  switch(use_topo_pot)
-    {
-    case 0:
-      break;
-    case 1:
-      read(th_top,input,"ThTop");
-      break;
-    case 2:
-      if(!use_hmc) crash("must use hmc");
-      read(chrono_topo_after,input,"ChronoTopoAfter");
-      read(chrono_topo_coeff,input,"ChronoTopoCoeff");
-      read(chrono_topo_width,input,"ChronoTopoWidth");
-      read(chrono_topo_barr,input,"ChronoTopoBarr");
-      read(chrono_topo_force_out,input,"ChronoTopoForceOut");
-      read(chrono_topo_bend,input,"ChronoTopoBend");
-      read(chrono_topo_well_tempering,input,"ChronoTopoWellTempering");
-      break;
-    }
-  read(nstout_lev,input,"NStoutLev");
-  read(stout_rho,input,"StoutRho");
-  
-  //initialize
-  init(HOT,seed);
-  
+  //read input and initialize
+  read_pars_t read_pars;
+  read_input(read_pars,"input");
+  init(read_pars);
+
   //thermalization
-  for(int isweep=0;isweep<nterm;isweep++)
-  {
-    for(int imicro=0;imicro<nmicro;imicro++) micro_sweep();
-    overheat_sweep();
-  }
-  
-  //print number of threads
-#pragma omp parallel
-  {
-#pragma omp single
-    cout<<omp_get_num_threads()<<" threads"<<endl;
-  }
+  for(int isweep=0;isweep<read_pars.nterm;isweep++)
+    {
+      if(read_pars.start_cond==COLD) hmc_update((isweep<10)?SKIP_TEST:DO_TEST);
+      for(int imicro=0;imicro<read_pars.nmicro;imicro++) micro_sweep();
+      overheat_sweep();
+    }
   
   //open output files
   ofstream energy_file("energy");
@@ -173,25 +50,25 @@ int main()
   ofstream corr_file("corr");
   ofstream corrd_file("corrd");
   ofstream mag_file("mag");
-  energy_file.precision(12);
-  weight_file.precision(12);
-  topology_file.precision(12);
-  corr_file.precision(12);
-  corrd_file.precision(12);
-  mag_file.precision(12);
+  energy_file.precision(PREC);
+  weight_file.precision(PREC);
+  topology_file.precision(PREC);
+  corr_file.precision(PREC);
+  corrd_file.precision(PREC);
+  mag_file.precision(PREC);
   
   //sweep with overheat-micro
   timing_t tot_time,sweep_time,energy_time,geo_topo_time,topo_time,corr_time;
   
   tot_time.start();
-  for(int isweep=1;isweep<=nsweep;isweep++)
+  for(int isweep=1;isweep<=read_pars.nsweep;isweep++)
     {
       //sweep
       sweep_time.start();
-      if(use_hmc) hmc_update();
+      if(read_pars.use_hmc) hmc_update();
       else
 	{
-	  for(int imicro=0;imicro<nmicro;imicro++) micro_sweep();
+	  for(int imicro=0;imicro<read_pars.nmicro;imicro++) micro_sweep();
 	  overheat_sweep();
 	}
       sweep_time.stop();
@@ -218,8 +95,11 @@ int main()
 	      chrono_topo_past_values.push_back(+topo_num);
 	      chrono_topo_past_weight.push_back(w);
 	      weight_file<<w<<endl;
-	      if(isweep%500==0) draw_chrono_topo_potential();
-	      //if(isweep%500==0) draw_chrono_topo_force();
+	      if(isweep%DRAW_EACH==0)
+		{
+		  draw_chrono_topo_potential();
+		  draw_chrono_topo_force();
+		}
 	    }
 	  
 	  topology_file<<isweep<<" "<<ilev<<" "<<
@@ -249,6 +129,9 @@ int main()
   cout<<"Topo time: "<<topo_time<<endl;
   cout<<"Energy time: "<<energy_time<<endl;
   cout<<"Corr time: "<<corr_time<<endl;
+  
+  //write the conf
+  write_conf("conf");
   
   //finalize
   close();

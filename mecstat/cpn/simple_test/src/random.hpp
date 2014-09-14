@@ -25,7 +25,6 @@ void set_U1_to_rnd(dcomplex &U);
 double get_theta(double a,int k);
 double get_theta_1(double a);
 void set_ON_to_rnd(dcomplex *O);
-void init_system_to(int cond);
 dcomplex get_gauss_complex();
 double get_gauss_double();
 
