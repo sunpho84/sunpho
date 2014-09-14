@@ -247,7 +247,7 @@ void hmc_integrate()
 }
 
 //perform a hybid monte carlo update
-void hmc_update()
+void hmc_update(bool skip_test=false)
 {
   //copy configuration
   copy_zeta_conf(zeta_old,zeta);
@@ -280,7 +280,7 @@ void hmc_update()
   bool acc=estr<pacc;
   
   //copy back old configuration
-  if(!acc)
+  if(!skip_test && !acc)
     {
       copy_zeta_conf(zeta,zeta_old);
       copy_lambda_conf(lambda,lambda_old);

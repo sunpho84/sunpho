@@ -2,27 +2,120 @@
  #include "config.hpp"
 #endif
 
+#include <fstream>
 #include <iostream>
+#include <omp.h>
 
 #include "data.hpp"
 #include "geometry.hpp"
 #include "random.hpp"
 #include "staples.hpp"
+#include "tools.hpp"
+
+#define EXTERN_INIT
+
+#include "init.hpp"
 
 using namespace std;
 
-int init_time;
+//read the input file
+void read_input(read_pars_t &read_pars,const char *path)
+{
+  //read parameters
+  ifstream input(path);
+  if(!input.good()) crash("opening input");
+  read(N,input,"N");
+  read(L,input,"L");
+  read(beta,input,"Beta");
+  g=1/(N*beta);
+  read(read_pars.seed,input,"Seed");
+  read(read_pars.nsweep,input,"NSweep");
+  string start_cond_str;
+  read(start_cond_str,input,"StartCond");
+  if(start_cond_str=="COLD") read_pars.start_cond=COLD;
+  else
+    if(start_cond_str=="HOT") read_pars.start_cond=HOT;
+    else
+      if(start_cond_str=="LOAD") read_pars.start_cond=LOAD;
+      else crash("Unkwnown start cond %s, use: COLD, HOT, LOAD",start_cond_str.c_str());
+  read(read_pars.nterm,input,"NTerm");
+  read(compute_corr_each,input,"ComputeCorrEach");
+  read(read_pars.use_hmc,input,"UseHMC");
+  if(!read_pars.use_hmc) read(read_pars.nmicro,input,"NMicro");
+  else
+    {
+      read_pars.nmicro=3;
+      read(nhmc_steps,input,"NhmcSteps");
+    }
+  read(use_topo_pot,input,"UseTopoPot");
+  switch(use_topo_pot)
+    {
+    case 0:
+      break;
+    case 1:
+      read(th_top,input,"ThTop");
+      break;
+    case 2:
+      if(!read_pars.use_hmc) crash("must use hmc");
+      read(chrono_topo_after,input,"ChronoTopoAfter");
+      read(chrono_topo_coeff,input,"ChronoTopoCoeff");
+      read(chrono_topo_width,input,"ChronoTopoWidth");
+      read(chrono_topo_barr,input,"ChronoTopoBarr");
+      read(chrono_topo_force_out,input,"ChronoTopoForceOut");
+      read(chrono_topo_bend,input,"ChronoTopoBend");
+      read(chrono_topo_well_tempering,input,"ChronoTopoWellTempering");
+      break;
+    }
+  read(nstout_lev,input,"NStoutLev");
+  read(stout_rho,input,"StoutRho");
+}
+
+//initialize the system to hot
+void init_system_to_hot()
+{
+  for(int site=0;site<V;site++)
+    {
+      //fill the lambda
+      for(int mu=0;mu<NDIMS;mu++)
+        set_U1_to_rnd(lambda[site*NDIMS+mu]);
+      
+      //fill the Zeta
+      set_ON_to_rnd(zeta+site*N);
+    }
+}
+
+//initialize to cold
+void init_system_to_cold()
+{
+#pragma omp parallel for
+  for(int site=0;site<V;site++)
+    {
+      //fill the lambda
+      for(int mu=0;mu<NDIMS;mu++) lambda[site*NDIMS+mu]=1;
+      
+      //fill the Zeta
+      for(int n=0;n<N;n++) zeta[site*N+n]=(n==0);
+    }
+}
 
 //initialize the code
-void init(int cond,int seed)
+void init(read_pars_t &read_pars)
 {
+  //take init time
   init_time=time(0);
+
+  //write nthreads
+#pragma omp parallel
+  {
+#pragma omp single
+    cout<<omp_get_num_threads()<<" threads"<<endl;
+  }
   
 #ifdef GOOD_GENERATOR
   //init the random generators
   rd=new random_device();
   gen=new mt19937_64((*rd)());
-  gen->seed(seed);
+  gen->seed(read_pars.seed);
   dis=new uniform_real_distribution<double>;
 #else
   const int im1=2147483563,ia1=40014;
@@ -30,7 +123,7 @@ void init(int cond,int seed)
   int j,k;
   
   //initialization
-  gen.idum=seed;
+  gen.idum=read_pars.seed;
   gen.idum=std::max(gen.idum+1,1);
   gen.idum2=gen.idum;
   for(j=RAN2_NTAB+7;j>=0;j--)
@@ -98,7 +191,12 @@ void init(int cond,int seed)
   //allocate stout lambda
   lambda_stout=new dcomplex*[nstout_lev+1];
   for(int istout_lev=1;istout_lev<=nstout_lev;istout_lev++) lambda_stout[istout_lev]=new dcomplex[V*NDIMS];
-
-  //set the system to hot state
-  init_system_to(cond);
+  
+  //init according to start condition
+  switch(read_pars.start_cond)
+    {
+    case HOT: init_system_to_hot();break;
+    case COLD: init_system_to_cold();break;
+    case LOAD: read_conf("conf");break; //remember rnd gen reinit
+    }
 }

@@ -10,8 +10,10 @@ using namespace std;
 #include "data.hpp"
 #include "debug.hpp"
 #include "geometry.hpp"
+#include "init.hpp"
 #include "parameters.hpp"
 #include "routines.hpp"
+#include "tools.hpp"
 
 #define EXTERN_RANDOM
 #include "random.hpp"
@@ -228,39 +230,4 @@ void set_ON_to_rnd(dcomplex *O)
       double the=get_unif_double(2*M_PI);
       O[i]=nor*dcomplex(cos(the),sin(the));
     }
-}
-
-//initialize the system to hot
-void init_system_to_hot()
-{
-  for(int site=0;site<V;site++)
-    {
-      //fill the lambda
-      for(int mu=0;mu<NDIMS;mu++)
-	set_U1_to_rnd(lambda[site*NDIMS+mu]);
-      
-      //fill the Zeta
-      set_ON_to_rnd(zeta+site*N);
-    }
-}
-
-//initialize to cold
-void init_system_to_cold()
-{
-#pragma omp parallel for
-  for(int site=0;site<V;site++)
-    {
-      //fill the lambda
-      for(int mu=0;mu<NDIMS;mu++) lambda[site*NDIMS+mu]=1;
-      
-      //fill the Zeta
-      for(int n=0;n<N;n++) zeta[site*N+n]=(n==0);
-    }
-}
-
-//switch
-void init_system_to(int cond)
-{
-  if(cond==HOT) init_system_to_hot();
-  else          init_system_to_cold();
 }
