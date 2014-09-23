@@ -14,15 +14,15 @@ int itraj;
 int do_not_exit;
 
 double A=1; //curvature of the pot
-double B=0; //weight
+double B=1; //tempering
 double C=1; //place-dependant weight
 
 const double SKIP_OUT_FROM=50;
 int nacc=0;
 const int debug=0;
-const double chrono_barr=2.2;//8;
+const double chrono_barr=14;//8;
 const double chrono_width=0.25;//W/4;
-const double harm_weight=10;
+const double harm_weight=0;
 const double chrono_coeff=0.01;
 double *chrono_hist;
 double *chrono_weight;
@@ -64,13 +64,14 @@ double meta_action(double X,bool ave=false)
 	{
 	  int aw=(ave?((it>start)?(end-it):(end-start)):1);
 	  double x=chrono_hist[it];
+	  double w=chrono_weight[it];
 	  double diff=X-x,f=diff/chrono_width;
 	  if(fabs(f)<SKIP_OUT_FROM)
 	    {
 #ifdef GAUSS
-	      double cont=aw*exp(-f*f/2+C*X*X/2);
+	      double cont=aw*w*exp(-f*f/2+C*X*X/2);
 #else
-	      double cont=aw/(1+f*f);
+	      double cont=aw*w/(1+f*f);
 #endif
 	      
 	      chrono_hist_potential+=cont;
@@ -184,16 +185,21 @@ bool hmc(double &x,int nt)
 
 int main()
 {
-  const int ntraj=100000;
+  int nthreads;
+#pragma omp parallel
+  nthreads=omp_get_num_threads();
+  cout<<"Nthreads: "<<nthreads<<endl;
+  
+  const int ntraj=50000;
   chrono_hist=new double[ntraj];
   chrono_weight=new double[ntraj];
   
-  const int nt=10;
+  const int nt=2;
   double x=1;
   
   ofstream pot("pot");
   for(double e=-1.5*chrono_barr;e<chrono_barr*1.5;e+=0.02)
-    pot<<e<<" "<<-4+x_action(e)<<endl;
+    pot<<e<<" "<<x_action(e)<<endl;
   
   ofstream force("force");
   for(double e=-1.5*chrono_barr;e<chrono_barr*1.5;e+=0.02)
@@ -206,8 +212,8 @@ int main()
     {
       hmc(x,nt);
       chrono_hist[itraj]=x;
-      chrono_weight[itraj]=exp(B*x*x/2);
-      //cerr<<x<<endl;
+      chrono_weight[itraj]=exp(-B*meta_action(x));
+      //cout<<chrono_weight[itraj]<<endl;
       itraj++;
       if(itraj%(ntraj/100)==0) cout<<(itraj*100/ntraj)<<"%"<<endl;
     }
@@ -216,7 +222,7 @@ int main()
   ofstream meta_pot_file("meta_pot");
   double meta_ave_0=meta_action(0,true);
   for(double e=-1.5*chrono_barr;e<chrono_barr*1.5;e+=0.1)
-    meta_pot_file<<e<<" "<<-(meta_action(e,true)-meta_ave_0)<<endl;
+    meta_pot_file<<e<<" "<<meta_ave_0-((meta_action(+e,true)+meta_action(-e,true))/2)<<endl;
 
   ofstream meta_force_file("meta_force");
   for(double e=-1.5*chrono_barr;e<chrono_barr*1.5;e+=0.02)

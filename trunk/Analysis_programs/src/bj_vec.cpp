@@ -144,7 +144,7 @@ VTYPE VTYPE::load(FILE *fin,int i)
 
 VTYPE VTYPE::load(const char *path,int i)
 {
-  cout<<"Loading corr "<<i<<" from path "<<path<<endl;
+  if(debug_load) cout<<"Loading corr "<<i<<" from path "<<path<<endl;
   FILE *fin=open_file(path,"r");
   
   load(fin,i);
@@ -163,7 +163,7 @@ void VTYPE::print_to_file(const char *format,...)
   va_end(args);
 
   ofstream fout(buffer);
-  if(!fout.good()) crash("opening %s",buffer);
+  if(!fout.good()) crash("opening %s [print_to_file]",buffer);
   
   fout<<"@type xydy"<<endl;
   fout<<(*this);
@@ -180,7 +180,7 @@ void VTYPE::print_rel_err_to_file(const char *format,...)
   va_end(args);
 
   ofstream fout(buffer);
-  if(!fout.good()) crash("opening %s",buffer);
+  if(!fout.good()) crash("opening %s [print_rel_err_to_file]",buffer);
   
   fout<<"@type xy"<<endl;
   for(int t=0;t<this->nel;t++) fout<<(*this)[t].med()/(*this)[t].err()<<endl;
@@ -581,13 +581,20 @@ string write_constant_fit_plot(VTYPE in,TYPE y,int tin,int tfin,int iset=0)
   
   return out.str();
 }
+void append_constant_fit_plot(const char *path,VTYPE in,TYPE y,int tin,int tfin,int iset)
+{
+  ofstream out(path,ios::app);
+  if(!out.good()) crash("opening %s [append_constant_fit_plot]",path);
+  out<<write_constant_fit_plot(in,y,tin,tfin,iset);
+  out.close();
+}
 void write_constant_fit_plot(const char *path,VTYPE in,TYPE y,int tin,int tfin,int iset=0)
 {
   ofstream out(path);
-  if(!out.good()) crash("opening %s",path);
+  if(!out.good()) crash("opening %s [write_constant_fit_plot]",path);
   out<<"@page size 800,600"<<endl;
-  out<<write_constant_fit_plot(in,y,tin,tfin,iset);
   out.close();
+  append_constant_fit_plot(path,in,y,tin,tfin,iset);
 }
 
 TYPE constant_fit(VTYPE in,int tin,int tfin,const char *path=NULL,const char *path_ch2=NULL)

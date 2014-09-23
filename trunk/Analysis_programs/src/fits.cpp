@@ -353,7 +353,11 @@ void two_pts_SL_fit(jack &M,jack &ZL,jack &ZS,jvec corrSL,jvec corrSS,int tminSL
   //cout<<"M: "<<smart_print(M)<<", ch2: "<<ch2<<endl;
   
   //write plots
-  if(path1!=NULL) write_constant_fit_plot(path1,effective_mass(corrSL),M,tminSL,tmaxSL);
+  if(path1!=NULL)
+    {
+      write_constant_fit_plot(path1,effective_mass(corrSL),M,tminSL,tmaxSL);
+      if(path2==NULL) append_constant_fit_plot(path1,effective_mass(corrSS),M,tminSS,tmaxSS,3);
+    }
   if(path2!=NULL) write_constant_fit_plot(path2,effective_mass(corrSS),M,tminSS,tmaxSS);
   
   //delete
