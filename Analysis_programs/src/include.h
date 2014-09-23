@@ -11,6 +11,8 @@
 
 using namespace std;
 
+bool debug_load=true;
+
 #include "tools.cpp"
 #include "auto.cpp"
 
