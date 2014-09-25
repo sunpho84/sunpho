@@ -10,6 +10,8 @@ AC_CANONICAL_HOST
 AC_PROG_CXX
 AC_CONFIG_FILES(Makefile)
 
+PKG_CHECK_MODULES([pkg_fftw3], [fftw3])
+
 #good-generator
 AC_ARG_ENABLE(good-generator,
         AS_HELP_STRING([--enable-good-generator],[Enable costly generation of random variables]),
