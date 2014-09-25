@@ -1,10 +1,9 @@
 ACLOCAL_AMFLAGS=-I m4
 
 bin_PROGRAMS=$(top_builddir)/bin/main
-__top_builddir__bin_main_CFLAGS=${pkg_fftw3_CFLAGS}
-__top_builddir__bin_main_LDADD=${pkg_fftw3_LIBS}
-__top_builddir__bin_main_LDADD+=-lfftw3_threads
 
+__top_builddir__bin_main_LDADD=-lfftw3
+__top_builddir__bin_main_LDADD+=-lfftw3_threads
 __top_builddir__bin_main_SOURCES= \
         src/action.cpp \
         src/close.cpp \

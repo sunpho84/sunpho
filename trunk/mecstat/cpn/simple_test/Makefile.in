@@ -111,8 +111,7 @@ am___top_builddir__bin_main_OBJECTS = src/action.$(OBJEXT) \
 	src/topology.$(OBJEXT) src/zeta.$(OBJEXT)
 __top_builddir__bin_main_OBJECTS =  \
 	$(am___top_builddir__bin_main_OBJECTS)
-am__DEPENDENCIES_1 =
-__top_builddir__bin_main_DEPENDENCIES = $(am__DEPENDENCIES_1)
+__top_builddir__bin_main_DEPENDENCIES =
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -225,9 +224,6 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
-PKG_CONFIG = @PKG_CONFIG@
-PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
-PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
@@ -271,8 +267,6 @@ mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
-pkg_fftw3_CFLAGS = @pkg_fftw3_CFLAGS@
-pkg_fftw3_LIBS = @pkg_fftw3_LIBS@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
@@ -285,8 +279,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 ACLOCAL_AMFLAGS = -I m4
-__top_builddir__bin_main_CFLAGS = ${pkg_fftw3_CFLAGS}
-__top_builddir__bin_main_LDADD = ${pkg_fftw3_LIBS} -lfftw3_threads
+__top_builddir__bin_main_LDADD = -lfftw3 -lfftw3_threads
 __top_builddir__bin_main_SOURCES = \
         src/action.cpp \
         src/close.cpp \
