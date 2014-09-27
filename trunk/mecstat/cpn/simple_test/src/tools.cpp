@@ -28,12 +28,22 @@ void crash(const char *temp,...)
   exit(1);
 }
 
+//check if a file exists
+bool file_exists(const char *path)
+{
+  ifstream file(path);
+  bool ex=file.good();
+  file.close();
+  return ex;  
+}
+
 //write the configuration to disk
-void write_conf(const char *path)
+void write_conf(const char *path,int isweep)
 {
   ofstream conf_file(path);
   if(!conf_file.good()) crash("opening %s to write conf",path);
   
+  if(!(conf_file.write((char*)&isweep,sizeof(int)))) crash("writing isweep");
   //write the two pieces
   if(!(conf_file.write((char*)zeta,sizeof(dcomplex)*N*V))) crash("writing zeta");
   if(!(conf_file.write((char*)lambda,sizeof(dcomplex)*V*NDIMS))) crash("writing lambda");
@@ -46,11 +56,12 @@ void write_conf(const char *path)
 }
 
 //read the configuration to disk
-void read_conf(const char *path)
+void read_conf(int &isweep,const char *path)
 {
   ifstream conf_file(path);
   if(!conf_file.good()) crash("opening %s to read conf",path);
   
+  if(!(conf_file.read((char*)&isweep,sizeof(int)))) crash("reading isweep");
   //read the two pieces
   if(!(conf_file.read((char*)zeta,sizeof(dcomplex)*N*V))) crash("reading zeta");
   if(!(conf_file.read((char*)lambda,sizeof(dcomplex)*V*NDIMS))) crash("reading lambda");

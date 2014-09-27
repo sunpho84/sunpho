@@ -7,8 +7,9 @@
 using namespace std;
 
 void crash(const char *temp,...);
-void write_conf(const char *path);
-void read_conf(const char *path);
+bool file_exists(const char *path);
+void read_conf(int &itraj,const char *path);
+void write_conf(const char *path,int itraj);
 
 //read an element from input file
 template <class T> void read(T &out,ifstream &in,string is)

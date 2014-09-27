@@ -15,7 +15,7 @@ struct read_pars_t
 };
 
 void read_input(read_pars_t &read_pars,const char *path);
-void init(read_pars_t &read_pars);
+void init(int &base_isweep,read_pars_t &read_pars);
 
 EXTERN_INIT int init_time;
 

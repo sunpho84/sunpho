@@ -33,15 +33,8 @@ int main()
   //read input and initialize
   read_pars_t read_pars;
   read_input(read_pars,"input");
-  init(read_pars);
-
-  //thermalization
-  for(int isweep=0;isweep<read_pars.nterm;isweep++)
-    {
-      if(read_pars.start_cond==COLD) hmc_update((isweep<10)?SKIP_TEST:DO_TEST);
-      for(int imicro=0;imicro<read_pars.nmicro;imicro++) micro_sweep();
-      overheat_sweep();
-    }
+  int base_isweep;
+  init(base_isweep,read_pars);
   
   //open output files
   ofstream energy_file("energy");
@@ -61,18 +54,9 @@ int main()
   timing_t tot_time,sweep_time,energy_time,geo_topo_time,topo_time,corr_time;
   
   tot_time.start();
-  for(int isweep=1;isweep<=read_pars.nsweep;isweep++)
+  int isweep;
+  for(isweep=base_isweep+1;isweep<=base_isweep+read_pars.nsweep;isweep++)
     {
-      //sweep
-      sweep_time.start();
-      if(read_pars.use_hmc) hmc_update();
-      else
-	{
-	  for(int imicro=0;imicro<read_pars.nmicro;imicro++) micro_sweep();
-	  overheat_sweep();
-	}
-      sweep_time.stop();
-      
       //compute geometrical topological charge
       geo_topo_time.start();
       double topo_sim=geometric_topology_simplified(zeta);
@@ -119,6 +103,16 @@ int main()
 	  mag_file<<isweep<<" "<<mag0<<" "<<mag1<<endl;
 	  corr_time.stop();
 	}
+
+      //sweep
+      sweep_time.start();
+      if(read_pars.use_hmc) hmc_update();
+      else
+	{
+	  for(int imicro=0;imicro<read_pars.nmicro;imicro++) micro_sweep();
+	  overheat_sweep();
+	}
+      sweep_time.stop();
     }
   tot_time.stop();
   
@@ -131,7 +125,7 @@ int main()
   cout<<"Corr time: "<<corr_time<<endl;
   
   //write the conf
-  write_conf("conf");
+  write_conf("conf",isweep);
   
   //finalize
   close();
