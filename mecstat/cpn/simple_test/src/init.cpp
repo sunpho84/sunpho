@@ -99,7 +99,7 @@ void init_system_to_cold()
 }
 
 //initialize the code
-void init(read_pars_t &read_pars)
+void init(int &base_isweep,read_pars_t &read_pars)
 {
   //take init time
   init_time=time(0);
@@ -193,10 +193,15 @@ void init(read_pars_t &read_pars)
   for(int istout_lev=1;istout_lev<=nstout_lev;istout_lev++) lambda_stout[istout_lev]=new dcomplex[V*NDIMS];
   
   //init according to start condition
-  switch(read_pars.start_cond)
+  if(!file_exists("conf"))
     {
-    case HOT: init_system_to_hot();break;
-    case COLD: init_system_to_cold();break;
-    case LOAD: read_conf("conf");break; //remember rnd gen reinit
+      base_isweep=0;
+      switch(read_pars.start_cond)
+	{
+	case HOT:  init_system_to_hot();break;
+	case COLD: init_system_to_cold();break;
+	case LOAD: crash("conf not exists!");break;
+	}
     }
+  else read_conf(base_isweep,"conf"); //remember rnd gen reinit
 }
