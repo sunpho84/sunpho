@@ -21,6 +21,21 @@ void overheat_update_site(int site)
   dcomplex staple[N];
   site_staple(staple,zeta,lambda,site);
   double staple_norm=get_zeta_norm(staple);
+  
+  //new version starts here
+  
+  double theta_new=get_theta(beta*N*staple_norm,N);
+  dcomplex R[N];
+  set_ON_to_rnd(R);
+  zeta_orthogonalize_with(R,staple);
+  double R_norm=get_zeta_norm(R);
+  double par_comp=cos(theta_new)/staple_norm;
+  double perp_comp=sin(theta_new)/R_norm;
+  for(int n=0;n<N;n++) zeta[site*N+n]=staple[n]*par_comp+R[n]*perp_comp;
+  
+  //and ends here
+  
+  /*
   double staple_energy=get_zeta_real_scalprod(zeta+site*N,staple);
   
   //compute theta in the simple way
@@ -50,6 +65,7 @@ void overheat_update_site(int site)
       zeta_unitarize(zeta+site*N);
     }
   else cout<<"skipping site "<<site<<": "<<theta_old<<endl;
+  */
 }
 
 //update a link using overrelaxion/heatbath

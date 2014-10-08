@@ -25,13 +25,6 @@ double get_zeta_real_scalprod(dcomplex *a,dcomplex *b)
   return res;
 }
 
-//orthogonalize
-void zeta_orthogonalize_with(dcomplex *z,dcomplex *w)
-{
-  double norm_with=get_zeta_real_scalprod(w,z);
-  for(int n=0;n<N;n++) z[n]-=norm_with*w[n];
-}
-
 //return inner product of zeta
 void get_zeta_P(dcomplex *P,dcomplex *z)
 {
@@ -46,6 +39,21 @@ double get_zeta_norm(dcomplex *z)
   double norm2=0;
   for(int n=0;n<N;n++) norm2+=norm(z[n]);
   return sqrt(norm2);
+}
+
+//return the norm2 of a zeta
+double get_zeta_norm2(dcomplex *z)
+{
+  double norm2=0;
+  for(int n=0;n<N;n++) norm2+=norm(z[n]);
+  return norm2;
+}
+
+//orthogonalize
+void zeta_orthogonalize_with(dcomplex *z,dcomplex *w)
+{
+  double norm_with=get_zeta_real_scalprod(w,z)/get_zeta_norm2(w);
+  for(int n=0;n<N;n++) z[n]-=norm_with*w[n];
 }
 
 //reunitarize a zeta
