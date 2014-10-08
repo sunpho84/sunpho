@@ -77,6 +77,21 @@ void overheat_update_link(int site,int mu)
 
   //compute the staple norm and energy
   double staple_norm=sqrt(norm(staple));
+  
+  //new version starts here
+  
+  double theta_new=get_theta_1(beta*N*staple_norm);
+  dcomplex R;
+  set_U1_to_rnd(R);
+  lambda_orthogonalize_with(R,staple);
+  double R_norm=get_lambda_norm(R);
+  double par_comp=cos(theta_new)/staple_norm;
+  double perp_comp=sin(theta_new)/R_norm;
+  lambda[site*NDIMS+mu]=staple*par_comp+R*perp_comp;
+  
+  //and ends here
+  
+  /*
   double staple_energy=get_lambda_real_scalprod(lambda[site*NDIMS+mu],staple);
   
   //compute theta in the simple way
@@ -104,6 +119,7 @@ void overheat_update_link(int site,int mu)
       //reunitarize
       lambda_unitarize(lambda[site*NDIMS+mu]);
     }
+  */
 }
 
 //sweep all the lattice with overrelaxation/heatbath
