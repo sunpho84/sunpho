@@ -14,6 +14,10 @@ double get_lambda_real_scalprod(dcomplex a,dcomplex b)
 double get_lambda_norm(dcomplex &l)
 {return sqrt(norm(l));}
 
+//return the norm of a lambda
+double get_lambda_norm2(dcomplex &l)
+{return norm(l);}
+
 //reunitarize a lambda
 double lambda_unitarize(dcomplex &l)
 {
@@ -25,3 +29,10 @@ double lambda_unitarize(dcomplex &l)
 //return the deviation from unitarity of a lambda
 double check_lambda_unitarity(dcomplex &l)
 {return fabs(get_lambda_norm(l)-1);}
+
+//orthogonalize
+void lambda_orthogonalize_with(dcomplex &l,dcomplex w)
+{
+  double norm_with=get_lambda_real_scalprod(w,l)/get_lambda_norm2(w);
+  l-=norm_with*w;
+}
