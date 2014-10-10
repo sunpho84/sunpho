@@ -25,10 +25,18 @@ void overheat_update_site(int site)
   //new version starts here
   
   double theta_new=get_theta(beta*N*staple_norm,N);
+  
+  //draw a random vetor until it is not too orthogonal to the staple
   dcomplex R[N];
-  set_ON_to_rnd(R);
-  zeta_orthogonalize_with(R,staple);
-  double R_norm=get_zeta_norm(R);
+  double R_norm;
+  do
+    {
+      set_ON_to_rnd(R);
+      zeta_orthogonalize_with(R,staple);
+      R_norm=get_zeta_norm(R);
+      //if(R_norm<1e-3) cout<<"drawing again site"<<endl;
+    }
+  while(R_norm<1e-3);
   double par_comp=cos(theta_new)/staple_norm;
   double perp_comp=sin(theta_new)/R_norm;
   for(int n=0;n<N;n++) zeta[site*N+n]=staple[n]*par_comp+R[n]*perp_comp;
@@ -81,10 +89,18 @@ void overheat_update_link(int site,int mu)
   //new version starts here
   
   double theta_new=get_theta_1(beta*N*staple_norm);
+  
+  //draw a random vetor until it is not too orthogonal to the staple
   dcomplex R;
-  set_U1_to_rnd(R);
-  lambda_orthogonalize_with(R,staple);
-  double R_norm=get_lambda_norm(R);
+  double R_norm;
+  do
+    {
+      set_U1_to_rnd(R);
+      lambda_orthogonalize_with(R,staple);
+      R_norm=get_lambda_norm(R);
+      //if(R_norm<1e-3) cout<<"drawing again link"<<endl;
+  }
+  while(R_norm<1e-3);
   double par_comp=cos(theta_new)/staple_norm;
   double perp_comp=sin(theta_new)/R_norm;
   lambda[site*NDIMS+mu]=staple*par_comp+R*perp_comp;
