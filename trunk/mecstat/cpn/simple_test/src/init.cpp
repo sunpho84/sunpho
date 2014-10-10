@@ -32,12 +32,14 @@ void read_input(read_pars_t &read_pars,const char *path)
   read(read_pars.nsweep,input,"NSweep");
   string start_cond_str;
   read(start_cond_str,input,"StartCond");
-  if(start_cond_str=="COLD") read_pars.start_cond=COLD;
+  if(file_exists("conf")) read_pars.start_cond=LOAD;
   else
-    if(start_cond_str=="HOT") read_pars.start_cond=HOT;
+    if(start_cond_str=="COLD") read_pars.start_cond=COLD;
     else
-      if(start_cond_str=="LOAD") read_pars.start_cond=LOAD;
-      else crash("Unkwnown start cond %s, use: COLD, HOT, LOAD",start_cond_str.c_str());
+      if(start_cond_str=="HOT") read_pars.start_cond=HOT;
+      else
+	if(start_cond_str=="LOAD") read_pars.start_cond=LOAD;
+	else crash("Unkwnown start cond %s, use: COLD, HOT, LOAD",start_cond_str.c_str());
   read(read_pars.nterm,input,"NTerm");
   read(compute_corr_each,input,"ComputeCorrEach");
   read(read_pars.use_hmc,input,"UseHMC");
