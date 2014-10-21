@@ -3,8 +3,12 @@
 #endif
 
 #include <cmath>
+#include <iostream>
 
+#include "geometry.hpp"
 #include "types.hpp"
+
+using namespace std;
 
 //return the result of the scalar product of two lambda
 double get_lambda_real_scalprod(dcomplex a,dcomplex b)
@@ -35,4 +39,16 @@ void lambda_orthogonalize_with(dcomplex &l,dcomplex w)
 {
   double norm_with=get_lambda_real_scalprod(w,l)/get_lambda_norm2(w);
   l-=norm_with*w;
+}
+
+//unitarity of the whole conf
+void check_lambda_conf_unitarity(dcomplex *l)
+{
+  double lambda_nonun=0;
+#pragma omp parallel for reduction(+:lambda_nonun)
+  for(int site=0;site<V;site++)
+    for(int mu=0;mu<NDIMS;mu++)
+      lambda_nonun+=get_lambda_norm(l[site*NDIMS+mu])-1;
+
+  cout<<"Lambda nonun: "<<lambda_nonun/sqrt(V*NDIMS)<<endl;
 }

@@ -11,6 +11,7 @@
 #include "routines.hpp"
 #include "staples.hpp"
 #include "topology.hpp"
+#include "tools.hpp"
 #include "zeta.hpp"
 
 #include <iostream>
@@ -210,9 +211,8 @@ void update_positions(double eps)
 }
 
 //integrate equation of motion
-void hmc_integrate()
+void hmc_integrate(double tl)
 {
-  double tl=1;
   double dt=tl/nhmc_steps/2,dth=dt/2,ldt=dt*OMELYAN_LAMBDA,l2dt=2*OMELYAN_LAMBDA*dt,uml2dt=(1-2*OMELYAN_LAMBDA)*dt;
 
   //     Compute H(t+lambda*dt) i.e. v1=v(t)+a[r(t)]*lambda*dt (first half step)
@@ -235,7 +235,9 @@ void hmc_integrate()
       //     Compute H(t+dt) i.e. v(t+dt)=v2+a[r(t+dt)]*lambda*dt (at last step) or *2*lambda*dt
       update_momenta(last_dt);
     }
-  
+
+  //check_lambda_conf_unitarity(lambda);
+  //check_zeta_conf_unitarity(zeta);
   //normalize the configuration
 #pragma omp parallel for
   for(int site=0;site<V;site++)
@@ -261,8 +263,8 @@ void hmc_update(bool skip_test=false)
   double start_action=start_mom_action+start_theo_action+start_topo_action;
   //cout<<"Action: mom="<<start_mom_action<<", coord="<<start_theo_action<<", topo: "<<start_topo_action<<endl;
   
-  //integrate
-  hmc_integrate();
+  //integrate for unitary length
+  hmc_integrate(1.0);
   
   //compute final action
   double final_mom_action=momenta_action();

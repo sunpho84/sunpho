@@ -2,6 +2,10 @@
 #define _DEBUG_HPP
 
 #include <chrono>
+#include <cmath>
+#include <ostream>
+
+using namespace std;
 
 void internal_crash(int line,const char *file,const char *templ,...);
 
