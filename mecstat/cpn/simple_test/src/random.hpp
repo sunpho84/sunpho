@@ -9,23 +9,36 @@
  #define EXTERN_RANDOM extern
 #endif
 
+#include <random>
+
+using namespace std;
+
 #include "types.hpp"
 
-//random number generators
-#ifdef GOOD_GENERATOR
- EXTERN_RANDOM random_device *rd;
- EXTERN_RANDOM mt19937_64 *gen;
- EXTERN_RANDOM uniform_real_distribution<double> *dis;
-#else
- EXTERN_RANDOM rnd_gen gen;
+#ifndef M_SQRT_2
+ #define M_SQRT_2 0.707106781186547524401
 #endif
 
-double get_unif_double(double max,bool incl=false);
+EXTERN_RANDOM mt19937_64 gen;
+
+inline double get_unif_double(double max)
+{
+  uniform_real_distribution<double> dis(0,max);
+  return dis(gen);
+}
+inline double get_gauss_double()
+{
+  normal_distribution<double> dis(0,1);
+  return dis(gen);
+}
+inline dcomplex get_gauss_complex()
+{
+  normal_distribution<double> dis(0,M_SQRT_2);
+  return dcomplex(dis(gen),dis(gen));
+}
 void set_U1_to_rnd(dcomplex &U);
 double get_theta(double a,int k);
 double get_theta_1(double a);
 void set_ON_to_rnd(dcomplex *O);
-dcomplex get_gauss_complex();
-double get_gauss_double();
 
 #endif

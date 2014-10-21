@@ -113,30 +113,7 @@ void init(int &base_isweep,read_pars_t &read_pars)
     cout<<omp_get_num_threads()<<" threads"<<endl;
   }
   
-#ifdef GOOD_GENERATOR
-  //init the random generators
-  rd=new random_device();
-  gen=new mt19937_64((*rd)());
-  gen->seed(read_pars.seed);
-  dis=new uniform_real_distribution<double>;
-#else
-  const int im1=2147483563,ia1=40014;
-  const int iq1=53668,ir1=12211;
-  int j,k;
-  
-  //initialization
-  gen.idum=read_pars.seed;
-  gen.idum=std::max(gen.idum+1,1);
-  gen.idum2=gen.idum;
-  for(j=RAN2_NTAB+7;j>=0;j--)
-    {
-      k=gen.idum/iq1;
-      gen.idum=ia1*(gen.idum-k*iq1)-k*ir1;
-      if(gen.idum<0) gen.idum+=im1;
-      if(j<RAN2_NTAB) gen.iv[j]=gen.idum;
-    }
-  gen.iy=gen.iv[0];
-#endif
+  gen.seed(read_pars.seed);
     
   //geometry
   V=1;

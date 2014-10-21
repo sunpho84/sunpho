@@ -2,6 +2,7 @@
 #define _ZETA_HPP
 
 double check_zeta_unitarity(dcomplex *z);
+void check_zeta_conf_unitarity(dcomplex *z);
 dcomplex get_zeta_compl_scalprod(dcomplex *a,dcomplex *b);
 double get_zeta_real_scalprod(dcomplex *a,dcomplex *b);
 double get_zeta_norm(dcomplex *z);

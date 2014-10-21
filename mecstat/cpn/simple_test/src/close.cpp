@@ -29,10 +29,4 @@ void close()
   delete[] lambda_stout;
   
   delete[] neigh_data;
-  
-#ifdef GOOD_GENERATOR
-  delete dis;
-  delete gen;
-  delete rd;
-#endif
 }

@@ -2,7 +2,9 @@
  #include "config.hpp"
 #endif
 
-#include "parameters.hpp"
+#include "debug.hpp"
+#include "geometry.hpp"
+#include "macros.hpp"
 #include "types.hpp"
 
 #include <iostream>
@@ -66,3 +68,14 @@ void zeta_unitarize(dcomplex *z)
 //return the deviation from unitarity of a zeta
 double check_zeta_unitarity(dcomplex *z)
 {return fabs(get_zeta_norm(z)-1);}
+
+//average over the whole conf
+void check_zeta_conf_unitarity(dcomplex *z)
+{
+  double zeta_nonun=0;
+#pragma omp parallel for reduction(+:zeta_nonun)
+  for(int site=0;site<V;site++)
+    zeta_nonun+=get_zeta_norm(z+site*N)-1;
+
+  cout<<"Zeta nonun: "<<zeta_nonun/sqrt(V*N)<<endl;
+}

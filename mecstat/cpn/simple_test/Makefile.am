@@ -1,11 +1,10 @@
 ACLOCAL_AMFLAGS=-I m4
 
-bin_PROGRAMS=$(top_builddir)/bin/main
+LDADD=-lfftw3
+LDADD+=-lfftw3_threads
 
-__top_builddir__bin_main_LDADD=-lfftw3
-__top_builddir__bin_main_LDADD+=-lfftw3_threads
-__top_builddir__bin_main_SOURCES= \
-        src/action.cpp \
+cpn_source_files= \
+	src/action.cpp \
         src/close.cpp \
         src/corr.cpp \
         src/data.cpp \
@@ -14,7 +13,6 @@ __top_builddir__bin_main_SOURCES= \
         src/hmc.cpp \
         src/init.cpp \
         src/lambda.cpp \
-        src/main.cpp \
         src/metro.cpp \
         src/micro.cpp \
         src/overheat.cpp \
@@ -25,3 +23,11 @@ __top_builddir__bin_main_SOURCES= \
         src/tools.cpp \
         src/topology.cpp \
         src/zeta.cpp
+
+
+bin_PROGRAMS= \
+	$(top_builddir)/bin/main \
+	$(top_builddir)/bin/reversibility_check
+
+__top_builddir__bin_main_SOURCES=${cpn_source_files} src/main.cpp
+__top_builddir__bin_reversibility_check_SOURCES=${cpn_source_files} src/reversibility_check.cpp

@@ -686,7 +686,6 @@ ac_user_opts='
 enable_option_checking
 enable_silent_rules
 enable_dependency_tracking
-enable_good_generator
 enable_smart_extraction
 enable_debug_hmc
 '
@@ -1323,7 +1322,6 @@ Optional Features:
                           do not reject slow dependency extractors
   --disable-dependency-tracking
                           speeds up one-time build
-  --enable-good-generator Enable costly generation of random variables
   --enable-smart-extraction
                           Enable smart extraction of random variables
   --enable-debug-hmc      Enable debugging of hmc
@@ -3181,20 +3179,6 @@ fi
 
 ac_config_files="$ac_config_files Makefile"
 
-
-#good-generator
-# Check whether --enable-good-generator was given.
-if test "${enable_good_generator+set}" = set; then :
-  enableval=$enable_good_generator; enable_good_generator="${enableval}"
-else
-  enable_good_generator="no"
-fi
-
-if test "$enable_good_generator" == "yes";then
-$as_echo "#define GOOD_GENERATOR 1" >>confdefs.h
- fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: enabling good generator... $enable_good_generator" >&5
-$as_echo "enabling good generator... $enable_good_generator" >&6; }
 
 #smart-extraction
 # Check whether --enable-smart-extraction was given.

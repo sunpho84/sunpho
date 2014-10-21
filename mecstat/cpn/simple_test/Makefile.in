@@ -78,7 +78,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = $(top_builddir)/bin/main$(EXEEXT)
+bin_PROGRAMS = $(top_builddir)/bin/main$(EXEEXT) \
+	$(top_builddir)/bin/reversibility_check$(EXEEXT)
 subdir = .
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/configure $(am__configure_deps) \
@@ -101,17 +102,25 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__dirstamp = $(am__leading_dot)dirstamp
-am___top_builddir__bin_main_OBJECTS = src/action.$(OBJEXT) \
-	src/close.$(OBJEXT) src/corr.$(OBJEXT) src/data.$(OBJEXT) \
-	src/debug.$(OBJEXT) src/geometry.$(OBJEXT) src/hmc.$(OBJEXT) \
-	src/init.$(OBJEXT) src/lambda.$(OBJEXT) src/main.$(OBJEXT) \
-	src/metro.$(OBJEXT) src/micro.$(OBJEXT) src/overheat.$(OBJEXT) \
-	src/parameters.$(OBJEXT) src/random.$(OBJEXT) \
-	src/staples.$(OBJEXT) src/stout.$(OBJEXT) src/tools.$(OBJEXT) \
-	src/topology.$(OBJEXT) src/zeta.$(OBJEXT)
+am__objects_1 = src/action.$(OBJEXT) src/close.$(OBJEXT) \
+	src/corr.$(OBJEXT) src/data.$(OBJEXT) src/debug.$(OBJEXT) \
+	src/geometry.$(OBJEXT) src/hmc.$(OBJEXT) src/init.$(OBJEXT) \
+	src/lambda.$(OBJEXT) src/metro.$(OBJEXT) src/micro.$(OBJEXT) \
+	src/overheat.$(OBJEXT) src/parameters.$(OBJEXT) \
+	src/random.$(OBJEXT) src/staples.$(OBJEXT) src/stout.$(OBJEXT) \
+	src/tools.$(OBJEXT) src/topology.$(OBJEXT) src/zeta.$(OBJEXT)
+am___top_builddir__bin_main_OBJECTS = $(am__objects_1) \
+	src/main.$(OBJEXT)
 __top_builddir__bin_main_OBJECTS =  \
 	$(am___top_builddir__bin_main_OBJECTS)
+__top_builddir__bin_main_LDADD = $(LDADD)
 __top_builddir__bin_main_DEPENDENCIES =
+am___top_builddir__bin_reversibility_check_OBJECTS = $(am__objects_1) \
+	src/reversibility_check.$(OBJEXT)
+__top_builddir__bin_reversibility_check_OBJECTS =  \
+	$(am___top_builddir__bin_reversibility_check_OBJECTS)
+__top_builddir__bin_reversibility_check_LDADD = $(LDADD)
+__top_builddir__bin_reversibility_check_DEPENDENCIES =
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -141,8 +150,10 @@ AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
 am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
-SOURCES = $(__top_builddir__bin_main_SOURCES)
-DIST_SOURCES = $(__top_builddir__bin_main_SOURCES)
+SOURCES = $(__top_builddir__bin_main_SOURCES) \
+	$(__top_builddir__bin_reversibility_check_SOURCES)
+DIST_SOURCES = $(__top_builddir__bin_main_SOURCES) \
+	$(__top_builddir__bin_reversibility_check_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -279,9 +290,9 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 ACLOCAL_AMFLAGS = -I m4
-__top_builddir__bin_main_LDADD = -lfftw3 -lfftw3_threads
-__top_builddir__bin_main_SOURCES = \
-        src/action.cpp \
+LDADD = -lfftw3 -lfftw3_threads
+cpn_source_files = \
+	src/action.cpp \
         src/close.cpp \
         src/corr.cpp \
         src/data.cpp \
@@ -290,7 +301,6 @@ __top_builddir__bin_main_SOURCES = \
         src/hmc.cpp \
         src/init.cpp \
         src/lambda.cpp \
-        src/main.cpp \
         src/metro.cpp \
         src/micro.cpp \
         src/overheat.cpp \
@@ -302,6 +312,8 @@ __top_builddir__bin_main_SOURCES = \
         src/topology.cpp \
         src/zeta.cpp
 
+__top_builddir__bin_main_SOURCES = ${cpn_source_files} src/main.cpp
+__top_builddir__bin_reversibility_check_SOURCES = ${cpn_source_files} src/reversibility_check.cpp
 all: all-am
 
 .SUFFIXES:
@@ -415,7 +427,6 @@ src/hmc.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/init.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/lambda.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
-src/main.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/metro.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/micro.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/overheat.$(OBJEXT): src/$(am__dirstamp) \
@@ -431,6 +442,7 @@ src/tools.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/topology.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/zeta.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/main.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 $(top_builddir)/bin/$(am__dirstamp):
 	@$(MKDIR_P) $(top_builddir)/bin
 	@: > $(top_builddir)/bin/$(am__dirstamp)
@@ -438,6 +450,12 @@ $(top_builddir)/bin/$(am__dirstamp):
 $(top_builddir)/bin/main$(EXEEXT): $(__top_builddir__bin_main_OBJECTS) $(__top_builddir__bin_main_DEPENDENCIES) $(EXTRA___top_builddir__bin_main_DEPENDENCIES) $(top_builddir)/bin/$(am__dirstamp)
 	@rm -f $(top_builddir)/bin/main$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(__top_builddir__bin_main_OBJECTS) $(__top_builddir__bin_main_LDADD) $(LIBS)
+src/reversibility_check.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+
+$(top_builddir)/bin/reversibility_check$(EXEEXT): $(__top_builddir__bin_reversibility_check_OBJECTS) $(__top_builddir__bin_reversibility_check_DEPENDENCIES) $(EXTRA___top_builddir__bin_reversibility_check_DEPENDENCIES) $(top_builddir)/bin/$(am__dirstamp)
+	@rm -f $(top_builddir)/bin/reversibility_check$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(__top_builddir__bin_reversibility_check_OBJECTS) $(__top_builddir__bin_reversibility_check_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -461,6 +479,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/overheat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/parameters.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/random.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/reversibility_check.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/staples.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/stout.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/tools.Po@am__quote@
