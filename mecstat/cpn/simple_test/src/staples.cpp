@@ -48,4 +48,3 @@ void compute_topo_staples(dcomplex *staple,dcomplex *l)
         staple[s*NDIMS+mu]*=sign[mu]/(2*M_PI);
       }
 }
-

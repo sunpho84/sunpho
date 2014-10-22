@@ -3,7 +3,8 @@
 #endif
 
 #include <algorithm>
-#include <math.h>
+#include <iostream>
+#include <cmath>
 
 using namespace std;
 
@@ -71,7 +72,7 @@ double get_theta(double a,int k)
 
 //taken by appendix C of hep-lat/9210016
 //correction done: h is returned in place of (wrong) g
-double get_theta_1(double a)
+double eget_theta_1(double a)
 {
   double eps=0.001;
   double as=0.798953686083986;
@@ -100,7 +101,30 @@ double get_theta_1(double a)
     }
   while(!acc);
   
+  cerr<<h<<endl;
+  
   return h;
+}
+
+double get_theta_1(double a)
+{
+  int eff=0;
+  
+  double max=exp(fabs(a));
+  double ret,pacc,extr;
+  do
+    {
+      ret=get_unif_double(2*M_PI)-M_PI;
+      pacc=exp(a*cos(ret));
+      extr=get_unif_double(max);
+      
+      if(pacc>max) crash("ahm");
+      eff++;
+    }
+  while(extr>pacc);
+
+  cerr<<eff<<endl;
+  return ret;
 }
 #else
 double get_theta(double a,int k)
@@ -157,7 +181,7 @@ void set_U1_to_rnd(dcomplex &U)
 //set an O(N) to random respecting the bound of unitarity
 void set_ON_to_rnd(dcomplex *O)
 {
-  //first of all extract their norm in such: ordering
+  //first of all extract their norm
   double w[N+1];
   w[0]=0;
   for(int i=1;i<N;i++) w[i]=get_unif_double(1);

@@ -77,7 +77,7 @@ void init_system_to_hot()
 {
   for(int site=0;site<V;site++)
     {
-      //fill the lambda
+      //fill the Lambda
       for(int mu=0;mu<NDIMS;mu++)
         set_U1_to_rnd(lambda[site*NDIMS+mu]);
       
@@ -92,7 +92,7 @@ void init_system_to_cold()
 #pragma omp parallel for
   for(int site=0;site<V;site++)
     {
-      //fill the lambda
+      //fill the Lambda
       for(int mu=0;mu<NDIMS;mu++) lambda[site*NDIMS+mu]=1;
       
       //fill the Zeta
@@ -113,8 +113,9 @@ void init(int &base_isweep,read_pars_t &read_pars)
     cout<<omp_get_num_threads()<<" threads"<<endl;
   }
   
+  //seed the generator
   gen.seed(read_pars.seed);
-    
+  
   //geometry
   V=1;
   for(int mu=0;mu<NDIMS;mu++) V*=L;
