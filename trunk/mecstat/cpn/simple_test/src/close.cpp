@@ -29,4 +29,7 @@ void close()
   delete[] lambda_stout;
   
   delete[] neigh_data;
+  delete[] lx_of_par;
+  
+  delete[] gen;
 }

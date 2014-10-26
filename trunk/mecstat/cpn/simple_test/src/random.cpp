@@ -35,7 +35,7 @@ double fun_ptheta(double theta,double a,int k)
 
 #ifdef SMART_EXTRACTION
 //obtain theta
-double get_theta(double a,int k)
+double get_theta(double a,int k,int site)
 {
   //compute parameters
   double zita=(k-1)/a;
@@ -51,13 +51,13 @@ double get_theta(double a,int k)
   int no=0;
   do
     {
-      double chi=get_unif_double(1);
+      double chi=get_unif_double(1,site);
       theta=theta0+tan(chi*atan(c*(M_PI-theta0))+(chi-1)*atan(c*theta0))/c;
       
       //reweighting
       double ptheta=fun_ptheta(theta,a,k);
       double pacc=ptheta/ptheta0*(1+sqr(c*(theta-theta0)))*eta;
-      double extr=get_unif_double(1);
+      double extr=get_unif_double(1,site);
       if(pacc>1) CRASH("pacc: %lg",pacc);
       //cerr<<extr<<" "<<theta<<" "<<theta0<<" "<<zita<<endl;
       acc=(extr<pacc);
@@ -72,7 +72,7 @@ double get_theta(double a,int k)
 
 //taken by appendix C of hep-lat/9210016
 //correction done: h is returned in place of (wrong) g
-double eget_theta_1(double a)
+double eget_theta_1(double a,int site)
 {
   double eps=0.001;
   double as=0.798953686083986;
@@ -87,14 +87,14 @@ double eget_theta_1(double a)
   int no=0;
   do
     {
-      double r=get_unif_double(1);
+      double r=get_unif_double(1,site);
       double h1=bt1*tan((2*r-1)*atan(tanh(M_PI*alp/2)/bt1));
       h=log((1+h1)/(1-h1))/alp;
       
       //decide if accept or reject
       double g=exp(-a*(1-cos(h)))*(cosh(alp*h)+bet)/(1+bet);
       if(g>1+TINY) CRASH("%lg",g-1);
-      double p=get_unif_double(1);
+      double p=get_unif_double(1,site);
       acc=(p<g);
       if(!acc) no++;
       if(no>1000) CRASH("%d",no);
@@ -106,7 +106,7 @@ double eget_theta_1(double a)
   return h;
 }
 
-double get_theta_1(double a)
+double get_theta_1(double a,int site)
 {
   int eff=0;
   
@@ -114,20 +114,20 @@ double get_theta_1(double a)
   double ret,pacc,extr;
   do
     {
-      ret=get_unif_double(2*M_PI)-M_PI;
+      ret=get_unif_double(2*M_PI,site)-M_PI;
       pacc=exp(a*cos(ret));
-      extr=get_unif_double(max);
+      extr=get_unif_double(max,site);
       
       if(pacc>max) crash("ahm");
       eff++;
     }
   while(extr>pacc);
 
-  cerr<<eff<<endl;
+  //cerr<<eff<<endl;
   return ret;
 }
 #else
-double get_theta(double a,int k)
+double get_theta(double a,int k,int site)
 {
   double th,no=exp(-fabs(a));
   
@@ -135,10 +135,10 @@ double get_theta(double a,int k)
   bool acc;
   do
     {
-      th=get_unif_double(2*M_PI);
+      th=get_unif_double(2*M_PI,site);
       double pacc=no*pow(sin(th),2*(k-1))*exp(a*cos(th));
       if(pacc>1) CRASH("a%lg",pacc);
-      double ext=get_unif_double(1);
+      double ext=get_unif_double(1,site);
       acc=(ext<pacc);
       if(!acc) non++;
       if(non>10000) CRASH("non: %d, a: %lg",non,a);
@@ -148,7 +148,7 @@ double get_theta(double a,int k)
   return th;
 }
 
-double get_theta_1(const double a)
+double get_theta_1(const double a,int site)
 {
   double th,no=exp(-fabs(a));
   
@@ -156,10 +156,10 @@ double get_theta_1(const double a)
   bool acc;
   do
     {
-      th=get_unif_double(2*M_PI);
+      th=get_unif_double(2*M_PI,site);
       double pacc=no*exp(a*cos(th));
       if(pacc>1+TINY) CRASH("a%lg",pacc-1);
-      double ext=get_unif_double(1);
+      double ext=get_unif_double(1,site);
       acc=(ext<pacc);
       if(!acc) non++;
       if(non>100) CRASH("non: %d",non);
@@ -171,20 +171,20 @@ double get_theta_1(const double a)
 #endif
 
 //set an U1 to random
-void set_U1_to_rnd(dcomplex &U)
+void set_U1_to_rnd(dcomplex &U,int site)
 {
   //extract a phase
-  double ph=get_unif_double(2*M_PI);
+  double ph=get_unif_double(2*M_PI,site);
   U=dcomplex(cos(ph),sin(ph));
 }
 
 //set an O(N) to random respecting the bound of unitarity
-void set_ON_to_rnd(dcomplex *O)
+void set_ON_to_rnd(dcomplex *O,int site)
 {
   //first of all extract their norm
   double w[N+1];
   w[0]=0;
-  for(int i=1;i<N;i++) w[i]=get_unif_double(1);
+  for(int i=1;i<N;i++) w[i]=get_unif_double(1,site);
   w[N]=1;
   sort(w,w+N+1);
   
@@ -192,7 +192,7 @@ void set_ON_to_rnd(dcomplex *O)
   for(int i=0;i<N;i++)
     {
       double nor=sqrt(w[i+1]-w[i]);
-      double the=get_unif_double(2*M_PI);
+      double the=get_unif_double(2*M_PI,site);
       O[i]=nor*dcomplex(cos(the),sin(the));
     }
 }
