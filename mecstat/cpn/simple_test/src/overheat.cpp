@@ -23,18 +23,18 @@ void overheat_update_site(int site)
   double staple_norm=get_zeta_norm(staple);
   
   //if the staple is 0 we can set zeta to random
-  if(staple_norm==0) set_ON_to_rnd(zeta+site*N);
+  if(staple_norm==0) set_ON_to_rnd(zeta+site*N,site);
   else
     {
       //generate the new theta according to the microscopic distriution of prob
-      double theta_new=get_theta(beta*N*staple_norm,N);
+      double theta_new=get_theta(beta*N*staple_norm,N,site);
       
       //draw a random vetor orthogonal to the staple until it's not too small
       dcomplex R[N];
       double R_norm;
       do
 	{
-	  set_ON_to_rnd(R);
+	  set_ON_to_rnd(R,site);
 	  zeta_orthogonalize_with(R,staple);
 	  R_norm=get_zeta_norm(R);
 	}
@@ -60,18 +60,18 @@ void overheat_update_link(int site,int mu)
   double staple_norm=sqrt(norm(staple));
   
   //if the staple is 0 we can set zeta to random
-  if(staple_norm==0) set_U1_to_rnd(lambda[site*NDIMS]);
+  if(staple_norm==0) set_U1_to_rnd(lambda[site*NDIMS],site);
   else
     {
       //generate the new theta according to the microscopic distriution of prob
-      double theta_new=get_theta_1(beta*N*staple_norm);
+      double theta_new=get_theta_1(beta*N*staple_norm,site);
       
       //draw a vector orthogonal to the staple until it is not too small
       dcomplex R;
       double R_norm;
       do
 	{
-	  set_U1_to_rnd(R);
+	  set_U1_to_rnd(R,site);
 	  lambda_orthogonalize_with(R,staple);
 	  R_norm=get_lambda_norm(R);
 	}
@@ -89,8 +89,13 @@ void overheat_sweep()
 {
   //loop over sites
   for(int site=0;site<V;site++)
-    {
-      overheat_update_site(site);
-      for(int mu=0;mu<NDIMS;mu++) overheat_update_link(site,mu);
-    }
+  
+    //for(int ipar=0;ipar<npar;ipar++)
+    //#pragma omp parallel for
+    //for(int site_par=ipar*V_per_par;site_par<(ipar+1)*V_per_par;site_par++)
+      {
+	//int site=lx_of_par[site_par];
+	overheat_update_site(site);
+	for(int mu=0;mu<NDIMS;mu++) overheat_update_link(site,mu);
+      }
 }

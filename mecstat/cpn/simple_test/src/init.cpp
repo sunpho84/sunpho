@@ -79,10 +79,10 @@ void init_system_to_hot()
     {
       //fill the Lambda
       for(int mu=0;mu<NDIMS;mu++)
-        set_U1_to_rnd(lambda[site*NDIMS+mu]);
+        set_U1_to_rnd(lambda[site*NDIMS+mu],site);
       
       //fill the Zeta
-      set_ON_to_rnd(zeta+site*N);
+      set_ON_to_rnd(zeta+site*N,site);
     }
 }
 
@@ -113,8 +113,11 @@ void init(int &base_isweep,read_pars_t &read_pars)
     cout<<omp_get_num_threads()<<" threads"<<endl;
   }
   
-  //seed the generator
-  gen.seed(read_pars.seed);
+  //find parity
+  npar=1;
+  do npar++;
+  while(L%npar!=0);
+  cout<<"Parity: "<<npar<<endl;
   
   //geometry
   V=1;
@@ -122,12 +125,26 @@ void init(int &base_isweep,read_pars_t &read_pars)
   cout<<"Volume: "<<V<<endl;
   neigh_data=new int[V*NDIMS*2];
   
+  //parity subdivision
+  V_per_par=V/npar;
+  lx_of_par=new int[V];
+  int nof_par[npar];
+  for(int ipar=0;ipar<npar;ipar++) nof_par[ipar]=ipar*V_per_par;
+  
   //loop over sites
   for(int site=0;site<V;site++)
     {
       //get the original coordinates
       coords c;
       coords_of_site(c,site);
+      
+      //get parity
+      int ipar=0;
+      for(int mu=0;mu<NDIMS;mu++) ipar+=c[mu];
+      ipar%=npar;
+      
+      //mark it in the list of parity
+      lx_of_par[nof_par[ipar]++]=site;
       
       //loop over directions
       for(int mu=0;mu<NDIMS;mu++)
@@ -147,6 +164,11 @@ void init(int &base_isweep,read_pars_t &read_pars)
 	  c[mu]=o;
 	}
     }
+  
+  //check parity
+  for(int ipar=0;ipar<npar;ipar++)
+    if(nof_par[ipar]!=(ipar+1)*V_per_par)
+      crash("expected %d obtained %d",(ipar+1)*V_per_par,nof_par[ipar]);
   
   //Zeta and Lambda
   zeta=new dcomplex[N*V];
@@ -171,6 +193,11 @@ void init(int &base_isweep,read_pars_t &read_pars)
   //allocate stout lambda
   lambda_stout=new dcomplex*[nstout_lev+1];
   for(int istout_lev=1;istout_lev<=nstout_lev;istout_lev++) lambda_stout[istout_lev]=new dcomplex[V*NDIMS];
+  
+  //seed the generator
+  gen=new mt19937_64[V+1];
+  for(int site=0;site<=V;site++)
+    gen[site].seed(read_pars.seed+site);
   
   //init according to start condition
   if(!file_exists("conf"))

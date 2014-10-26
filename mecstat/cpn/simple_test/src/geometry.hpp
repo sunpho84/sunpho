@@ -14,8 +14,10 @@
 #include "types.hpp"
 
 //geometry
-EXTERN_GEOMETRY int V;
+EXTERN_GEOMETRY int V,V_per_par;
 EXTERN_GEOMETRY int *neigh_data;
+EXTERN_GEOMETRY int npar;
+EXTERN_GEOMETRY int *lx_of_par;
 
 //return the neighbors
 inline int &neighdw(int site,int mu)

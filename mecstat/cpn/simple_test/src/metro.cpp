@@ -20,13 +20,13 @@ void metro_update_site(int site)
   
   //change of action
   double ori_ac=site_action(zeta,lambda,site);
-  set_ON_to_rnd(zeta+site*N);
+  set_ON_to_rnd(zeta+site*N,site);
   double fin_ac=site_action(zeta,lambda,site);
   
   //accept or not?
   double diff_ac=fin_ac-ori_ac;
   double t=exp(-diff_ac);
-  double p=get_unif_double(1);
+  double p=get_unif_double(1,site);
   if(p>t) for(int n=0;n<N;n++) zeta[site*N+n]=ori[n];
 }
 
@@ -38,13 +38,13 @@ void metro_update_link(int site,int mu)
   
   //change of action
   double ori_ac=link_action(zeta,lambda,site,mu);
-  set_U1_to_rnd(lambda[site*NDIMS+mu]);
+  set_U1_to_rnd(lambda[site*NDIMS+mu],site);
   double fin_ac=link_action(zeta,lambda,site,mu);
   
   //accept or not?
   double diff_ac=fin_ac-ori_ac;
   double t=exp(-diff_ac);
-  double p=get_unif_double(1);
+  double p=get_unif_double(1,site);
   if(p>t) lambda[site*NDIMS+mu]=ori;
 }
 

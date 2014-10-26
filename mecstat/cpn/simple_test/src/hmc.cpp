@@ -22,13 +22,13 @@ void generate_momenta()
   for(int site=0;site<V;site++)
     {
       //generate the lambda momenta, gaussianly
-      for(int mu=0;mu<NDIMS;mu++) omega[site*NDIMS+mu]=get_gauss_double();
+      for(int mu=0;mu<NDIMS;mu++) omega[site*NDIMS+mu]=get_gauss_double(site);
       
       //generate zeta momenta
       for(int n=0;n<N;n++)
 	{
-	  pi[site*N+n].real(get_gauss_double());
-	  pi[site*N+n].imag(get_gauss_double());
+	  pi[site*N+n].real(get_gauss_double(site));
+	  pi[site*N+n].imag(get_gauss_double(site));
 	}
       
       //orthogonalize
@@ -278,7 +278,7 @@ void hmc_update(bool skip_test=false)
   
   //make metropolis test
   double pacc=std::min(exp(-diff_action),1.0);
-  double estr=get_unif_double(1);
+  double estr=get_unif_double(1,V);
   bool acc=estr<pacc;
   
   //copy back old configuration

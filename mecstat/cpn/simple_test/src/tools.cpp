@@ -48,7 +48,7 @@ void write_conf(const char *path,int isweep)
   if(!(conf_file.write((char*)zeta,sizeof(dcomplex)*N*V))) crash("writing zeta");
   if(!(conf_file.write((char*)lambda,sizeof(dcomplex)*V*NDIMS))) crash("writing lambda");
   //write the rnd status
-  conf_file<<gen<<endl;
+  for(int site=0;site<=V;site++) conf_file<<gen[site]<<endl;
   if(!conf_file.good()) crash("writing random number generator");
   
   conf_file.close();
@@ -65,7 +65,7 @@ void read_conf(int &isweep,const char *path)
   if(!(conf_file.read((char*)zeta,sizeof(dcomplex)*N*V))) crash("reading zeta");
   if(!(conf_file.read((char*)lambda,sizeof(dcomplex)*V*NDIMS))) crash("reading lambda");
   //read the rnd status
-  conf_file>>gen;
+  for(int site=0;site<=V;site++) conf_file>>gen[site];
   if(!conf_file.good()) crash("reading random number generator");
   
   conf_file.close();
