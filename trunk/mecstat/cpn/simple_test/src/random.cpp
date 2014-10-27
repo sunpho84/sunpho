@@ -122,9 +122,10 @@ double get_theta(double a,int k,int site)
     {
       ret=get_unif_double(M_PI,site);
       pacc=fun_ptheta(ret,a,k);
+      if(pacc>max) crash("ahm K pacc=%lg max=%lg a=%lg",pacc,max,a);
+
       extr=get_unif_double(max,site);
       
-      if(pacc>max) crash("ahm");
       effK++;
     }
   while(extr>pacc);
@@ -142,9 +143,10 @@ double get_theta_1(double a,int site)
     {
       ret=get_unif_double(2*M_PI,site)-M_PI;
       pacc=exp(a*cos(ret));
-      extr=get_unif_double(max,site);
       
-      if(pacc>max) crash("ahm");
+      if(pacc>max) crash("ahm 1 pacc=%lg max=%lg a=%lg",pacc,max,a);
+
+      extr=get_unif_double(max,site);
       eff1++;
     }
   while(extr>pacc);
