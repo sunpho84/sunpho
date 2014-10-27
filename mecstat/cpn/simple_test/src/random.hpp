@@ -40,5 +40,6 @@ void set_U1_to_rnd(dcomplex &U,int site);
 double get_theta(double a,int k,int site);
 double get_theta_1(double a,int site);
 void set_ON_to_rnd(dcomplex *O,int site);
+void print_rand_stat();
 
 #endif

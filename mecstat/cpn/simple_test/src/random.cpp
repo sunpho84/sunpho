@@ -19,6 +19,9 @@ using namespace std;
 #define EXTERN_RANDOM
 #include "random.hpp"
 
+int eff1=0,est1=0;
+int effK=0,estK=0;
+
 //compute p(theta)
 double fun_ptheta(double theta,double a,int k)
 {
@@ -34,45 +37,10 @@ double fun_ptheta(double theta,double a,int k)
 }
 
 #ifdef SMART_EXTRACTION
-//obtain theta
-double get_theta(double a,int k,int site)
-{
-  //compute parameters
-  double zita=(k-1)/a;
-  double theta0=acos(sqrt(1+zita*zita)-zita);
-  double ctheta0=cos(theta0);
-  double c=sqrt(2*(k-1)*(1-zita*ctheta0)/sqr(sin(theta0)));
-  double ptheta0=fun_ptheta(theta0,a,k);
-  
-  //extract theta
-  double theta;
-  double eta=0.99;
-  bool acc;
-  int no=0;
-  do
-    {
-      double chi=get_unif_double(1,site);
-      theta=theta0+tan(chi*atan(c*(M_PI-theta0))+(chi-1)*atan(c*theta0))/c;
-      
-      //reweighting
-      double ptheta=fun_ptheta(theta,a,k);
-      double pacc=ptheta/ptheta0*(1+sqr(c*(theta-theta0)))*eta;
-      double extr=get_unif_double(1,site);
-      if(pacc>1) CRASH("pacc: %lg",pacc);
-      //cerr<<extr<<" "<<theta<<" "<<theta0<<" "<<zita<<endl;
-      acc=(extr<pacc);
-      if(!acc) no++;
-      if(no>1000) CRASH("k: %lg, a: %d, zita: %lg, ptheta: %lg, ptheta0: %lg, c: %lg, theta: %lg, theta0: %lg, pacc: %lg",
-			k,a,zita,ptheta,ptheta0,c,theta,theta0,pacc);
-    }
-  while(!acc);
-  
-  return theta;
-}
 
 //taken by appendix C of hep-lat/9210016
 //correction done: h is returned in place of (wrong) g
-double eget_theta_1(double a,int site)
+double get_theta_1(double a,int site)
 {
   double eps=0.001;
   double as=0.798953686083986;
@@ -101,15 +69,73 @@ double eget_theta_1(double a,int site)
     }
   while(!acc);
   
-  cerr<<h<<endl;
+  //cerr<<h<<endl;
   
   return h;
 }
 
+//obtain theta
+double get_theta(double a,int k,int site)
+{
+  //compute parameters
+  double zita=(k-1)/a;
+  double theta0=acos(sqrt(1+zita*zita)-zita);
+  //double ctheta0=cos(theta0);
+  double c=sqrt(a*sqrt(1+pow(zita,2)));
+  //FRIENDS: sqrt(2*(k-1)*(1-zita*ctheta0)/sqr(sin(theta0)));
+  double ptheta0=fun_ptheta(theta0,a,k);
+  
+  //extract theta
+  double theta;
+  double eta=0.99;
+  bool acc;
+  int no=0;
+  do
+    {
+      double chi=get_unif_double(1,site);
+      theta=theta0+tan(chi*atan(c*(M_PI-theta0))+(chi-1)*atan(c*theta0))/c;
+      
+      //reweighting
+      double ptheta=fun_ptheta(theta,a,k);
+      double pacc=ptheta/ptheta0*(1+sqr(c*(theta-theta0)))*eta;
+      double extr=get_unif_double(1,site);
+      if(pacc>1) CRASH("pacc: %lg",pacc);
+      //cerr<<extr<<" "<<theta<<" "<<theta0<<" "<<zita<<endl;
+      acc=(extr<pacc);
+      if(!acc) no++;
+      if(no>1000) CRASH("k: %lg, a: %d, zita: %lg, ptheta: %lg, ptheta0: %lg, c: %lg, theta: %lg, theta0: %lg, pacc: %lg",
+			k,a,zita,ptheta,ptheta0,c,theta,theta0,pacc);
+    }
+  while(!acc);
+  
+  return theta;
+}
+
+#else
+
+double get_theta(double a,int k,int site)
+{
+  double xmax=acos((-(k-1)+sqrt(sqr(k-1)+sqr(a)))/a);
+  double max=fun_ptheta(xmax,a,k);
+  double ret,pacc,extr;
+  do
+    {
+      ret=get_unif_double(M_PI,site);
+      pacc=fun_ptheta(ret,a,k);
+      extr=get_unif_double(max,site);
+      
+      if(pacc>max) crash("ahm");
+      effK++;
+    }
+  while(extr>pacc);
+
+  estK++;
+  
+  return ret;
+}
+
 double get_theta_1(double a,int site)
 {
-  int eff=0;
-  
   double max=exp(fabs(a));
   double ret,pacc,extr;
   do
@@ -119,55 +145,15 @@ double get_theta_1(double a,int site)
       extr=get_unif_double(max,site);
       
       if(pacc>max) crash("ahm");
-      eff++;
+      eff1++;
     }
   while(extr>pacc);
 
-  //cerr<<eff<<endl;
+  est1++;
+  
   return ret;
 }
-#else
-double get_theta(double a,int k,int site)
-{
-  double th,no=exp(-fabs(a));
-  
-  int non=0;
-  bool acc;
-  do
-    {
-      th=get_unif_double(2*M_PI,site);
-      double pacc=no*pow(sin(th),2*(k-1))*exp(a*cos(th));
-      if(pacc>1) CRASH("a%lg",pacc);
-      double ext=get_unif_double(1,site);
-      acc=(ext<pacc);
-      if(!acc) non++;
-      if(non>10000) CRASH("non: %d, a: %lg",non,a);
-    }
-  while(!acc);
-  
-  return th;
-}
 
-double get_theta_1(const double a,int site)
-{
-  double th,no=exp(-fabs(a));
-  
-  int non=0;
-  bool acc;
-  do
-    {
-      th=get_unif_double(2*M_PI,site);
-      double pacc=no*exp(a*cos(th));
-      if(pacc>1+TINY) CRASH("a%lg",pacc-1);
-      double ext=get_unif_double(1,site);
-      acc=(ext<pacc);
-      if(!acc) non++;
-      if(non>100) CRASH("non: %d",non);
-    }
-  while(!acc);
-  
-  return th;
-}
 #endif
 
 //set an U1 to random
@@ -195,4 +181,12 @@ void set_ON_to_rnd(dcomplex *O,int site)
       double the=get_unif_double(2*M_PI,site);
       O[i]=nor*dcomplex(cos(the),sin(the));
     }
+}
+
+void print_rand_stat()
+{
+#ifndef SMART_EXTRACTION
+  cerr<<(double)eff1/est1<<" "<<est1<<endl;
+  cerr<<(double)effK/estK<<" "<<estK<<endl;
+#endif
 }
