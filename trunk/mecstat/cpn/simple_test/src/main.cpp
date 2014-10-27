@@ -111,6 +111,8 @@ int main()
   //write the conf
   write_conf("conf",isweep);
   
+  print_rand_stat();
+  
   //finalize
   close();
   
