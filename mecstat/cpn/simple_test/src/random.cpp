@@ -25,15 +25,19 @@ int effK=0,estK=0;
 //compute p(theta)
 double fun_ptheta(double theta,double a,int k)
 {
+  double x=(k-1)/a;
+  double cxmax=-x+sqrt(x*x+1);
+  
   //compute the factor
   double f=sin(theta);
   f*=f;
+  f/=1-cxmax*cxmax;
 
   //compute first piece
   double p=1;
   for(int i=0;i<k-1;i++) p*=f;
   
-  return p*exp(a*cos(theta));
+  return p*exp(a*(cos(theta)-cxmax));
 }
 
 #ifdef SMART_EXTRACTION
@@ -115,14 +119,17 @@ double get_theta(double a,int k,int site)
 
 double get_theta(double a,int k,int site)
 {
-  double xmax=acos((-(k-1)+sqrt(sqr(k-1)+sqr(a)))/a);
-  double max=fun_ptheta(xmax,a,k);
+  double x=(k-1)/a;
+  double xmax=acos((-x+sqrt(sqr(x)+1)));
+  //double xmax=acos((-(k-1)+sqrt(sqr(k-1)+sqr(a)))/a);
+  //double max=fun_ptheta(xmax,a,k);
+  double max=1+1e-14;
   double ret,pacc,extr;
   do
     {
       ret=get_unif_double(M_PI,site);
       pacc=fun_ptheta(ret,a,k);
-      if(pacc>max) crash("ahm K pacc=%lg max=%lg a=%lg",pacc,max,a);
+      if(pacc>max) crash("ahm K ret=%lg pacc=%lg max=%lg pacc-max=%lg a=%lg",ret,pacc,max,pacc-max,a);
 
       extr=get_unif_double(max,site);
       
