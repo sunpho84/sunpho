@@ -14,12 +14,14 @@
 using namespace std;
 
 #include "types.hpp"
+#include "sitmo_prng_engine.hpp"
 
 #ifndef M_SQRT_2
  #define M_SQRT_2 0.707106781186547524401
 #endif
 
 EXTERN_RANDOM mt19937_64 *gen;
+//EXTERN_RANDOM sitmo::prng_engine gen;
 
 inline double get_unif_double(double max,int site)
 {
