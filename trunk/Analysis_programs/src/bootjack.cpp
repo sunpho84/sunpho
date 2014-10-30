@@ -27,12 +27,12 @@ public:
   void reallocate_if_necessary(int nb,int nj){if(nboot!=nb||njack!=nj){if(data!=NULL) delete[] data;create(nb,nj);}}
   TYPE operator=(const TYPE& in){reallocate_if_necessary(in.nboot,in.njack);put(in.data);return *this;}
 #else
-  void clusterize()
+  void clusterize(int clust_size=1)
   {
     data[njack]=0;
     for(int ijack=0;ijack<njack;ijack++) data[njack]+=data[ijack];
-    for(int ijack=0;ijack<njack;ijack++) data[ijack]=(data[njack]-data[ijack])/(njack-1);
-    data[njack]/=njack;
+    for(int ijack=0;ijack<njack;ijack++) data[ijack]=(data[njack]-data[ijack])/((njack-1)*clust_size);
+    data[njack]/=njack*clust_size;
   }
   void create(int nj){njack=nj;data=new double[nj+1];}
   TYPE(const TYPE& in){create(in.njack);put(in.data);}

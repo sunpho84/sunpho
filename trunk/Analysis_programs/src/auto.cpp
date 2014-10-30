@@ -11,6 +11,8 @@
 
 int autocorr_debug=true;
 
+const long unsigned int max_njacks=2000;
+
 using namespace std;
 
 class autocorr_data_t
@@ -142,10 +144,22 @@ void autocorr_data_t::compute_tint(double &med_tint,double &err_tint,const char 
   bool loop;
   do
     {
+      //enforce not to overshot
+      long unsigned int max_clust_size=size/max_njacks;
+      if(clust_size<max_clust_size)
+	{
+	  cout<<"Too many jacknives to make clust_size="<<clust_size<<", reducing to "<<max_njacks<<" jacknives"<<endl;
+	  clust_size=max_clust_size;
+	}
+      
       //fix njacks according
       njacks=size/clust_size;
       int_size=njacks*clust_size;
       jackniffed_size=int_size-clust_size;
+      
+      cout<<" njacks: "<<njacks<<endl;
+      cout<<" int_size: "<<int_size<<endl;
+      cout<<" jackniffed_size: "<<jackniffed_size<<endl;
       
       //compute autocorr
       double *ave_corr=(double*)malloc(sizeof(double)*jackniffed_size);
@@ -195,7 +209,7 @@ void autocorr_data_t::compute_tint(double &med_tint,double &err_tint,const char 
       if(fabs(clust_size-2*med_tint)>=4*err_tint)
 	{
 	  long unsigned int new_clust_size=(long unsigned int)(2*med_tint+0.5);
-	  if(new_clust_size!=clust_size && new_clust_size!=0)
+	  if(new_clust_size!=clust_size && new_clust_size!=0 && new_clust_size>=max_clust_size && new_clust_size<size)
 	    {
 	      clust_size=new_clust_size;
 	      loop=true;
