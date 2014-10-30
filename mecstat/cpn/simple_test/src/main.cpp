@@ -25,6 +25,7 @@ int main()
   ofstream topology_file("topology",mode);
   ofstream corr_file("corr",mode);
   ofstream corrd_file("corrd",mode);
+  ofstream mom2_file("mom2",mode);
   ofstream mag_file("mag",mode);
   energy_file.precision(PREC);
   weight_file.precision(PREC);
@@ -56,7 +57,7 @@ int main()
       for(int ilev=0;ilev<=nstout_lev;ilev++)
 	{
 	  double topo_num=topology(lambda_stout[ilev]);
-	  if(use_topo_pot==2 && ilev==nstout_lev)
+	  if(use_topo_pot==2 && ilev==nstout_lev && isweep>=chrono_topo_after)
 	    {
 	      double w=exp(-chrono_topo_well_tempering*compute_theta_pot(+topo_num));
 	      chrono_topo_past_values.push_back(+topo_num);
@@ -64,7 +65,7 @@ int main()
 	      weight_file<<w<<endl;
 	      if(isweep%DRAW_EACH==0)
 		{
-		  draw_chrono_topo_potential();
+		  draw_chrono_topo_potential(true);
 		  draw_chrono_topo_force();
 		}
 	    }
@@ -79,17 +80,18 @@ int main()
       if(isweep%compute_corr_each==0)
 	{
 	  corr_time.start();
-	  double mag0,mag1,corr[L],corrd[L];
-	  compute_corr(mag0,mag1,corr,corrd,zeta);
+	  double mag0,mag1,mom2,corr[L],corrd[L];
+	  compute_corr(mag0,mag1,mom2,corr,corrd,zeta);
 	  for(int i=0;i<=L/2;i++) corr_file<<isweep<<" "<<i<<" "<<corr[i]<<endl;
 	  for(int i=0;i<=L/2;i++) corrd_file<<isweep<<" "<<i/sqrt(2)<<" "<<corrd[i]<<endl;
+	  mom2_file<<isweep<<" "<<mom2<<endl;
 	  mag_file<<isweep<<" "<<mag0<<" "<<mag1<<endl;
 	  corr_time.stop();
 	}
   
       //sweep
       sweep_time.start();
-      if(read_pars.use_hmc) hmc_update();
+      if(read_pars.use_hmc) hmc_update(isweep<read_pars.nterm);
       else
 	{
 	  for(int imicro=0;imicro<read_pars.nmicro;imicro++) micro_sweep();

@@ -23,6 +23,14 @@ template <class T> void parabolic_spline(T &a,T &b,T &c,double *xin,T *yd)
   c=Dc/D;
 }
 
+//interpolate on the fly
+template <class T> T parabolic_spline(double *xin,T *yd,double xint)
+{
+  T a,b,c;
+  parabolic_spline(a,b,c,xin,yd);
+  return a*xint*xint+b*xint+c;
+}
+
 bvec interpolate_multi(bvec xin,bvec yin,bvec xout,const char *outpath=NULL)
 {
   bvec yout(xout.nel,xout.nboot,xout.njack);

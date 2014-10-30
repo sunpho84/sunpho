@@ -24,7 +24,10 @@ void crash(const char *temp,...)
 void read(const char *path)
 {
   //scan
-  ifstream fin(path);
+  ifstream fin;
+  
+  if(string(path)=="-") fin.open("/dev/stdin");
+  else fin.open(path);
   double t;
   vector<double> buf;
   while(fin>>t) buf.push_back(t);

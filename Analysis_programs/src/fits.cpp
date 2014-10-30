@@ -265,6 +265,7 @@ void two_pts_SL_fit(jack &M,jack &ZL,jack &ZS,jvec corrSL,jvec corrSS,int tminSL
   two_pts_fit(MSS,ZSS,corrSS,tminSS,tmaxSS);
   
   //get estimates for ZS and ZL
+  M=MSL;
   ZS=sqrt(ZSS);
   ZL=ZSL/ZS;
   
@@ -318,9 +319,9 @@ void two_pts_SL_fit(jack &M,jack &ZL,jack &ZS,jvec corrSL,jvec corrSS,int tminSL
       
       //get back parameters
       double dum;
-      minu.GetParameter(0,M.data[ijack_fit],dum);
-      minu.GetParameter(1,ZL.data[ijack_fit],dum);
-      minu.GetParameter(2,ZS.data[ijack_fit],dum);
+      minu.GetParameter(0,M[ijack_fit],dum);
+      minu.GetParameter(1,ZL[ijack_fit],dum);
+      minu.GetParameter(2,ZS[ijack_fit],dum);
       
       //write down chi2
       if(ijack_fit==njack)

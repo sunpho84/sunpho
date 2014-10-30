@@ -56,7 +56,7 @@ void stop_fftw()
 }
 
 //compute correlation function
-void compute_corr(double &mag0,double &mag1,double *out,double *outd,dcomplex *z)
+void compute_corr(double &mag0,double &mag1,double &mom2,double *out,double *outd,dcomplex *z)
 {
   init_fftw();
 
@@ -94,6 +94,16 @@ void compute_corr(double &mag0,double &mag1,double *out,double *outd,dcomplex *z
   
   //take anti-fftw
   fftw_execute(bw);
+  
+  //compute second momentum
+  mom2=0;
+  for(int dx=-L/2;dx<L/2;dx++)
+    for(int dy=-L/2;dy<L/2;dy++)
+      {
+	coords c={dx+L/2,dy+L/2};
+	int x2=dx*dx+dy*dy;
+	mom2+=x2*C_fftw[site_of_coords(c)].real();
+      }
   
   //project to zero spatial momentum
   for(int x=0;x<L;x++)

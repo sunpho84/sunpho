@@ -125,7 +125,7 @@ double compute_theta_pot_der(dcomplex *l)
 {return compute_theta_pot_der(topology(l));}
 
 //compute the topodynamical potential using past history
-double compute_theta_pot(double Q)
+double compute_theta_pot(double Q,bool ave=false)
 {
   //compute parabolic barrier derivative
   double harm_potential=0;
@@ -145,7 +145,7 @@ double compute_theta_pot(double Q)
   for(int i=0;i<nchrono;i++)
     {
       double q=chrono_topo_past_values[i];
-      double w=chrono_topo_past_weight[i];
+      double w=chrono_topo_past_weight[i]*(ave?(nchrono-i):1);
       double diff=Q-q,f=diff/chrono_topo_width;
       double cont=w*exp(-f*f/2+chrono_topo_bend*Q*Q/2);
       gauss_topotential+=cont;
@@ -162,19 +162,19 @@ double compute_theta_pot(dcomplex *l)
 {return compute_theta_pot(topology(l));}
 
 //draw the chronological topological potential
-void draw_chrono_topo_potential()
+void draw_chrono_topo_potential(bool ave=false)
 {
   double Q_min=*std::min_element(chrono_topo_past_values.begin(),chrono_topo_past_values.end());
   double Q_max=*std::max_element(chrono_topo_past_values.begin(),chrono_topo_past_values.end());
   double Q_diff=Q_max-Q_min;
-  int n=ceil(Q_diff/chrono_topo_width*20);
+  int n=ceil(Q_diff/chrono_topo_width*10);
   if(n==0) n=1;
   double dQ=Q_diff/n;
   
   //compute 
   double *Qy=new double[n+1];
 #pragma omp parallel for
-  for(int i=0;i<=n;i++) Qy[i]=compute_theta_pot(Q_min+i*dQ);
+  for(int i=0;i<=n;i++) Qy[i]=compute_theta_pot(Q_min+i*dQ,ave);
   
   //write
   ofstream fout("topo_potential");

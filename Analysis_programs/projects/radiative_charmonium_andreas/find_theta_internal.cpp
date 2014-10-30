@@ -6,10 +6,10 @@ using namespace std;
 template <class T> T sqr(T in)
 {return in*in;}
 
-double cont_e(double m,double p)
+template <class T> T cont_e(T m,double p)
 {return sqrt(m*m+3*p*p);}
 
-double latt_e(double m,double p)
+template <class T> T latt_e(T m,double p)
 {return 2*asinh(sqrt(3*sqr(sin(p/2))+sqr(sinh(m/2))));}
 
 double Q2_fun(double m1,double p1,double m2,double p2,double(*fun_e)(double,double)=cont_e)
