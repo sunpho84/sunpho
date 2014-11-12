@@ -57,7 +57,7 @@ int main()
       for(int ilev=0;ilev<=nstout_lev;ilev++)
 	{
 	  double topo_num=topology(lambda_stout[ilev]);
-	  if(use_topo_pot==2 && ilev==nstout_lev && isweep>=chrono_topo_after)
+	  if(use_topo_pot==2 && ilev==nstout_lev && isweep>=chrono_topo_after && (isweep-chrono_topo_after)%chrono_topo_each==0)
 	    {
 	      double w=exp(-chrono_topo_well_tempering*compute_theta_pot(+topo_num));
 	      chrono_topo_past_values.push_back(+topo_num);
@@ -81,6 +81,7 @@ int main()
 	{
 	  corr_time.start();
 	  double mag0,mag1,mom2,corr[L],corrd[L];
+	  //compute_corr_alt(corr,zeta);
 	  compute_corr(mag0,mag1,mom2,corr,corrd,zeta);
 	  for(int i=0;i<=L/2;i++) corr_file<<isweep<<" "<<i<<" "<<corr[i]<<endl;
 	  for(int i=0;i<=L/2;i++) corrd_file<<isweep<<" "<<i/sqrt(2)<<" "<<corrd[i]<<endl;

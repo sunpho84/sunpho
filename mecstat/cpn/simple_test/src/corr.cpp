@@ -61,6 +61,7 @@ void compute_corr(double &mag0,double &mag1,double &mom2,double *out,double *out
   init_fftw();
 
   //fill P
+#pragma omp parallel for
   for(int s=0;s<V;s++)
     for(int i=0;i<N;i++)
       for(int j=0;j<N;j++)
@@ -154,3 +155,70 @@ void compute_corre(double *out,double *outd,dcomplex *z)
       outd[x]=sqrt(2)*(resd/V-L/2);
     }
 }
+
+fftw_plan fw_alt,bw_alt;
+bool inited_alt=false;
+dcomplex *P_red,*P_tra;
+
+void init_alt()
+{
+  if(!inited_alt)
+    {
+      inited_alt=true;
+      
+      P_red=new dcomplex[N*N*L];
+      P_tra=new dcomplex[L];
+
+      fw_alt=fftw_plan_many_dft(1,&L,N*N,
+				(fftw_complex*)P_red,NULL,N*N,1,
+				(fftw_complex*)P_red,NULL,N*N,1,
+				FFTW_FORWARD,FFTW_MEASURE);
+      bw_alt=fftw_plan_many_dft(1,&L,1,
+				(fftw_complex*)P_tra,NULL,1,1,
+				(fftw_complex*)P_tra,NULL,1,1,
+				FFTW_BACKWARD,FFTW_MEASURE);
+    }
+}
+
+/*
+//compute correlation function
+void compute_corr_alt(double *out,dcomplex *z)
+{
+cacca
+  init_alt();
+  
+  for(int i=0;i<N*N*L;i++) P_red[i]=0;
+
+  //fill P
+  coords c;
+  //#pragma omp parallel for
+  for(int t=0;t<L;t++)
+    for(c[1]=0;c[1]<L;c[1]++)
+      {
+	c[0]=t;
+	int s=site_of_coords(c);
+	for(int i=0;i<N;i++)
+	  for(int j=0;j<N;j++)
+	    P_red[(c[0]*N+i)*N+j]+=conj(z[s*N+i])*z[s*N+j];
+      }
+
+  fftw_execute(fw_alt);
+  
+  //#pragma omp parallel for
+  for(int t=0;t<L;t++)
+    {
+      P_tra[t]=0;
+      for(int i=0;i<N;i++)
+	for(int j=0;j<N;j++)
+	  P_tra[t]+=P_red[(t*N+i)*N+j]*P_red[(((L-t)%L)*N+j)*N+i];
+      P_tra[t]/=V;
+    }
+  
+  P_tra[0]-=(double)V/N;
+  
+  fftw_execute(bw_alt);
+  
+  for(int t=0;t<L;t++) cout<<P_tra[t]*(1.0/L)<<endl;
+  
+}
+*/

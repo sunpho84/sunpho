@@ -60,6 +60,7 @@ void read_input(read_pars_t &read_pars,const char *path)
     case 2:
       if(!read_pars.use_hmc) crash("must use hmc");
       read(chrono_topo_after,input,"ChronoTopoAfter");
+      read(chrono_topo_each,input,"ChronoTopoEach");
       read(chrono_topo_coeff,input,"ChronoTopoCoeff");
       read(chrono_topo_width,input,"ChronoTopoWidth");
       read(chrono_topo_barr,input,"ChronoTopoBarr");
