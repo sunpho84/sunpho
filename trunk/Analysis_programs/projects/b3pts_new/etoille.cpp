@@ -145,7 +145,8 @@ int main(int narg,char **arg)
   ofstream mel_file("plots/mel.xmg");
   mel_file<<"@type xydy"<<endl;
   {ofstream mel_dat("mel.dat");}
-
+  
+  jack M[2][5];
   const char tag_isp[3]="ls";
   for(int isp=0;isp<2;isp++)
     for(int ith=4;ith<9;ith++)
@@ -163,8 +164,9 @@ int main(int narg,char **arg)
 		       tint_Detoille[isp][1][0],tint_Detoille[isp][1][1],
 		       combine("plots/D%c_th%d_etoille_effmass_SL.xmg",tag_isp[isp],ith-4).c_str(),
 		       combine("plots/D%c_th%d_etoille_effmass_SS.xmg",tag_isp[isp],ith-4).c_str());
-	cout<<"MD*: "<<smart_print(MD)<<endl;
+	cout<<"MD"<<tag_isp[isp]<<"*: "<<smart_print(MD)<<endl;
 	cout<<"ZD*sm: "<<smart_print(ZDS)<<endl;
+	M[isp][ith-4]=MD;
 	
 	for(int ih=0;ih<10;ih++)
 	  {
@@ -310,6 +312,26 @@ int main(int narg,char **arg)
 	    */
 	  }
     }
+  
+  for(int isp=0;isp<1;isp++)
+    for(int ith=0;ith<5;ith++)
+      {
+	auto le=latt_en(M[isp][0],th_S0[ith]);
+	auto fe=sqrt(sqr(M[isp][0])+3*sqr(momentum(th_S0[ith])));
+	
+	//cerr<<th_S0[ith]<<" "<<sqr(momentum(th_S0[ith]))<<" "<<smart_print(M[isp][ith])<<" "<<smart_print(le)<<" "<<smart_print(fe)<<endl;
+	jack th_c=sqrt((sqr(M[isp][ith])-sqr(M[isp][0]))/3)*TH/M_PI;
+	jack th_l=2*asin(1/sqrt(3)*sqrt(sqr(sinh(M[isp][ith]/2))-sqr(sinh(M[isp][0]/2))))*TH/M_PI;
+	cerr<<th_S0[ith]<<" "<<smart_print(th_c)<<" "<<smart_print(th_l)<<endl;
+      }
+  cerr<<"&"<<endl;
+  for(int isp=0;isp<1;isp++)
+    for(int ith=0;ith<5;ith++)
+      cerr<<sqr(momentum(th_S0[ith]))<<" "<<latt_en(M[isp][0],th_S0[ith])<<endl;
+  cerr<<"&"<<endl;
+  for(int isp=0;isp<1;isp++)
+    for(int ith=0;ith<5;ith++)
+      cerr<<sqr(momentum(th_S0[ith]))<<" "<<cont_en(M[isp][0],th_S0[ith])<<endl;
   
   return 0;
 }

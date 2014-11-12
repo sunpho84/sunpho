@@ -111,6 +111,7 @@ int main(int narg,char **arg)
     if(nlevls>1)
       {
 	two_pts_fit(M_P[1],Z2,g.eig_va[1],tfit_first_min,tfit_first_max);
+	cout<<"M1: "<<smart_print(M_P[1])<<endl;
 	Z_P[1]=sqrt(Z2);
 	fits<<write_constant_fit_plot(effective_mass(g.eig_va[1]),M_P[1],tfit_first_min,tfit_first_max,3);
 	
@@ -118,6 +119,7 @@ int main(int narg,char **arg)
 	if(nlevls>2)
 	  {
 	    two_pts_fit(M_P[2],Z2,g.eig_va[2],tfit_second_min,tfit_second_max);
+	    cout<<"M2: "<<smart_print(M_P[2])<<endl;
 	    Z_P[2]=sqrt(Z2);
 	    fits<<write_constant_fit_plot(effective_mass(g.eig_va[2]),M_P[2],tfit_second_min,tfit_second_max,6);
 	    
@@ -137,7 +139,7 @@ int main(int narg,char **arg)
   g2.load_raw_data(NULL,infile,map2,nlevls_sto,0);
   
   //build sink opt corr
-  jvec impr_sink_corr[nlevls];
+  jvec *impr_sink_corr=new jvec[nlevls];
   for(int ilev=0;ilev<nlevls;ilev++)
     {
       impr_sink_corr[ilev]=jvec(TH+1,njacks);
@@ -191,6 +193,7 @@ int main(int narg,char **arg)
       out_sink_plot<<write_constant_fit_plot(effective_mass(impr_sink_corr[1]),M_P2[1],tfit_first_min,
 					     tfit_first_max,3);
       
+      cout<<"M1: "<<smart_print(M_P2[1])<<endl;
       cout<<"M1/M0: "<<smart_print(M_P2[1]/M_P2[0])<<endl;
       if(nlevls>2)
 	{
@@ -204,6 +207,7 @@ int main(int narg,char **arg)
 	  out_sink_plot<<write_constant_fit_plot(effective_mass(impr_sink_corr[2]),M_P2[2],
 						 tfit_second_min,tfit_second_max,6);
 	  
+	  cout<<"M2: "<<smart_print(M_P2[2])<<endl;
 	  cout<<"M2/M0: "<<smart_print(M_P2[2]/M_P2[0])<<endl;
 	}
     }

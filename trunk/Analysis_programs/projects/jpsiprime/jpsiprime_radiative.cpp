@@ -130,7 +130,7 @@ jvec dt(jack ZV,jack ZP,jack MV,jack MP)
 
 void study_operator_content(jack ZV,jack ZP,jack MV,jack MP,int nst)
 {
-  jvec OP[nsm*nst],OV[nsm*nst];
+  jvec *OP=new jvec[nsm*nst],*OV=new jvec[nsm*nst];
   for(int ist=0;ist<nst;ist++)
     for(int ism=0;ism<nsm;ism++)
       {
@@ -156,6 +156,9 @@ void study_operator_content(jack ZV,jack ZP,jack MV,jack MP,int nst)
       outV<<OV[iZ(EX,ism)]/OV[iZ(GR,ism)]<<endl;
       cout<<"V suppression "<<ism<<": "<<ZV[iZ(EX,ism)]/ZV[iZ(GR,ism)]<<endl;
     }
+  
+  delete[] OP;
+  delete[] OV;
 }
 
 int main(int narg,char **arg)
@@ -241,8 +244,10 @@ int main(int narg,char **arg)
       jack f=1/qi*(MV[GR]+MP[GR])/(2*MP[GR]);
       cout<<"f: "<<f<<", ff: "<<f*MEL_GR<<endl;
       //testing f.f. for excited state
-      f=1/qi*(MV[GR]+MP[EX])/(2*MP[GR]);
+      f=1/qi*(MV[GR]+MP[EX])/(2*MP[EX]);
       cout<<"f: "<<f<<", ff: "<<f*MEL_FI<<endl;
+      
+      cout<<"NB: m'/m="<<smart_print(MP[EX]/MP[GR])<<endl;
     }
   else
     {

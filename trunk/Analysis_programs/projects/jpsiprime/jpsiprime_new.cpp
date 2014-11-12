@@ -578,7 +578,8 @@ int main(int narg,char **arg)
   if(narg<2) crash("use %s input",arg[0]);
   read_input(arg[1]);
   
-  jvec corr[nst][nsm*nsm];
+  jvec **corr=new jvec*[nst];
+  for(int ist=0;ist<nst;ist++) corr[ist]=new jvec[nsm*nsm];
   jvec M(nst,njacks),Z(nst*nsm,njacks);
 
   ////////////////////// Stage A, loop over different states fitting them one by one //////////////////////

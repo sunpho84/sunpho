@@ -154,7 +154,7 @@ double compute_theta_pot(double Q,bool ave=false)
   //add correct normalization
   gauss_topotential*=chrono_topo_coeff;
   
-  return gauss_topotential+harm_potential;
+  return gauss_topotential/(ave?nchrono:1)+harm_potential;
 }
 
 //compute the topodynamical potential using past history
