@@ -17,6 +17,7 @@ cpn_source_files= \
         src/micro.cpp \
         src/overheat.cpp \
         src/parameters.cpp \
+        src/polyakov.cpp \
         src/random.cpp \
         src/staples.cpp \
         src/stout.cpp \
