@@ -13,6 +13,7 @@
 #include "metro.hpp"
 #include "micro.hpp"
 #include "overheat.hpp"
+#include "polyakov.hpp"
 #include "random.hpp"
 #include "routines.hpp"
 #include "staples.hpp"

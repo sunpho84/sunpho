@@ -107,8 +107,9 @@ am__objects_1 = src/action.$(OBJEXT) src/close.$(OBJEXT) \
 	src/geometry.$(OBJEXT) src/hmc.$(OBJEXT) src/init.$(OBJEXT) \
 	src/lambda.$(OBJEXT) src/metro.$(OBJEXT) src/micro.$(OBJEXT) \
 	src/overheat.$(OBJEXT) src/parameters.$(OBJEXT) \
-	src/random.$(OBJEXT) src/staples.$(OBJEXT) src/stout.$(OBJEXT) \
-	src/tools.$(OBJEXT) src/topology.$(OBJEXT) src/zeta.$(OBJEXT)
+	src/polyakov.$(OBJEXT) src/random.$(OBJEXT) \
+	src/staples.$(OBJEXT) src/stout.$(OBJEXT) src/tools.$(OBJEXT) \
+	src/topology.$(OBJEXT) src/zeta.$(OBJEXT)
 am___top_builddir__bin_main_OBJECTS = $(am__objects_1) \
 	src/main.$(OBJEXT)
 __top_builddir__bin_main_OBJECTS =  \
@@ -305,6 +306,7 @@ cpn_source_files = \
         src/micro.cpp \
         src/overheat.cpp \
         src/parameters.cpp \
+        src/polyakov.cpp \
         src/random.cpp \
         src/staples.cpp \
         src/stout.cpp \
@@ -433,6 +435,8 @@ src/overheat.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/parameters.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/polyakov.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 src/random.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/staples.$(OBJEXT): src/$(am__dirstamp) \
@@ -478,6 +482,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/micro.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/overheat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/parameters.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/polyakov.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/random.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/reversibility_check.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/staples.Po@am__quote@

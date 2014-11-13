@@ -21,6 +21,7 @@ int main()
   ios::openmode mode=ios::out;
   if(read_pars.start_cond==LOAD) mode|=ios::app;
   ofstream energy_file("energy",mode);
+  ofstream polyakov_file("polyakov",mode);
   ofstream weight_file("topo_weight",mode);
   ofstream topology_file("topology",mode);
   ofstream corr_file("corr",mode);
@@ -28,6 +29,7 @@ int main()
   ofstream mom2_file("mom2",mode);
   ofstream mag_file("mag",mode);
   energy_file.precision(PREC);
+  polyakov_file.precision(PREC);
   weight_file.precision(PREC);
   topology_file.precision(PREC);
   corr_file.precision(PREC);
@@ -50,6 +52,10 @@ int main()
       energy_time.start();
       energy_file<<isweep<<" "<<energy(zeta,lambda)/V/NDIMS<<endl;
       energy_time.stop();
+      
+      //compute polyakov loop
+      dcomplex poly=polyakov(lambda);
+      polyakov_file<<poly.real()<<" "<<poly.imag()<<endl;
       
       //compute topologycal charge
       topo_time.start();
