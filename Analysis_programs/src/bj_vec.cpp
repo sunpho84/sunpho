@@ -294,7 +294,8 @@ VTYPE pair_operator(const VTYPE &a,const VTYPE &b,double (*fun)(const double,con
   if(b.nel!=nel){cerr<<"Error, unmatched nel!"<<endl;exit(1);}
   bvec c(nel,nboot,njack);
 #else
-  if(b.njack!=njack||b.nel!=nel){cerr<<"Error, unmatched njack or nel!"<<endl;exit(1);}
+  if(b.njack!=njack){cerr<<"Error, unmatched njack!"<<endl;exit(1);}
+  if(b.nel!=nel){cerr<<"Error, unmatched nel!"<<endl;exit(1);}
   jvec c(nel,njack);
 #endif
   
@@ -686,20 +687,21 @@ TYPE correlated_constant_fit(VTYPE in,int tin,int tfin,const char *path=NULL)
   return E;
 }
 
-void linear_fit(TYPE &q,TYPE &m,double *x,VTYPE &y,double xmin,double xmax,const char *plot_path=NULL)
+string write_line_with_error(TYPE q,TYPE m,double xmin,double xmax,int npoints); 
+void linear_fit(TYPE &q,TYPE &m,double *x,VTYPE y,double xmin,double xmax,const char *plot_path=NULL)
 {
   double S,Sx,Sx2;
-  TYPE Sxy(y.data[0]),Sy(y.data[0]);
+  TYPE Sxy(y[0]),Sy(y[0]);
   
   Sx2=S=Sx=0;
   Sxy=Sy=0;
   for(int iel=0;iel<y.nel;iel++)
     if(x[iel]>=xmin && x[iel]<=xmax)
       {
-	double err=y.data[iel].err();
+	double err=y[iel].err();
 	double weight=1/(err*err);
 	double xi=x[iel];
-	TYPE yi=y.data[iel];
+	TYPE yi=y[iel];
 	
 	S+=weight;
 	Sx+=xi*weight;
@@ -714,18 +716,18 @@ void linear_fit(TYPE &q,TYPE &m,double *x,VTYPE &y,double xmin,double xmax,const
 
   if(plot_path!=NULL)
     {
-      ofstream plot_file(plot_path);
-      plot_file<<"@type xydy"<<endl;
-      for(int iel=0;iel<y.nel;iel++)
-	plot_file<<x[iel]<<" "<<y[iel]<<endl;
-      plot_file<<"&"<<endl<<"@type xy"<<endl;
-      plot_file<<xmin<<" "<<m.med()*xmin+q.med()<<endl;
-      plot_file<<xmax<<" "<<m.med()*xmax+q.med()<<endl;
-      plot_file<<"&"<<endl;
+      ofstream out(plot_path);
+      out<<"@type xy"<<endl<<
+	write_line_with_error(q,m,xmin-0.2,xmax+0.2,100)<<endl<<
+	"&"<<endl<<
+	"@type xydy"<<endl;
+      
+      for(int i=0;i<y.nel;i++)
+	out<<x[i]<<" "<<y[i]<<endl;
     }
 }
 
-void linear_fit(TYPE &q,TYPE &m,VTYPE &y,int tmin,int tmax,const char *plot_path=NULL)
+void linear_fit(TYPE &q,TYPE &m,VTYPE y,int tmin,int tmax,const char *plot_path=NULL)
 {
   double x[y.nel];
   for(int iel=0;iel<y.nel;iel++) x[iel]=iel;

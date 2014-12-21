@@ -12,7 +12,7 @@
 #include "random.hpp"
 
 //update zeta with metropolis
-void metro_update_site(int site)
+inline int metro_update_site(int site)
 {
   //copy zeta
   dcomplex ori[N];
@@ -27,11 +27,15 @@ void metro_update_site(int site)
   double diff_ac=fin_ac-ori_ac;
   double t=exp(-diff_ac);
   double p=get_unif_double(1,site);
+
+  //copy back
   if(p>t) for(int n=0;n<N;n++) zeta[site*N+n]=ori[n];
+
+  return p<=t;
 }
 
 //update lambda with metropolis
-void metro_update_link(int site,int mu)
+inline int metro_update_link(int site,int mu)
 {
   //copy lambdaa
   dcomplex ori=lambda[site*NDIMS+mu];
@@ -45,16 +49,22 @@ void metro_update_link(int site,int mu)
   double diff_ac=fin_ac-ori_ac;
   double t=exp(-diff_ac);
   double p=get_unif_double(1,site);
+
+  //copy back
   if(p>t) lambda[site*NDIMS+mu]=ori;
+
+  return p<=t;
 }
 
 //sweep all the lattice
 void metro_sweep()
 {
   //loop over sites
+  int acc_site=0,acc_link=0;
   for(int site=0;site<V;site++)
     {
-      metro_update_site(site);
-      for(int mu=0;mu<NDIMS;mu++) metro_update_link(site,mu);
+      acc_site+=metro_update_site(site);
+      for(int mu=0;mu<NDIMS;mu++) acc_link+=metro_update_link(site,mu);
     }
+  cout<<"Acceptance: "<<(double)acc_site/V<<" site, "<<(double)acc_link/(NDIMS*V)<<" links"<<endl;
 }

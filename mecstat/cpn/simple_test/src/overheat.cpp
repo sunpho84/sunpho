@@ -26,7 +26,7 @@ void overheat_update_site(int site)
   if(staple_norm==0) set_ON_to_rnd(zeta+site*N,site);
   else
     {
-      //generate the new theta according to the microscopic distriution of prob
+      //generate the new theta according to the microscopic distribution of prob
       double theta_new=get_theta(beta*N*staple_norm,N,site);
       
       //draw a random vetor orthogonal to the staple until it's not too small

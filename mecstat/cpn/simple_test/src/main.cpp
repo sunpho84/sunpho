@@ -9,6 +9,91 @@
 
 using namespace std;
 
+inline int get_unif_int(int max,int site)
+{
+  uniform_int_distribution<int> dis(0,max-1);
+  return dis(gen[site]);
+}
+
+int acc1=0,acc2=0;
+int nestr1=0,nestr2=0;
+
+double w=0.3;
+
+void metro_site(int O)
+{
+  //cout<<"0 "<<get_zeta_norm(zeta+O*N)<<endl;
+  int n=get_unif_int(N,O);
+  double ebef=site_action(zeta,lambda,O);
+  dcomplex zbef=zeta[O*N+n];
+  double th=(get_unif_double(2*M_PI,O)-M_PI)*w;
+  zeta[O*N+n]*=dcomplex(cos(th),sin(th));
+  double eaft=site_action(zeta,lambda,O);
+  double diff=eaft-ebef;
+  double tresh=exp(-diff);
+  double extr=get_unif_double(1,O);
+  if(extr<tresh) acc1++;//cout<<"Acc: "<<extr<<"<exp("<<-diff<<")="<<tresh<<endl;
+  else
+    {
+      //cout<<"Rej: "<<extr<<">exp("<<-diff<<")="<<tresh<<endl;
+      zeta[O*N+n]=zbef;
+    }
+  
+  //cout<<"1 "<<get_zeta_norm(zeta+O*N)<<endl;
+  nestr1++;
+}
+
+void metro_site2(int O)
+{
+  int i=get_unif_int(N,O);
+  int j;
+  do j=get_unif_int(N,O);
+  while(i==j);
+  
+  double ebef=site_action(zeta,lambda,O);
+  dcomplex zibef=zeta[O*N+i];
+  dcomplex zjbef=zeta[O*N+j];
+  double th=(get_unif_double(2*M_PI,O)-M_PI)*w;
+  double cth=cos(th);
+  double sth=sin(th);
+  zeta[O*N+i]=+cth*zibef-sth*zjbef;
+  zeta[O*N+j]=+sth*zibef+cth*zjbef;
+  //cout<<"th: "<<th<<" i: "<<i<<", j: "<<j<<endl;
+  //cout<<"Pre: "<<zibef<<" "<<zjbef<<" "<<norm(zibef)+norm(zjbef)<<endl;
+  //cout<<"Aft: "<<zeta[O*N+i]<<" "<<zeta[O*N+j]<<" "<<norm(zeta[O*N+i])+norm(zeta[O*N+j])<<endl;
+  double eaft=site_action(zeta,lambda,O);
+  double diff=eaft-ebef;
+  double tresh=exp(-diff);
+  double extr=get_unif_double(1,O);
+  if(extr<tresh) acc2++;//cout<<"Acc2: "<<extr<<"<exp("<<-diff<<")="<<tresh<<endl;
+  else
+    {
+      //cout<<"Rej2: "<<extr<<">exp("<<-diff<<")="<<tresh<<endl;
+      zeta[O*N+i]=zibef;
+      zeta[O*N+j]=zjbef;
+    } 
+
+  nestr2++;
+  
+  //cout<<get_zeta_norm(zeta+O*N)<<endl;
+}
+
+void metro_sweep_new()
+{
+  for(int site=0;site<V;site++)
+    {
+      for(int n=0;n<N*(N-1)/2*2;n++)
+	{
+	  for(int j=0;j<2;j++) metro_site(site);
+	  metro_site2(site);
+	}
+      for(int mu=0;mu<2;mu++) overheat_update_link(site,mu);
+    }
+
+  cout<<"Acc1: "<<acc1/(double)nestr1<<endl;
+  cout<<"Acc2: "<<acc2/(double)nestr2<<endl;
+}
+
 int main()
 {
   //read input and initialize
@@ -47,7 +132,57 @@ int main()
       geo_topo_time.start();
       double topo_sim=geometric_topology_simplified(zeta);
       geo_topo_time.stop();
-      
+
+      cout<<topo_sim<<endl;
+      /*
+      for(int i=0;i<100;i++)
+	{
+	  int O=1;
+	  int mu=0,nu=1;
+	
+	  double topo=0;
+	  int A=neighup(O,mu);
+	  int B=neighup(A,nu);
+	  int C=neighup(O,nu);
+	  int D=neighdw(O,mu);
+	  int E=neighdw(D,nu);
+	  int F=neighdw(O,nu);
+	  dcomplex *z=zeta;
+	  dcomplex AB=get_zeta_compl_scalprod(z+A*N,z+B*N);
+	  dcomplex BC=get_zeta_compl_scalprod(z+B*N,z+C*N);
+	  dcomplex CD=get_zeta_compl_scalprod(z+C*N,z+D*N);
+	  dcomplex DE=get_zeta_compl_scalprod(z+D*N,z+E*N);
+	  dcomplex EF=get_zeta_compl_scalprod(z+E*N,z+F*N);
+	  dcomplex FA=get_zeta_compl_scalprod(z+F*N,z+A*N);
+	  topo+=
+	    arg(get_zeta_compl_scalprod(z+B*N,z+O*N)*
+		AB*
+		get_zeta_compl_scalprod(z+O*N,z+A*N))+
+	    arg(get_zeta_compl_scalprod(z+C*N,z+O*N)*
+		BC*
+		get_zeta_compl_scalprod(z+O*N,z+B*N))+
+	    arg(get_zeta_compl_scalprod(z+O*N,z+E*N)*
+		get_zeta_compl_scalprod(z+F*N,z+O*N)*
+		EF)+
+	    arg(DE*
+		get_zeta_compl_scalprod(z+O*N,z+D*N)*
+		get_zeta_compl_scalprod(z+E*N,z+O*N))+
+	    arg(CD*
+		get_zeta_compl_scalprod(z+O*N,z+C*N)*
+		get_zeta_compl_scalprod(z+D*N,z+O*N))+
+	    arg(get_zeta_compl_scalprod(z+O*N,z+F*N)*
+		get_zeta_compl_scalprod(z+A*N,z+O*N)*
+		FA);
+	  topo/=2*M_PI;
+
+	  double tgeo=0;//geometric_topology_simplified(zeta);
+	  double ene=0;//energy(zeta,lambda)/V/NDIMS;
+	  cout<<"Topo: "<<topo<<" "<<tgeo<<" "<<ene<<endl;
+	  
+	  metro_site(O);
+	  metro_site2(O);
+	}
+      */
       //compute energy
       energy_time.start();
       energy_file<<isweep<<" "<<energy(zeta,lambda)/V/NDIMS<<endl;
@@ -55,7 +190,7 @@ int main()
       
       //compute polyakov loop
       dcomplex poly=polyakov(lambda);
-      polyakov_file<<poly.real()<<" "<<poly.imag()<<endl;
+      polyakov_file<<isweep<<" "<<poly.real()<<" "<<poly.imag()<<endl;
       
       //compute topologycal charge
       topo_time.start();
@@ -98,11 +233,20 @@ int main()
   
       //sweep
       sweep_time.start();
-      if(read_pars.use_hmc) hmc_update(isweep<read_pars.nterm);
-      else
+      switch(read_pars.use_hmc)
 	{
+	case 1:
+	   hmc_update(isweep<read_pars.nterm);
+	   break;
+	case 0:
 	  for(int imicro=0;imicro<read_pars.nmicro;imicro++) micro_sweep();
 	  overheat_sweep();
+	  break;
+	case -1:
+	  metro_sweep_new();
+	  break;
+	default:
+	  crash("unkwnown update %d",read_pars.use_hmc);
 	}
       sweep_time.stop();
     }
