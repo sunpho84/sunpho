@@ -43,11 +43,19 @@ void read_input(read_pars_t &read_pars,const char *path)
   read(read_pars.nterm,input,"NTerm");
   read(compute_corr_each,input,"ComputeCorrEach");
   read(read_pars.use_hmc,input,"UseHMC");
-  if(!read_pars.use_hmc) read(read_pars.nmicro,input,"NMicro");
-  else
+  switch(read_pars.use_hmc)
     {
+    case -1:
+      break;
+    case 0:
+       read(read_pars.nmicro,input,"NMicro");
+       break;
+    case 1:
       read_pars.nmicro=3;
       read(nhmc_steps,input,"NhmcSteps");
+      break;
+    default:
+      crash("unknwon update method %d",read_pars.use_hmc);
     }
   read(use_topo_pot,input,"UseTopoPot");
   switch(use_topo_pot)

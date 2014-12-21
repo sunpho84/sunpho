@@ -11,7 +11,7 @@
 
 int autocorr_debug=true;
 
-const long unsigned int max_njacks=2000;
+const long unsigned int max_njacks=2048;
 
 using namespace std;
 
@@ -74,6 +74,8 @@ void autocorr_data_t::autocorr(double *ave_corr,double *jck_corr,double *err_cor
   
   for(int ijack=0;ijack<njacks;ijack++)
     {
+      cerr<<ijack<<"/"<<njacks<<endl;
+      
       //compute ave
       double ave=0;
       EXCLUDING_LOOP(i,j,ijack) ave+=(*this)[j];
@@ -156,7 +158,8 @@ void autocorr_data_t::compute_tint(double &med_tint,double &err_tint,const char 
       njacks=size/clust_size;
       int_size=njacks*clust_size;
       jackniffed_size=int_size-clust_size;
-      
+    
+      cout<<" clust_size: "<<clust_size<<endl;
       cout<<" njacks: "<<njacks<<endl;
       cout<<" int_size: "<<int_size<<endl;
       cout<<" jackniffed_size: "<<jackniffed_size<<endl;
