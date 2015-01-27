@@ -1,5 +1,7 @@
 #pragma once
 
+#include "effmass.cpp"
+
 int debug_fit=1;
 
 //jack-vec version
@@ -19,55 +21,7 @@ jvec effective_mass(jvec a,int TH=-1,int par=1)
       if(einiz==0) einiz=1.e-10;
       
       for(int ijack=0;ijack<=njack;ijack++)
-	{
-	  double m=miniz;
-	  double e=einiz;
-	  
-	  double targ=a[t+1][ijack]/a[t][ijack];
-	  
-	  double yl;
-	  double yr;
-	  
-	  //increment the range up to reaching opposite sign
-	  int q;
-	  do
-	    {
-	      if(par==1)
-		{
-		  yl=cosh((m-e)*(TH-(t+1)))/cosh((m-e)*(TH-t))-targ;
-		  yr=cosh((m+e)*(TH-(t+1)))/cosh((m+e)*(TH-t))-targ;
-		}
-	      else
-		{
-		  yl=sinh((m-e)*(TH-(t+1)))/sinh((m-e)*(TH-t))-targ;
-		  yr=sinh((m+e)*(TH-(t+1)))/sinh((m+e)*(TH-t))-targ;
-		}
-	      q=((yl<0 && yr<0) || (yl>=0 && yr>=0));
-	      //cout<<t<<" "<<ijack<<" "<<yl<<" "<<yr<<" "<<e<<endl;
-	      if(q)
-		{
-		  e*=2;
-		  if(m<=e) m+=(e-m);
-		}
-	    }
-	  while(q);
-	  
-	  //bisect
-	  double xl=m-e,xr=m+e,ym;
-	  do
-	    {
-	      m=(xl+xr)/2;
-	      if(par==1) ym=cosh(m*(TH-(t+1)))/cosh(m*(TH-t))-targ;
-	      else       ym=sinh(m*(TH-(t+1)))/sinh(m*(TH-t))-targ;
-	      if((yl<0 && ym<0) || (yl>0 && ym>0))
-		xl=m;
-	      else
-		xr=m;
-	      //cout<<t<<" "<<ijack<<" "<<m<<endl;
-	    }
-	  while(fabs(ym)>1.e-14);
-	  b.data[t].data[ijack]=m;
-	}
+	b.data[t].data[ijack]=effective_mass(a[t][ijack],a[t+1][ijack],t,TH,miniz,einiz,par);
     }
   return b;
 }
@@ -173,7 +127,7 @@ void two_pts_migrad_fit(jack &M,jack &Z2,jvec corr,int tmin,int tmax,const char 
   jvec ecorr=effective_mass(corr);
   M=constant_fit(ecorr,tmin,tmax,NULL);
   double M_med=M.med();
-  if(isnan(M_med)) M_med=1;
+  if(std::isnan(M_med)) M_med=1;
   
   jvec temp(corr.nel,corr.njack);
   int TH=temp.nel-1;
@@ -182,7 +136,7 @@ void two_pts_migrad_fit(jack &M,jack &Z2,jvec corr,int tmin,int tmax,const char 
   
   Z2=constant_fit(temp,tmin,tmax,NULL);
   double Z2_med=Z2.med();
-  if(isnan(Z2_med)) Z2_med=M_med=1;
+  if(std::isnan(Z2_med)) Z2_med=M_med=1;
   minu.DefineParameter(0,"M",M_med,0.001,0,0);
   minu.DefineParameter(1,"Z2",Z2_med,0.001,0,0);
   

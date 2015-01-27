@@ -35,7 +35,7 @@ void crash(const char *temp,...)
   va_start(args,temp);
   vsprintf(buffer,temp,args);
   va_end(args);
-
+  
   cerr<<"ERROR: "<<buffer<<endl;
   exit(1);
 }

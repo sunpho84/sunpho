@@ -25,33 +25,29 @@ void init_fftw()
       fftw_plan_with_nthreads(omp_get_max_threads());
       
       //forward
-      P_fftw=new dcomplex[N*N*V];
-      int rank=2,sizes[2]={L,L};
-      int howmany=N*N,ostride=howmany,istride=howmany;
-      int idist=1,odist=1;
-      fw=fftw_plan_many_dft(rank,sizes,howmany,
-			    (fftw_complex*)P_fftw,NULL,istride,idist,
-			    (fftw_complex*)P_fftw,NULL,ostride,odist,
-			    FFTW_FORWARD,FFTW_MEASURE);
+      P_fftw=new dcomplex[2*N*N*L];
+      {
+	int rank=1,sizes[1]={L};
+	int howmany=2*N*N,ostride=howmany,istride=howmany;
+	int idist=1,odist=1;
+	fw=fftw_plan_many_dft(rank,sizes,howmany,
+			      (fftw_complex*)P_fftw,NULL,istride,idist,
+			      (fftw_complex*)P_fftw,NULL,ostride,odist,
+			      FFTW_FORWARD,FFTW_MEASURE);
+      }
       
       //backward
-      C_fftw=new dcomplex[V];
-      bw=fftw_plan_dft(rank,sizes,(fftw_complex*)C_fftw,(fftw_complex*)C_fftw,FFTW_BACKWARD,FFTW_MEASURE);
-      
+      C_fftw=new dcomplex[2*L];
+      {
+	int rank=1,sizes[1]={L};
+	int howmany=2,ostride=howmany,istride=howmany;
+	int idist=1,odist=1;
+	bw=fftw_plan_many_dft(rank,sizes,howmany,
+			      (fftw_complex*)C_fftw,NULL,istride,idist,
+			      (fftw_complex*)C_fftw,NULL,ostride,odist,
+			      FFTW_BACKWARD,FFTW_MEASURE);
+      }
       init_fftw_flag=true;
-    }
-}
-
-void stop_fftw()
-{
-  if(init_fftw_flag==true)
-    {
-      delete[] P_fftw;
-      delete[] C_fftw;
-      
-      fftw_destroy_plan(fw);
-      fftw_destroy_plan(bw);
-      init_fftw_flag=false;
     }
 }
 
@@ -59,166 +55,57 @@ void stop_fftw()
 void compute_corr(double &mag0,double &mag1,double &mom2,double *out,double *outd,dcomplex *z)
 {
   init_fftw();
-
-  //fill P
+  
 #pragma omp parallel for
-  for(int s=0;s<V;s++)
-    for(int i=0;i<N;i++)
-      for(int j=0;j<N;j++)
-	P_fftw[(s*N+i)*N+j]=conj(z[s*N+i])*z[s*N+j];
-  
-  //take FFT
-  fftw_execute(fw);
-  
-  //take P(k)*P(-k)
-  for(int s=0;s<V;s++)
-    {
-      //find -k
-      coords c,c1;
-      coords_of_site(c,s);
-      c1[0]=(L-c[0])%L;
-      c1[1]=(L-c[1])%L;
-      int s1=site_of_coords(c1);
-      
-      //take the product
-      C_fftw[s]=0;
-      for(int i=0;i<N;i++)
-	for(int j=0;j<N;j++)
-	  C_fftw[s]+=P_fftw[(s*N+i)*N+j]*P_fftw[(s1*N+j)*N+i];
-      C_fftw[s]/=V;
-    }
-  C_fftw[0]-=V/(double)N;
-  
-  //mark magnetic susceptibility ingredients
-  mag0=C_fftw[0].real();
-  mag1=(C_fftw[1].real()+C_fftw[L].real())/2;
-  
-  //take anti-fftw
-  fftw_execute(bw);
-  
-  //compute second momentum
-  mom2=0;
-  for(int dx=-L/2;dx<L/2;dx++)
-    for(int dy=-L/2;dy<L/2;dy++)
-      {
-	coords c={dx+L/2,dy+L/2};
-	int x2=dx*dx+dy*dy;
-	mom2+=x2*C_fftw[site_of_coords(c)].real();
-      }
-  
-  //project to zero spatial momentum
-  for(int x=0;x<L;x++)
-    {
-      double res=0,resd=0;
-      for(int y=0;y<L;y++)
-	{
-	  coords c1={x,y},c2={y,x};
-	  res+=C_fftw[site_of_coords(c1)].real()+C_fftw[site_of_coords(c2)].real();
-	  coords c3={(x-y+L)%L,y%L},c4={(x+y)%L,y%L};
-	  resd+=C_fftw[site_of_coords(c3)].real()+C_fftw[site_of_coords(c4)].real();
-	}
-      out[x]=res/V/2;
-      outd[x]=sqrt(2)*resd/V/2;
-    }
-    
-  //stop_fftw();
-}
+  for(int i=0;i<2*N*N*L;i++) P_fftw[i]=0;
 
-//compute correlation function
-void compute_corre(double *out,double *outd,dcomplex *z)
-{
-  for(int x=0;x<L;x++)
-    {
-      double res=0,resd=0;
-#pragma omp parallel for reduction(+:res,resd)
-      for(int y=0;y<L;y++)
-	for(int s0=0;s0<V;s0++)
-	  {
-	    coords c0;
-	    coords_of_site(c0,s0);
-	    
-	    coords c={(x+c0[0])%L,(y+c0[1])%L};
-	    int s=site_of_coords(c);
-	    
-	    dcomplex t=0.0;
-	    for(int n=0;n<N;n++) t+=conj(z[s*N+n])*z[s0*N+n];
-	    res+=norm(t);
-
-	    coords c1={(x-y+L+c0[0])%L,(y+c0[1])%L};
-	    int s1=site_of_coords(c1);
-	    
-	    dcomplex t1=0.0;
-	    for(int n=0;n<N;n++) t1+=conj(z[s1*N+n])*z[s0*N+n];
-	    resd+=norm(t1);
-	  }
-      out[x]=res/V-L/2;
-      outd[x]=sqrt(2)*(resd/V-L/2);
-    }
-}
-
-fftw_plan fw_alt,bw_alt;
-bool inited_alt=false;
-dcomplex *P_red,*P_tra;
-
-void init_alt()
-{
-  if(!inited_alt)
-    {
-      inited_alt=true;
-      
-      P_red=new dcomplex[N*N*L];
-      P_tra=new dcomplex[L];
-
-      fw_alt=fftw_plan_many_dft(1,&L,N*N,
-				(fftw_complex*)P_red,NULL,N*N,1,
-				(fftw_complex*)P_red,NULL,N*N,1,
-				FFTW_FORWARD,FFTW_MEASURE);
-      bw_alt=fftw_plan_many_dft(1,&L,1,
-				(fftw_complex*)P_tra,NULL,1,1,
-				(fftw_complex*)P_tra,NULL,1,1,
-				FFTW_BACKWARD,FFTW_MEASURE);
-    }
-}
-
-/*
-//compute correlation function
-void compute_corr_alt(double *out,dcomplex *z)
-{
-cacca
-  init_alt();
-  
-  for(int i=0;i<N*N*L;i++) P_red[i]=0;
-
-  //fill P
-  coords c;
-  //#pragma omp parallel for
+#pragma omp parallel for
   for(int t=0;t<L;t++)
-    for(c[1]=0;c[1]<L;c[1]++)
+    for(int x=0;x<L;x++)
       {
-	c[0]=t;
-	int s=site_of_coords(c);
+	int s=t*L+x;
+	int tmx=(t-x+L)%L;
+	
 	for(int i=0;i<N;i++)
 	  for(int j=0;j<N;j++)
-	    P_red[(c[0]*N+i)*N+j]+=conj(z[s*N+i])*z[s*N+j];
+	    {
+	      dcomplex c=conj(z[s*N+i])*z[s*N+j];
+	      P_fftw[((t*N+i)*N+j)*2+0]+=c;
+	      P_fftw[((tmx*N+i)*N+j)*2+1]+=c;
+	    }
       }
-
-  fftw_execute(fw_alt);
   
-  //#pragma omp parallel for
+  fftw_execute(fw);
+  
+#pragma omp parallel for
   for(int t=0;t<L;t++)
     {
-      P_tra[t]=0;
+      C_fftw[0+2*t]=0;
+      C_fftw[1+2*t]=0;
       for(int i=0;i<N;i++)
 	for(int j=0;j<N;j++)
-	  P_tra[t]+=P_red[(t*N+i)*N+j]*P_red[(((L-t)%L)*N+j)*N+i];
-      P_tra[t]/=V;
+	  {
+	    C_fftw[0+2*t]+=norm(P_fftw[((t*N+i)*N+j)*2+0]);
+	    C_fftw[1+2*t]+=norm(P_fftw[((t*N+i)*N+j)*2+1]);
+	  }
+      C_fftw[0+2*t]/=V*L;
+      C_fftw[1+2*t]/=V*L;
     }
   
-  P_tra[0]-=(double)V/N;
+  //subtract disconnected
+  C_fftw[0]-=L/(double)N;
+  C_fftw[1]-=L/(double)N;
   
-  fftw_execute(bw_alt);
+  //note magnetization
+  mag0=C_fftw[0].real()*L;
+  mag1=C_fftw[1].real()*L;
   
-  for(int t=0;t<L;t++) cout<<P_tra[t]*(1.0/L)<<endl;
+  fftw_execute(bw);
   
+  for(int t=0;t<L;t++)
+    {
+      out[t]=C_fftw[0+2*t].real();
+      outd[t]=C_fftw[1+2*t].real()*sqrt(2);
+    }
 }
-*/
+

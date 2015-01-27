@@ -15,7 +15,7 @@ int do_not_exit;
 
 double A=1; //curvature of the pot
 double B=1; //tempering
-double C=1; //place-dependant weight
+double C=0; //place-dependant weight
 
 const double SKIP_OUT_FROM=50;
 int nacc=0;

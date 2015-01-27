@@ -133,7 +133,6 @@ int main()
       double topo_sim=geometric_topology_simplified(zeta);
       geo_topo_time.stop();
 
-      cout<<topo_sim<<endl;
       /*
       for(int i=0;i<100;i++)
 	{
@@ -200,14 +199,15 @@ int main()
 	  double topo_num=topology(lambda_stout[ilev]);
 	  if(use_topo_pot==2 && ilev==nstout_lev && isweep>=chrono_topo_after && (isweep-chrono_topo_after)%chrono_topo_each==0)
 	    {
-	      double w=exp(-chrono_topo_well_tempering*compute_theta_pot(+topo_num));
+	      double w=exp(-chrono_topo_well_tempering*compute_theta_pot(+topo_num,isweep));
+	      update_chrono_potential(+topo_num,isweep);
 	      chrono_topo_past_values.push_back(+topo_num);
 	      chrono_topo_past_weight.push_back(w);
 	      weight_file<<w<<endl;
 	      if(isweep%DRAW_EACH==0)
 		{
 		  draw_chrono_topo_potential(true);
-		  draw_chrono_topo_force();
+		  draw_chrono_topo_force(isweep);
 		}
 	    }
 	  

@@ -5,9 +5,9 @@ const int DEBUG_GEVP=0;
 extern "C" {
   int dpotrf(char *uplo,int *n,double *a,int *lda,int *info);
   int dsygst(int *itype,char *uplo,int *n,double *a,int *lda,double *b,int *ldb,int *info);
-  int dsygv(int *itype,char *jobz,char *uplo,int *n,double *a,int *lda,double *b,int *ldb,double *w,double *work,int *lwork,int *info);
+  int dsygv_(int *itype,char *jobz,char *uplo,int *n,double *a,int *lda,double *b,int *ldb,double *w,double *work,int *lwork,int *info);
   int dggev(char *jobz,char *uplo,int *n,double *a,int *lda,double *b,int *ldb,double *alpahr,double *alphai,double *beta,double *vl,int *nvl,double *vr,int *nvr,double *work,int *lwork,int *info);
-  int dsyev(char *jobz,char *uplo,int *n,double *a,int *lda,double *work,double *w,int *lwork,int *info);
+  int dsyev_(char *jobz,char *uplo,int *n,double *a,int *lda,double *work,double *w,int *lwork,int *info);
 }
 
 class gevp_pars_t
@@ -182,7 +182,7 @@ void gevp_pars_t::gevp_preliminary()
       double mt0[nlevls*nlevls];
       matr_copy(mt0,data,t0,ijack0);
       
-      dsyev(VEC,low,&nlevls,mt0,&nlevls,va,work,&lwork,&info);
+      dsyev_(VEC,low,&nlevls,mt0,&nlevls,va,work,&lwork,&info);
       if(info) crash("info at ijack=%d after dsyev: %d",ijack,info);
 
 	//copy eigenvalues, eigenvectors
@@ -257,7 +257,7 @@ void gevp_pars_t::gevp()
 		    inv_sqrt_data_t0[kop*nlevls+lop][ijack0];
 	    }
 
-	dsyev(VEC,low,&nlevls,mt,&nlevls,va,work,&lwork,&info);
+	dsyev_(VEC,low,&nlevls,mt,&nlevls,va,work,&lwork,&info);
 	if(info) crash("info at t=%d ijack=%d after dsyev: %d",t,ijack,info);
 	
 	//copy eigenvalues, eigenvectors

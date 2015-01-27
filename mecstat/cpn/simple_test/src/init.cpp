@@ -11,6 +11,7 @@
 #include "random.hpp"
 #include "staples.hpp"
 #include "tools.hpp"
+#include "topology.hpp"
 
 #define EXTERN_INIT
 
@@ -220,4 +221,16 @@ void init(int &base_isweep,read_pars_t &read_pars)
 	}
     }
   else read_conf(base_isweep,"conf"); //remember rnd gen reinit
+  
+#ifndef TOPO_HISTO
+  if(use_topo_pot==2)
+    {
+      dx_grid=chrono_topo_width/20;
+      ngrid=2*chrono_topo_barr/dx_grid;
+      topo_grid.resize(ngrid+1);
+      topo_grid_ave.resize(ngrid+1);
+      for(auto &grid : topo_grid) grid=0;
+      for(auto &grid : topo_grid_ave) grid=0;
+    }
+#endif
 }
