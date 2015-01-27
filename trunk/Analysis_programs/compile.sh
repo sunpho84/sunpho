@@ -13,6 +13,6 @@ else
     fi
 fi
 
-/usr/bin/g++ -o $1 $a -I /Users/francesco/Prace/sunpho/Analysis_programs/src  $suff -Wall $(~/bin/rootlib|sed 's|-stdlib=libc++||g') -I $(dirname $1) -I/opt/local/include -O0 -ggdb3 -llapack -lfftw3 -std=c++11 $2
+g++ -o $1 $a -I /home/francesco/Prace/sunpho/Analysis_programs/src -Wall `~/bin/rootlib` -I $(dirname $1) -L/usr/lib/x86_64-linux-gnu/root5.34 -O0 -ggdb3 -llapack -lblas -lfftw3 -std=c++1y $2
 
-#g++ -o $1 $a -I /Users/francesco/Prace/sunpho/Analysis_programs/src  $suff -Wall `rootlib` -I $(dirname $1) -O0 -ggdb3
+#g++ -o $1 $a -I /Users/francesco/Prace/sunpho/Analysis_programs/src -Wall `rootlib` -I $(dirname $1) -O0 -ggdb3

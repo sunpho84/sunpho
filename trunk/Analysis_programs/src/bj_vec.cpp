@@ -260,7 +260,7 @@ ostream& operator<<(ostream &out,const VTYPE &obj)
     {
       double med=obj.data[iel].med();
       double err=obj.data[iel].err();
-      if(!isnan(med) && !isnan(err))
+      if(!std::isnan(med) && !std::isnan(err))
 	out<<iel<<" "<<obj.data[iel]<<endl;
     }
   
@@ -611,7 +611,7 @@ TYPE constant_fit(VTYPE in,int tin,int tfin,const char *path=NULL,const char *pa
       TYPE ele=in.data[iel];
       double err=in.data[iel].err();
       double weight=1/(err*err);
-      if(!isnan(err)&&err!=0)
+      if(!std::isnan(err)&&err!=0)
 	{
 	  E+=ele*weight;
 	  norm+=weight;

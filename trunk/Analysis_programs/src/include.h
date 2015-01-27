@@ -4,6 +4,7 @@
 #define _LARGEFILE_SOURCE
 
 #include <TMinuit.h>
+#include <cmath>
 #include <iostream>
 #include <sstream>
 #include <fstream>

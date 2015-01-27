@@ -158,7 +158,7 @@ ostream& operator<<(ostream &out,const TYPE &obj)
   double med=TYPE(obj).med();
   double err=TYPE(obj).err();
 
-  if(!isnan(med) && !isnan(err)) out<<med<<" "<<err;
+  if(!std::isnan(med) && !std::isnan(err)) out<<med<<" "<<err;
   
   return out;
 }

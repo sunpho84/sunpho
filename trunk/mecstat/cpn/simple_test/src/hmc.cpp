@@ -289,5 +289,5 @@ void hmc_update(bool skip_test=false)
     }
   
   const char acc_flag[2][4]={"rej","acc"};
-  cout<<"diff action: "<<final_action<<"-"<<start_action<<"="<<diff_action<<", "<<acc_flag[acc]<<endl;
+  cout<<"diff action: "<<final_action<<"-"<<start_action<<"="<<diff_action<<", "<<acc_flag[acc]<<(skip_test?" (skip)":"")<<endl;
 }
