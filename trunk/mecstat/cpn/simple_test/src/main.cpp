@@ -17,9 +17,8 @@ inline int get_unif_int(int max,int site)
 
 int acc1=0,acc2=0;
 int nestr1=0,nestr2=0;
-
 double w=0.3;
-
+  
 void metro_site(int O)
 {
   //cout<<"0 "<<get_zeta_norm(zeta+O*N)<<endl;
@@ -107,7 +106,6 @@ int main()
   if(read_pars.start_cond==LOAD) mode|=ios::app;
   ofstream energy_file("energy",mode);
   ofstream polyakov_file("polyakov",mode);
-  ofstream weight_file("topo_weight",mode);
   ofstream topology_file("topology",mode);
   ofstream corr_file("corr",mode);
   ofstream corrd_file("corrd",mode);
@@ -115,7 +113,6 @@ int main()
   ofstream mag_file("mag",mode);
   energy_file.precision(PREC);
   polyakov_file.precision(PREC);
-  weight_file.precision(PREC);
   topology_file.precision(PREC);
   corr_file.precision(PREC);
   corrd_file.precision(PREC);
@@ -199,15 +196,11 @@ int main()
 	  double topo_num=topology(lambda_stout[ilev]);
 	  if(use_topo_pot==2 && ilev==nstout_lev && isweep>=chrono_topo_after && (isweep-chrono_topo_after)%chrono_topo_each==0)
 	    {
-	      double w=exp(-chrono_topo_well_tempering*compute_theta_pot(+topo_num,isweep));
-	      update_chrono_potential(+topo_num,isweep);
-	      chrono_topo_past_values.push_back(+topo_num);
-	      chrono_topo_past_weight.push_back(w);
-	      weight_file<<w<<endl;
+	      update_chrono_potential(+topo_num);
 	      if(isweep%DRAW_EACH==0)
 		{
-		  draw_chrono_topo_potential(true);
-		  draw_chrono_topo_force(isweep);
+		  draw_chrono_topo_potential();
+		  draw_chrono_topo_force();
 		}
 	    }
 	  
@@ -254,6 +247,7 @@ int main()
   tot_time.stop();
   
   //write lasted time
+  cout<<"Acc: "<<nacc/(double)read_pars.nsweep<<endl;
   cout<<"Tot time: "<<tot_time<<endl;
   cout<<"Sweep time: "<<sweep_time<<endl;
   cout<<"Geo topo time: "<<geo_topo_time<<endl;
@@ -263,6 +257,7 @@ int main()
   
   //write the conf
   write_conf("conf",isweep);
+  if(use_topo_pot==2) draw_chrono_topo_potential();
   
   print_rand_stat();
   

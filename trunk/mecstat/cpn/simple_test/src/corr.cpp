@@ -98,7 +98,7 @@ void compute_corr(double &mag0,double &mag1,double &mom2,double *out,double *out
   
   //note magnetization
   mag0=C_fftw[0].real()*L;
-  mag1=C_fftw[1].real()*L;
+  mag1=C_fftw[2].real()*L;
   
   fftw_execute(bw);
   

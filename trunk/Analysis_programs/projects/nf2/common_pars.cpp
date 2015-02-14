@@ -103,7 +103,7 @@ void init_latpars()
     ref_hmass[iref_hmass]=ref_ahmass[iref_hmass]/lat[1].med()/Zp[1].med();
   */
     
-  FILE *input_latpars=fopen("/Users/francesco/QCD/LAVORI/NF2/latpars_E","r");
+  FILE *input_latpars=fopen("/home/francesco/QCD/LAVORI/NF2/latpars_E","r");
   
   for(int ib=0;ib<4;ib++) lat[ib]=get_latpar(input_latpars);
   for(int ib=0;ib<4;ib++) Zp[ib]=get_latpar(input_latpars);

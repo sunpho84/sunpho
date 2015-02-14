@@ -9,6 +9,7 @@
 #include "routines.hpp"
 #include "staples.hpp"
 #include "stout.hpp"
+#include "tools.hpp"
 #include "types.hpp"
 #include "zeta.hpp"
 
@@ -16,11 +17,8 @@
 #include <fstream>
 #include <algorithm>
 
-std::vector<double> chrono_topo_past_values;
-std::vector<double> chrono_topo_past_weight;
 int ngrid;
-double dx_grid;
-vector<double> topo_grid,topo_grid_ave;
+vector<double> topo_grid;
 
 //return the geometric definition of topology
 double geometric_topology_simplified(dcomplex *z)
@@ -93,155 +91,92 @@ double topology(dcomplex *l)
 }
 
 //update the history-dependent potential
-void update_chrono_potential(double Q,int isweep)
+void update_chrono_potential(double Q)
 {
-  double q=-chrono_topo_barr;
-  double incr=(isweep?(double)isweep/(isweep-1):1);
-  for(int igrid=0;igrid<=ngrid;igrid++)
-    {
-      double diff=Q-q,f=diff/chrono_topo_width;
-      topo_grid_ave[igrid]*=incr;
-      if(fabs(f)<5)
-	{
-	  double cont=chrono_topo_coeff*exp(-f*f/2+chrono_topo_bend*Q*Q/2);
-	  topo_grid[igrid]+=cont;
-	  topo_grid_ave[igrid]+=cont;	  
-	}
-      q+=dx_grid;
-    }
+  int igrid=floor(Q/chrono_topo_width)+ngrid/2;
+  double alpha=Q/chrono_topo_width;
+  alpha=alpha-floor(alpha);
+  if(igrid>=0 && igrid<=ngrid) topo_grid[igrid]+=(1-alpha)*chrono_topo_coeff;
+  if(igrid+1>=0 && igrid+1<=ngrid) topo_grid[igrid+1]+=alpha*chrono_topo_coeff;
 }
 
-//compute the topological potential according t
+//compute the derivative of the topological potential
 double compute_theta_pot_der(double Q)
 {
-  //set to zero results and compute total number of contributions
-  double topote_der=0;
-
-  //inside the barrier
-  if(Q>-chrono_topo_barr && Q<+chrono_topo_barr)
-    {
-      /*  
-      //define prefactors
-      double pref_gauss=-chrono_topo_coeff/sqr(chrono_topo_width);
-      double pref_bend=chrono_topo_coeff*chrono_topo_bend;
-      
-      int nchrono=chrono_topo_past_values.size();
-#pragma omp parallel for reduction(+:topote_der)
-      for(int i=0;i<nchrono;i++)
-	{
-	  double q=chrono_topo_past_values[i];
-	  double w=chrono_topo_past_weight[i];
-	  double diff=Q-q,f=diff/chrono_topo_width;
-	  double cont=w*(pref_gauss*diff+pref_bend*Q)*exp(-f*f/2+chrono_topo_bend*Q*Q/2);
-	  topote_der+=cont;
-	}
-*/      
-      
-      int igrid=floor((Q+chrono_topo_barr)/dx_grid);
-      topote_der=(topo_grid[igrid+1]-topo_grid[igrid])/dx_grid;
-    }
+  //take igrid
+  int igrid=floor((Q+chrono_topo_barr)/chrono_topo_width);
   
-  //compute parabolic barrier (overwrite gaussian piece because it must be set to zero)
-  if(Q<-chrono_topo_barr) topote_der=-chrono_topo_force_out*(-Q-chrono_topo_barr);
-  if(Q>+chrono_topo_barr) topote_der=+chrono_topo_force_out*(+Q-chrono_topo_barr);
-  
-  return topote_der;
+  //inside the barriers
+  if(igrid>=0 && igrid<ngrid)
+    return (topo_grid[igrid+1]-topo_grid[igrid])/chrono_topo_width;
+  else
+    if(igrid<0)
+      return -chrono_topo_force_out*(-Q-chrono_topo_barr);
+    else
+      return +chrono_topo_force_out*(+Q-chrono_topo_barr);
 }
 //wrapper
 double compute_theta_pot_der(dcomplex *l)
 {return compute_theta_pot_der(topology(l));}
 
 //compute the topodynamical potential using past history
-double compute_theta_pot(double Q,int isweep=0,bool ave=false)
+double compute_theta_pot(double Q)
 {
-  //compute parabolic barrier derivative
-  double harm_potential=0;
-  if(Q<-chrono_topo_barr) harm_potential=chrono_topo_force_out*sqr(-Q-chrono_topo_barr)/2;
-  if(Q>+chrono_topo_barr) harm_potential=chrono_topo_force_out*sqr(+Q-chrono_topo_barr)/2;
+  //take igrid
+  int igrid=floor((Q+chrono_topo_barr)/chrono_topo_width);
   
-  //put inside the barrier in any case
-  if(Q<-chrono_topo_barr) Q=-chrono_topo_barr;
-  if(Q>+chrono_topo_barr) Q=+chrono_topo_barr;
-  
-  //set to zero results and compute total number of contributions
-  double gauss_topotential=0;
-  
-      int nchrono=chrono_topo_past_values.size();
-      
-      //inside the barrier
-#pragma omp parallel for reduction(+:gauss_topotential)
-      for(int i=0;i<nchrono;i++)
-	{
-	  double q=chrono_topo_past_values[i];
-	  double w=chrono_topo_past_weight[i]*(ave?(nchrono-i):1);
-	  double diff=Q-q,f=diff/chrono_topo_width;
-	  double cont=w*exp(-f*f/2+chrono_topo_bend*Q*Q/2);
-	  gauss_topotential+=cont;
-	}
-      
-      //add correct normalization
-      gauss_topotential*=chrono_topo_coeff;  
-      gauss_topotential=0;
-      
-  //take y
-  int igrid=floor((Q+chrono_topo_barr)/dx_grid);
-  double y0,y1,x0=igrid*dx_grid-chrono_topo_barr;
-  if(ave)
+  //inside the barriers
+  if(igrid>=0 && igrid<ngrid)
     {
-      y0=topo_grid_ave[igrid];
-      y1=topo_grid_ave[igrid+1];
+      //interpolate
+      double x0=igrid*chrono_topo_width-chrono_topo_barr;
+      double m=(topo_grid[igrid+1]-topo_grid[igrid])/chrono_topo_width;
+      double q=topo_grid[igrid]-m*x0;
+      return q+m*Q;
     }
   else
-    {
-      y0=topo_grid[igrid];
-      y1=topo_grid[igrid+1];
-    }
-  
-  //interpolate
-  if(igrid>0 && igrid<ngrid)
-    {
-      double m=(y1-y0)/dx_grid;
-      double q=y0-m*x0;
-      gauss_topotential=q+m*Q;
-    }
-  
-  return gauss_topotential/(ave?(isweep-chrono_topo_after):1)+harm_potential;
+    if(igrid<0)
+      return chrono_topo_force_out*sqr(-Q-chrono_topo_barr)/2+topo_grid[0];
+    else
+      return chrono_topo_force_out*sqr(+Q-chrono_topo_barr)/2+topo_grid[ngrid];
 }
  
 //compute the topodynamical potential using past history
-double compute_theta_pot(dcomplex *l,int isweep=0)
-{return compute_theta_pot(topology(l),isweep);}
+double compute_theta_pot(dcomplex *l)
+{return compute_theta_pot(topology(l));}
 
 //draw the chronological topological potential
-void draw_chrono_topo_potential(bool ave=false)
+void draw_chrono_topo_potential()
 {
-  double Q_min=*std::min_element(chrono_topo_past_values.begin(),chrono_topo_past_values.end());
-  double Q_max=*std::max_element(chrono_topo_past_values.begin(),chrono_topo_past_values.end());
-  double Q_diff=Q_max-Q_min;
-  int n=ceil(Q_diff/chrono_topo_width*10);
-  if(n==0) n=1;
-  double dQ=Q_diff/n;
-  
-  //compute 
-  double *Qy=new double[n+1];
-#pragma omp parallel for
-  for(int i=0;i<=n;i++) Qy[i]=compute_theta_pot(Q_min+i*dQ,ave);
-  
   //write
   ofstream fout("topo_potential");
-  for(int i=0;i<=n;i++) fout<<Q_min+i*dQ<<" "<<Qy[i]<<endl;
+  fout.precision(16);
+  for(int i=0;i<=ngrid;i++) fout<<-chrono_topo_barr+i*chrono_topo_width<<" "<<topo_grid[i]<<endl;
   fout.close();
-
-  delete[] Qy;
+}
+void load_chrono_topo_potential()
+{
+  //read
+  ifstream fin("topo_potential");
+  if(!fin.good()) crash("opening \"topo_potential\"");
+  for(int igrid=0;igrid<=ngrid;igrid++)
+    {
+      double xread;
+      fin>>xread>>topo_grid[igrid];
+      if(!fin.good()) crash("reading line %d of \"topo_potential\"",igrid);
+      int jgrid=floor((xread+chrono_topo_barr+chrono_topo_width/2)/chrono_topo_width);
+      if(igrid!=jgrid) crash("found %d (%lg) when expecting %d",jgrid,xread,igrid);
+    }
+  fin.close();
 }
 
 //draw the chronological topological force
-void draw_chrono_topo_force(int isweep)
+void draw_chrono_topo_force()
 {
-  double Q_min=*std::min_element(chrono_topo_past_values.begin(),chrono_topo_past_values.end());
-  double Q_max=*std::max_element(chrono_topo_past_values.begin(),chrono_topo_past_values.end());
+  double Q_min=-chrono_topo_barr*1.1;
+  double Q_max=+chrono_topo_barr*1.1;
   double Q_diff=Q_max-Q_min;
-  int n=ceil(Q_diff/chrono_topo_width*20);
+  int n=ceil(Q_diff/chrono_topo_width*10);
   if(n==0) n=1;
   double dQ=Q_diff/n;
   
