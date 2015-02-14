@@ -1,0 +1,40 @@
+/* src/config.hpp.in.  Generated from configure.ac by autoheader.  */
+
+/* Flags passed to configure */
+#undef CONFIG_FLAGS
+
+/* time when configured */
+#undef CONFIG_TIME
+
+/* Max_verbosity_lv */
+#undef MAX_VERBOSITY_LV
+
+/* Define to the address where bug reports for this package should be sent. */
+#undef PACKAGE_BUGREPORT
+
+/* Define to the full name of this package. */
+#undef PACKAGE_NAME
+
+/* Define to the full name and version of this package. */
+#undef PACKAGE_STRING
+
+/* Define to the one symbol short name of this package. */
+#undef PACKAGE_TARNAME
+
+/* Define to the home page for this package. */
+#undef PACKAGE_URL
+
+/* Define to the version of this package. */
+#undef PACKAGE_VERSION
+
+/* Enable thread_debug */
+#undef THREAD_DEBUG
+
+/* Enable MPI */
+#undef USE_MPI
+
+/* Enable MPI I/O */
+#undef USE_MPI_IO
+
+/* Enable threads */
+#undef USE_THREADS

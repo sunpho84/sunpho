@@ -20,12 +20,15 @@ double C=0; //place-dependant weight
 const double SKIP_OUT_FROM=50;
 int nacc=0;
 const int debug=0;
-const double chrono_barr=14;//8;
+const double chrono_barr=2;
 const double chrono_width=0.25;//W/4;
 const double harm_weight=0;
 const double chrono_coeff=0.01;
-double *chrono_hist;
-double *chrono_weight;
+//double *chrono_hist;
+//double *chrono_weight;
+
+int ngrid;
+vector<double> chrono_grid;
 
 inline double sqr(double x)
 {return x*x;}
@@ -43,8 +46,18 @@ double x_action(double x)
 double p_action(double p)
 {return p*p/2;}
 
+void update_meta_action(double x)
+{
+  int igrid=floor(x/chrono_width)+ngrid/2;
+  double alpha=x/chrono_width;
+  alpha=alpha-floor(alpha);
+  if(igrid>=0 && igrid<=ngrid) chrono_grid[igrid]+=(1-alpha)*chrono_coeff;
+  if(igrid+1>=0 && igrid+1<=ngrid) chrono_grid[igrid+1]+=alpha*chrono_coeff;
+}
+
 double meta_action(double X,bool ave=false)
 {
+  /*
   double chrono_hist_potential=0;
   double harm_pot=0;
   
@@ -81,6 +94,25 @@ double meta_action(double X,bool ave=false)
     }
   
   return chrono_hist_potential+harm_pot;
+  */
+  
+  //take igrid
+  int igrid=floor(X/chrono_width)+ngrid/2;
+  
+  //inside the barriers
+  if(igrid>=0 && igrid<ngrid)
+    {
+      //interpolate
+      double x0=igrid*chrono_width-chrono_barr;
+      double m=(chrono_grid[igrid+1]-chrono_grid[igrid])/chrono_width;
+      double q=chrono_grid[igrid]-m*x0;
+      return q+m*X;
+    }
+  else
+    if(igrid<0)
+      return harm_weight*sqr(-X-chrono_barr)/2+chrono_grid[0];
+    else
+      return harm_weight*sqr(+X-chrono_barr)/2+chrono_grid[ngrid];
 }
 
 double action(double x,double p)
@@ -91,6 +123,7 @@ double action_force(double x)
 
 double meta_force(double X)
 {
+  /*
   double chrono_hist_potential=0;
   double harm_pot=0;
   
@@ -123,6 +156,19 @@ double meta_force(double X)
     }
   
   return chrono_hist_potential+harm_pot;
+  */
+  
+  //take igrid
+  int igrid=floor(X/chrono_width)+ngrid/2;
+  
+  //inside the barriers
+  if(igrid>=0 && igrid<ngrid)
+    return -(chrono_grid[igrid+1]-chrono_grid[igrid])/chrono_width;
+  else
+    if(igrid<0)
+      return +harm_weight*(-X-chrono_barr);
+    else
+      return -harm_weight*(+X-chrono_barr);
 }
 
 double p_force(double x)
@@ -190,11 +236,15 @@ int main()
   nthreads=omp_get_num_threads();
   cout<<"Nthreads: "<<nthreads<<endl;
   
-  const int ntraj=50000;
-  chrono_hist=new double[ntraj];
-  chrono_weight=new double[ntraj];
+  const int ntraj=5000000;
+  //chrono_hist=new double[ntraj];
+  //chrono_weight=new double[ntraj];
   
-  const int nt=2;
+  ngrid=(2*chrono_barr+chrono_width/2)/chrono_width;
+  chrono_grid.resize(ngrid+1);
+  for(auto &grid : chrono_grid) grid=0;
+  
+  const int nt=4;
   double x=1;
   
   ofstream pot("pot");
@@ -211,9 +261,12 @@ int main()
   do
     {
       hmc(x,nt);
-      chrono_hist[itraj]=x;
-      chrono_weight[itraj]=exp(-B*meta_action(x));
+      //chrono_hist[itraj]=x;
+      //chrono_weight[itraj]=exp(-B*meta_action(x));
       //cout<<chrono_weight[itraj]<<endl;
+      
+      update_meta_action(x);
+      
       itraj++;
       if(itraj%(ntraj/100)==0) cout<<(itraj*100/ntraj)<<"%"<<endl;
     }
@@ -232,16 +285,16 @@ int main()
   for(double e=-1.5*chrono_barr;e<chrono_barr*1.5;e+=0.02)
     meta_force_file<<e<<" "<<-((meta_action(e+la)-meta_action(e-la)))/la/2<<endl;
   
-  ofstream meta_histo_file("meta_histo");
-  for(int it=0;it<itraj;it++) meta_histo_file<<chrono_hist[it]<<endl;
+  //ofstream meta_histo_file("meta_histo");
+  //for(int it=0;it<itraj;it++) meta_histo_file<<chrono_hist[it]<<endl;
   
-  ofstream meta_weight_file("meta_weight");
-  for(int it=0;it<itraj;it++) meta_weight_file<<chrono_weight[it]<<endl;
+  //ofstream meta_weight_file("meta_weight");
+  //for(int it=0;it<itraj;it++) meta_weight_file<<chrono_weight[it]<<endl;
   
   cout<<"acceptance: "<<nacc/(double)itraj<<endl;  
 
-  delete[] chrono_hist;
-  delete[] chrono_weight;
+  //delete[] chrono_hist;
+  //delete[] chrono_weight;
   
   return 0;
 }

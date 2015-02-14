@@ -210,6 +210,7 @@ void init(int &base_isweep,read_pars_t &read_pars)
     gen[site].seed(read_pars.seed+site);
   
   //init according to start condition
+  bool conf_loaded=false;
   if(!file_exists("conf"))
     {
       base_isweep=0;
@@ -220,17 +221,21 @@ void init(int &base_isweep,read_pars_t &read_pars)
 	case LOAD: crash("conf not exists!");break;
 	}
     }
-  else read_conf(base_isweep,"conf"); //remember rnd gen reinit
-  
-#ifndef TOPO_HISTO
+  else
+    {
+      read_conf(base_isweep,"conf"); //remember rnd gen reinit
+      conf_loaded=true;
+    }
+
   if(use_topo_pot==2)
     {
-      dx_grid=chrono_topo_width/20;
-      ngrid=2*chrono_topo_barr/dx_grid;
+      ngrid=(2*chrono_topo_barr+chrono_topo_width/2)/chrono_topo_width;
       topo_grid.resize(ngrid+1);
-      topo_grid_ave.resize(ngrid+1);
       for(auto &grid : topo_grid) grid=0;
-      for(auto &grid : topo_grid_ave) grid=0;
+      
+      //load the potential
+      if(conf_loaded) load_chrono_topo_potential();
     }
-#endif
+  
+  nacc=0;
 }

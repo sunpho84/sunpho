@@ -2,7 +2,7 @@
  #include "config.hpp"
 #endif
 
-#include "/Users/francesco/Prace/sunpho/Analysis_programs/src/auto.cpp"
+#include "/home/francesco/Prace/sunpho/Analysis_programs/src/auto.cpp"
 
 autocorr_data_t data(1);
 

@@ -26,6 +26,34 @@ cpn_source_files= \
         src/zeta.cpp
 
 
+include_HEADERS= \
+	src/action.hpp \
+        src/close.hpp \
+        src/corr.hpp \
+        src/cpn.hpp \
+        src/data.hpp \
+        src/debug.hpp \
+        src/geometry.hpp \
+        src/hmc.hpp \
+        src/init.hpp \
+        src/lambda.hpp \
+        src/macros.hpp \
+        src/metro.hpp \
+        src/micro.hpp \
+        src/overheat.hpp \
+        src/parameters.hpp \
+        src/polyakov.hpp \
+        src/random.hpp \
+        src/routines.hpp \
+        src/sitmo_prng_engine.hpp \
+        src/staples.hpp \
+        src/stout.hpp \
+        src/tools.hpp \
+        src/types.hpp \
+        src/topology.hpp \
+        src/zeta.hpp
+
+
 bin_PROGRAMS= \
 	$(top_builddir)/bin/main \
 	$(top_builddir)/bin/reversibility_check

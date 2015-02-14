@@ -16,6 +16,8 @@ using namespace std;
  #define EXTERN_DATA extern
 #endif
 
+EXTERN_DATA int nacc;
+
 EXTERN_DATA dcomplex *zeta,*lambda;
 EXTERN_DATA dcomplex *zeta_old,*lambda_old;
 EXTERN_DATA dcomplex *pi,*fpi;
