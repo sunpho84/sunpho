@@ -13,3 +13,12 @@
 /mecstat/ising/config/keep_orderd_timestamp_list~
 /mecstat/ising/config/missing
 /mecstat/ising/ising
+mecstat/cpn/simple_test/build/
+mecstat/cpn/simple_test/build_hmc_debug/
+mecstat/cpn/simple_test/m4/
+mecstat/z3/build
+mecstat/z3_worm/build
+mecstat/metatest/build
+mecstat/ising/build
+mecstat/cpn/build
+/esagoni/config/compile
