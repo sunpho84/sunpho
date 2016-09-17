@@ -273,9 +273,12 @@ void analysis_Zv(const char *outf,jvec &Zv,jvec C3pts[nseps][nave_mom],jvec C2pt
       int tsep=tsep_tab[isep];
       
       //determine Zv
+      ofstream out(combine("%s/tsep_%d/Zv_corr.xmg",outf,tsep));
+      out<<"@type xydy"<<endl;
       jvec Zv_corr=C2pts_tilde[0][tsep]/C3pts[isep][0];
-      Zv_corr.subset(2,tsep-1).print_to_file("%s/tsep_%d/Zv_corr.xmg",outf,tsep);
-
+      for(int t=2;t<tsep-1;t++) out<<(double)t/pow(tsep,1.03)<<" "<<Zv_corr[t]<<endl;
+      out<<"&"<<endl;
+      
       //fill Zc
       Zv[isep]=Zv_corr[tsep/2];
     }
@@ -294,11 +297,20 @@ void analysis_all_Zv()
     {
       int tsep=tsep_tab[isep];
       
-      cout<<"Zv_Pi["<<tsep<<"]: "<<smart_print(Zv_Pi[isep])<<endl;
-      cout<<"Zv_K["<<tsep<<"]: "<<smart_print(Zv_K[isep])<<endl;
-      cout<<"Zv_D["<<tsep<<"]: "<<smart_print(Zv_D[isep])<<endl;
-      cout<<"Zv_Ds["<<tsep<<"]: "<<smart_print(Zv_Ds[isep])<<endl;
+      cout<<"Zv_Pi["<<tsep<<"]: "<</*smart_print*/(Zv_Pi[isep])<<endl;
+      cout<<"Zv_K["<<tsep<<"]: "<</*smart_print*/(Zv_K[isep])<<endl;
+      cout<<"Zv_D["<<tsep<<"]: "<</*smart_print*/(Zv_D[isep])<<endl;
+      cout<<"Zv_Ds["<<tsep<<"]: "<</*smart_print*/(Zv_Ds[isep])<<endl;
     }
+  
+    for(int isep=1;isep<nseps-1;isep++)
+    {
+      cout<<M_Pi.med()<<" "<</*smart_print*/(Zv_Pi[isep])<<endl;
+      cout<<M_K.med()<<" "<</*smart_print*/(Zv_K[isep])<<endl;
+      cout<<M_D.med()<<" "<</*smart_print*/(Zv_D[isep])<<endl;
+      cout<<M_Ds.med()<<" "<</*smart_print*/(Zv_Ds[isep])<<endl;
+    }
+
 }
 
 int band_color[3]={10,7,3};
@@ -436,8 +448,8 @@ void analysis_3pts(const char *outf,jack &M,jack &ZM,jvec &e,jack &Ze,jvec C3pts
 	  //write the aperiodic effective mass
       	  for(int t=2;t<tsep-2;t++)
 	    {
-	      if(!isnan(ap[t].err()))out_3pts_eff_mass[imom]<<(double)t/tsep<<" "<<ap[t]<<endl;
-	      if(imom!=0 && !isnan(ap_sp[t].err())) out_3pts_sp_eff_mass[imom]<<(double)t/tsep<<" "<<ap_sp[t]<<endl;
+	      if(!std::isnan(ap[t].err()))out_3pts_eff_mass[imom]<<(double)t/tsep<<" "<<ap[t]<<endl;
+	      if(imom!=0 && !std::isnan(ap_sp[t].err())) out_3pts_sp_eff_mass[imom]<<(double)t/tsep<<" "<<ap_sp[t]<<endl;
 	    }
 	  
 	  //define dt

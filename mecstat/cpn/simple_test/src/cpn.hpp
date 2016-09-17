@@ -2,6 +2,7 @@
 #define _CPN_HPP
 
 #include "action.hpp"
+#include "charge.hpp"
 #include "close.hpp"
 #include "corr.hpp"
 #include "data.hpp"

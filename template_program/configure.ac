@@ -7,8 +7,17 @@ AM_CONFIG_HEADER(src/config.hpp)
 AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_HOST
 
+#silent automake
+AM_SILENT_RULES([yes])
+
 AC_PROG_CXX
 AC_CONFIG_FILES(Makefile)
+
+AX_CXX_COMPILE_STDCXX_11(noext,mandatory)
+
+AC_LANG_PUSH([C++])
+AC_CHECK_HEADERS([eigen3/Eigen/Dense])
+AC_LANG_POP([C++])
 
 #good-generator
 AC_ARG_ENABLE(good-generator,
@@ -25,14 +34,5 @@ AC_ARG_ENABLE(smart-extraction,
         enable_smart_extraction="yes")
 if test "$enable_smart_extraction" == "yes";then AC_DEFINE([SMART_EXTRACTION],1,[Enable smart extraction]) fi
 AC_MSG_RESULT([enabling smart extraction... $enable_smart_extraction])
-
-#debug hmc
-AC_ARG_ENABLE(debug-hmc,
-        AS_HELP_STRING([--enable-debug-hmc],[Enable debugging of hmc]),
-        enable_debug_hmc="${enableval}",
-        enable_debug_hmc="no")
-if test "$enable_debug_hmc" == "yes";then AC_DEFINE([DEBUG_HMC],1,[Enable debug hmc]) fi
-AM_CONDITIONAL([DEBUG_HMC],[test "$enable_debug_hmc" == "yes" ],[true],[false])
-AC_MSG_RESULT([enabling debug hmc... $enable_debug_hmc])
 
 AC_OUTPUT

@@ -19,7 +19,7 @@
 #define SKIP_TEST true
 #define DO_TEST false
 
-#define DRAW_EACH 1
+#define DRAW_EACH 100
 
 #define PREC 12
 

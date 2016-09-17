@@ -17,22 +17,14 @@
 namespace bissa
 {
   //Return the index of site of coord x in the border mu
-  int bordlx_of_coord(int *x,int mu)
+  int bordlx_of_coord(coords x,int mu)
   {
     int ilx=0;  
-    for(int nu=0;nu<4;nu++)
+    for(int nu=0;nu<NDIM;nu++)
       if(nu!=mu)
 	ilx=ilx*loc_size[nu]+x[nu];
     
     return ilx;
-  }
-  
-  //wrapper
-  int bordlx_of_coord_list(int x0,int x1,int x2,int x3,int mu)
-  {
-    coords x={x0,x1,x2,x3};
-    
-    return bordlx_of_coord(x,mu);
   }
   
   //Return the index of site of coord x in a box of sides s
@@ -40,7 +32,7 @@ namespace bissa
   {
     int ilx=0;
     
-    for(int mu=0;mu<4;mu++)
+    for(int mu=0;mu<NDIM;mu++)
       ilx=ilx*s[mu]+x[mu];
     
     return ilx;
@@ -59,28 +51,14 @@ namespace bissa
   {return lx_of_coord(x,loc_size);}
   
   //wrappers
-  int loclx_of_coord_list(int x0,int x1,int x2,int x3)
-  {
-    coords x={x0,x1,x2,x3};
-    return lx_of_coord(x,loc_size);
-  }
-  
-  //wrappers
   int glblx_of_coord(coords x)
   {return lx_of_coord(x,glb_size);}
-  
-  //wrappers
-  int glblx_of_coord_list(int x0,int x1,int x2,int x3)
-  {
-    coords x={x0,x1,x2,x3};
-    return lx_of_coord(x,glb_size);
-  }
   
   //combine two points
   int glblx_of_comb(int b,int wb,int c,int wc)
   {
     coords co;
-    for(int mu=0;mu<4;mu++)
+    for(int mu=0;mu<NDIM;mu++)
       {
 	co[mu]=glb_coord_of_loclx[b][mu]*wb+glb_coord_of_loclx[c][mu]*wc;
 	while(co[mu]<0) co[mu]+=glb_size[mu];
@@ -111,7 +89,7 @@ namespace bissa
   
   //Return the coordinate of the rank containing the global coord
   void rank_coord_of_site_of_coord(coords rank_coord,coords glb_coord)
-  {for(int mu=0;mu<4;mu++) rank_coord[mu]=glb_coord[mu]/loc_size[mu];}
+  {for(int mu=0;mu<NDIM;mu++) rank_coord[mu]=glb_coord[mu]/loc_size[mu];}
   
   //Return the rank of passed coord
   int rank_of_coord(coords x)
@@ -139,7 +117,7 @@ namespace bissa
   void get_loclx_and_rank_of_coord(int *ivol,int *rank,coords g)
   {
     coords l,p;
-    for(int mu=0;mu<4;mu++)
+    for(int mu=0;mu<NDIM;mu++)
       {
 	p[mu]=g[mu]/loc_size[mu];
 	l[mu]=g[mu]-p[mu]*loc_size[mu];
@@ -156,7 +134,7 @@ namespace bissa
     coord_of_rank(p,irank);
     
     int iglblx=0;
-    for(int mu=0;mu<4;mu++)
+    for(int mu=0;mu<NDIM;mu++)
       iglblx=iglblx*glb_size[mu]+loc_coord_of_loclx[loclx][mu];
     
     return iglblx;
@@ -168,10 +146,13 @@ namespace bissa
   int full_lx_of_coords(coords ext_x)
   {
     int ort_dir_bord[4][3]={{1,2,3},{0,2,3},{0,1,3},{0,1,2}};
+#if NDIM != 4
+    #error puppa
+#endif
     
     //pseudo-localize it
     coords x;
-    for(int mu=0;mu<4;mu++)
+    for(int mu=0;mu<NDIM;mu++)
       {
 	x[mu]=ext_x[mu];
 	while(x[mu]<0) x[mu]+=glb_size[mu];
@@ -180,7 +161,7 @@ namespace bissa
     
     //check locality
     int isloc=1;
-    for(int mu=0;mu<4;mu++)
+    for(int mu=0;mu<NDIM;mu++)
       {
 	isloc&=(x[mu]>=0);
 	isloc&=(x[mu]<loc_size[mu]);
@@ -189,8 +170,8 @@ namespace bissa
     if(isloc) return loclx_of_coord(x);
     
     //check borderity
-    int isbord[4];
-    for(int mu=0;mu<4;mu++)
+    int isbord[NDIM];
+    for(int mu=0;mu<NDIM;mu++)
       {
 	isbord[mu]=0;
 	if(paral_dir[mu])
@@ -200,8 +181,11 @@ namespace bissa
 	  }
       }
     
-    //check if it is in one of the 4 forward or backward borders
-    for(int mu=0;mu<4;mu++)
+    //check if it is in one of the NDIM forward or backward borders
+#if NDIM != 4
+    #error puppa
+#endif
+    for(int mu=0;mu<NDIM;mu++)
       if((isbord[ort_dir_bord[mu][0]]==0)&&(isbord[ort_dir_bord[mu][1]]==0)&&(isbord[ort_dir_bord[mu][2]]==0))
 	{
 	  if(isbord[mu]==-1) return loc_vol+bord_offset[mu]+bordlx_of_coord(x,mu);             //backward border comes first
@@ -223,18 +207,14 @@ namespace bissa
     return -1;
   }
   
-  //wrapper
-  extern "C" int full_lx_of_coords_list(const int t,const int x,const int y,const int z)
-  {
-    coords c={t,x,y,z};
-    return full_lx_of_coords(c);
-  }
-  
   //label all the sites: bulk and border
   void label_all_sites()
   {
     coords x;
     
+#if NDIM != 4
+    #error puppa
+#endif
     for(x[0]=-paral_dir[0];x[0]<loc_size[0]+paral_dir[0];x[0]++) 
       for(x[1]=-paral_dir[1];x[1]<loc_size[1]+paral_dir[1];x[1]++) 
 	for(x[2]=-paral_dir[2];x[2]<loc_size[2]+paral_dir[2];x[2]++) 
@@ -245,7 +225,7 @@ namespace bissa
 	      if(iloc!=-1)
 		{
 		  //compute global coordinates, assigning
-		  for(int nu=0;nu<4;nu++)
+		  for(int nu=0;nu<NDIM;nu++)
 		    glb_coord_of_loclx[iloc][nu]=(x[nu]+rank_coord[nu]*loc_size[nu]+glb_size[nu])%glb_size[nu];
 		  
 		  //find the global index
@@ -254,7 +234,7 @@ namespace bissa
 		  //if it is on the bulk store it
 		  if(iloc<loc_vol)
 		    {
-		      for(int nu=0;nu<4;nu++) loc_coord_of_loclx[iloc][nu]=x[nu];
+		      for(int nu=0;nu<NDIM;nu++) loc_coord_of_loclx[iloc][nu]=x[nu];
 		      glblx_of_loclx[iloc]=iglb;
 		    }
 		  
@@ -274,11 +254,11 @@ namespace bissa
   {
     //loop over the four directions
     for(int ivol=0;ivol<loc_vol+bord_vol;ivol++)
-      for(int mu=0;mu<4;mu++)
+      for(int mu=0;mu<NDIM;mu++)
 	{
 	  //copy the coords
 	  coords n;
-	  for(int nu=0;nu<4;nu++) n[nu]=glb_coord_of_loclx[ivol][nu]-loc_size[nu]*rank_coord[nu];
+	  for(int nu=0;nu<NDIM;nu++) n[nu]=glb_coord_of_loclx[ivol][nu]-loc_size[nu]*rank_coord[nu];
 	  
 	  //move forward
 	  n[mu]++;
@@ -297,7 +277,7 @@ namespace bissa
   void find_surf_of_bord()
   {
     BISSA_LOC_VOL_LOOP(loclx)
-      for(int mu=0;mu<4;mu++)
+      for(int mu=0;mu<NDIM;mu++)
 	{
 	  int bordlx=bordlx_of_surflx(loclx,mu);
 	  if(bordlx!=-1) surflx_of_bordlx[bordlx]=loclx;
@@ -314,7 +294,7 @@ namespace bissa
     {
       //find if it is on bulk or non_fw or non_bw surf
       int is_bulk=true,is_non_fw_surf=true,is_non_bw_surf=true;
-      for(int mu=0;mu<4;mu++)
+      for(int mu=0;mu<NDIM;mu++)
 	if(paral_dir[mu])
 	  {
 	    if(loc_coord_of_loclx[ivol][mu]==loc_size[mu]-1) is_bulk=is_non_fw_surf=false;
@@ -347,7 +327,7 @@ namespace bissa
     if(grid_inited!=1) crash("grid not initialized!");
     
     //find the rank of the neighbour in the various dir
-    for(int mu=0;mu<4;mu++)
+    for(int mu=0;mu<NDIM;mu++)
       MPI_Cart_shift(cart_comm,mu,1,&(rank_neighdw[mu]),&(rank_neighup[mu]));
     memcpy(rank_neigh[0],rank_neighdw,sizeof(coords));
     memcpy(rank_neigh[1],rank_neighup,sizeof(coords));
@@ -388,13 +368,15 @@ namespace bissa
     find_bulk_sites();
     
     //init sender and receiver points for borders
-    for(int mu=0;mu<4;mu++)
+    for(int mu=0;mu<NDIM;mu++)
       if(paral_dir[mu]!=0)
 	{
-	  start_lx_bord_send_up[mu]=loclx_of_coord_list(0,0,0,0);
+	  coords zero;
+	  for(int nu=0;nu<NDIM;nu++) zero[nu]=0;
+	  start_lx_bord_send_up[mu]=loclx_of_coord(zero);
 	  start_lx_bord_rece_up[mu]=(loc_vol+bord_offset[mu]+bord_vol/2);
 	  coords x;
-	  for(int nu=0;nu<4;nu++)
+	  for(int nu=0;nu<NDIM;nu++)
 	    if(nu==mu) x[nu]=loc_size[mu]-1;
 	    else x[nu]=0;
 	  start_lx_bord_send_dw[mu]=loclx_of_coord(x);
@@ -471,30 +453,36 @@ namespace bissa
   //definitions of lexical ordered sender for borders
   void initialize_lx_bord_senders_of_kind(MPI_Datatype *MPI_BORD_SEND,MPI_Datatype *base)
   {
+#if NDIM != 4
+    #error puppa
+#endif
     //Various type useful for sub-borders
     MPI_Datatype MPI_3_SLICE;
     MPI_Datatype MPI_23_SLICE;
     MPI_Type_contiguous(loc_size[3],*base,&MPI_3_SLICE);
     MPI_Type_contiguous(loc_size[2]*loc_size[3],*base,&MPI_23_SLICE);
     
-    ///////////define the sender for the 4 kinds of borders////////////
+    ///////////define the sender for the NDIM kinds of borders////////////
     MPI_Type_contiguous(loc_size[1]*loc_size[2]*loc_size[3],*base,&(MPI_BORD_SEND[0]));
     MPI_Type_vector(loc_size[0],1,loc_size[1],MPI_23_SLICE,&(MPI_BORD_SEND[1]));
     MPI_Type_vector(loc_size[0]*loc_size[1],1,loc_size[2],MPI_3_SLICE,&(MPI_BORD_SEND[2]));
     MPI_Type_vector(loc_size[0]*loc_size[1]*loc_size[2],1,loc_size[3],*base,&(MPI_BORD_SEND[3]));
     //Commit
-    for(int ibord=0;ibord<4;ibord++) MPI_Type_commit(&(MPI_BORD_SEND[ibord]));
+    for(int ibord=0;ibord<NDIM;ibord++) MPI_Type_commit(&(MPI_BORD_SEND[ibord]));
   }
   
   //definitions of lexical ordered receivers for borders
   void initialize_lx_bord_receivers_of_kind(MPI_Datatype *MPI_BORD_RECE,MPI_Datatype *base)
   {
-    //define the 4 dir borders receivers, which are contiguous in memory
+#if NDIM != 4
+    #error puppa
+#endif
+    //define the NDIM dir borders receivers, which are contiguous in memory
     MPI_Type_contiguous(loc_size[1]*loc_size[2]*loc_size[3],*base,&(MPI_BORD_RECE[0]));
     MPI_Type_contiguous(loc_size[0]*loc_size[2]*loc_size[3],*base,&(MPI_BORD_RECE[1]));
     MPI_Type_contiguous(loc_size[0]*loc_size[1]*loc_size[3],*base,&(MPI_BORD_RECE[2]));
     MPI_Type_contiguous(loc_size[0]*loc_size[1]*loc_size[2],*base,&(MPI_BORD_RECE[3]));
-    for(int ibord=0;ibord<4;ibord++) MPI_Type_commit(&(MPI_BORD_RECE[ibord]));
+    for(int ibord=0;ibord<NDIM;ibord++) MPI_Type_commit(&(MPI_BORD_RECE[ibord]));
   }
   
   //initalize senders and receivers for borders of lexically ordered vectors
@@ -513,7 +501,7 @@ namespace bissa
     BISSA_LOC_VOL_LOOP(imom)
     {
       k2[imom]=ktilde2[imom]=0;
-      for(int mu=0;mu<4;mu++)
+      for(int mu=0;mu<NDIM;mu++)
 	{
 	  k[imom][mu]=M_PI*(2*glb_coord_of_loclx[imom][mu]+bc[mu])/glb_size[mu];
 	  ktilde[imom][mu]=sin(k[imom][mu]);
@@ -522,45 +510,5 @@ namespace bissa
 	  ktilde2[imom]+=ktilde[imom][mu]*ktilde[imom][mu];
 	}
     }
-  }
-  
-  //check that passed argument is between 0 and 15
-  inline void crash_if_not_hypercubic_red(int hyp_red)
-  {if(hyp_red<0||hyp_red>=16) crash("%d not a hyperucbic reduced point",hyp_red);}
-  
-  //return the coordinates inside the hypercube
-  void red_coords_of_hypercubic_red_point(coords h,int hyp_red)
-  {
-    crash_if_not_hypercubic_red(hyp_red);
-    
-    for(int mu=3;mu>=0;mu--)
-      {
-	h[mu]=hyp_red%2;
-	hyp_red/=2;
-      }
-  }
-  
-  //takes the 4 coordinates of the hypercube vertex one by one
-  void lx_coords_of_hypercube_vertex(coords lx,int hyp_cube)
-  {
-    for(int mu=3;mu>=0;mu--)
-      {
-	lx[mu]=2*(hyp_cube%(loc_size[mu]/2));
-	hyp_cube/=loc_size[mu]/2;
-      }
-  }
-  
-  //return the point of passed coords in the hypercube
-  int hypercubic_red_point_of_red_coords(coords h)
-  {
-    int hyp=0;
-    for(int mu=0;mu<4;mu++)
-      {
-	if(h[mu]<0||h[mu]>=2) crash("coordinate %d not in the range [0,1]",h[mu]);
-	hyp*=2;
-	hyp+=h[mu];
-      }
-    
-    return hyp;
   }
 }

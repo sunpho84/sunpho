@@ -15,8 +15,8 @@ namespace bissa
   //nomenclature: 
   //-glb is relative to the global grid
   //-loc to the local one
-  EXTERN int glb_size[4],glb_vol,glb_spat_vol,glb_volh;
-  EXTERN int loc_size[4],loc_vol,loc_spat_vol,loc_volh;
+  EXTERN int glb_size[NDIM],glb_vol,glb_spat_vol,glb_volh;
+  EXTERN int loc_size[NDIM],loc_vol,loc_spat_vol,loc_volh;
   EXTERN int bulk_vol,non_bw_surf_vol,non_fw_surf_vol;
   EXTERN int surf_vol,bw_surf_vol,fw_surf_vol;
   EXTERN int vsurf_vol,vsurf_volh;
@@ -78,19 +78,19 @@ namespace bissa
   //size of the border
   EXTERN int bord_vol,bord_volh;
   //size along various dir
-  EXTERN int bord_dir_vol[4],bord_offset[4];
-  EXTERN int bord_offset_eo[2][8]; //eo, 8 dirs
+  EXTERN int bord_dir_vol[NDIM],bord_offset[NDIM];
+  EXTERN int bord_offset_eo[2][2*NDIM]; //eo
 
 #ifdef USE_MPI
-  EXTERN int start_lx_bord_send_up[4],start_lx_bord_rece_up[4];
-  EXTERN int start_lx_bord_send_dw[4],start_lx_bord_rece_dw[4];
-  EXTERN int start_eo_bord_send_up[4],start_eo_bord_rece_up[4];
-  EXTERN int start_eo_bord_send_dw[4],start_eo_bord_rece_dw[4];
+  EXTERN int start_lx_bord_send_up[NDIM],start_lx_bord_rece_up[NDIM];
+  EXTERN int start_lx_bord_send_dw[NDIM],start_lx_bord_rece_dw[NDIM];
+  EXTERN int start_eo_bord_send_up[NDIM],start_eo_bord_rece_up[NDIM];
+  EXTERN int start_eo_bord_send_dw[NDIM],start_eo_bord_rece_dw[NDIM];
   
   //volume, plan and line communicator
   EXTERN MPI_Comm cart_comm;
-  EXTERN MPI_Comm plan_comm[4];
-  EXTERN MPI_Comm line_comm[4];
+  EXTERN MPI_Comm plan_comm[NDIM];
+  EXTERN MPI_Comm line_comm[NDIM];
 #endif
   //ranks
   EXTERN int rank,nranks,cart_rank;

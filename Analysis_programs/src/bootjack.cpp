@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <functional>
 #include <iostream>
+#include <fstream>
 
 #include "rand.cpp"
 
@@ -18,7 +19,7 @@ public:
   double *data;
 
 #ifdef BOOT
-  void create(int a,int b){nboot=a;njack=b;data=new double[a+1];}
+  void create(int a,int b){nboot=a;njack=b;data=new double[a+1];for(int i=0;i<=a;i++) data[i]=0;}
   TYPE(const TYPE& in){create(in.nboot,in.njack);put(in.data);}
   explicit TYPE(){data=NULL;nboot=njack=0;}
   explicit TYPE(int a,int b){create(a,b);}
@@ -34,7 +35,7 @@ public:
     for(int ijack=0;ijack<njack;ijack++) data[ijack]=(data[njack]-data[ijack])/((njack-1)*clust_size);
     data[njack]/=njack*clust_size;
   }
-  void create(int nj){njack=nj;data=new double[nj+1];}
+  void create(int nj){njack=nj;data=new double[nj+1];for(int i=0;i<=nj;i++) data[i]=0;}
   TYPE(const TYPE& in){create(in.njack);put(in.data);}
   explicit TYPE(){data=NULL;njack=0;}
   explicit TYPE(int nj){create(nj);}
@@ -56,6 +57,7 @@ public:
   void put(double* in){memcpy(data,in,sizeof(double)*(N+1));}
   void get(double* out){memcpy(out,data,sizeof(double)*(N+1));}
   
+  TYPE write_to_file(string path);
   TYPE append_to_binfile(const char*,...);
   TYPE write_to_binfile(const char*,...);
   TYPE load(const char*,int);
@@ -78,6 +80,8 @@ jack fill_gauss(double med,double sigma,int seed,int njacks)
 
 double TYPE::err()
 {
+  if(njack<=1) return 0;
+  
   double sx=0,s2x=0;
   
   for(int ij=0;ij<N;ij++)
@@ -153,7 +157,7 @@ TYPE TYPE::load(const char *path,int i=0)
   return *this;
 }
 
-ostream& operator<<(ostream &out,const TYPE &obj)
+ostream& operator<<(ostream &out,const TYPE obj)
 {
   double med=TYPE(obj).med();
   double err=TYPE(obj).err();
@@ -301,3 +305,12 @@ double cov(TYPE x,TYPE y)
 
 double var(TYPE x)
 {return cov(x,x);}
+
+
+TYPE TYPE::write_to_file(string path)
+{
+  ofstream out(path);
+  out<<(*this)<<endl;
+  
+  return *this;
+}

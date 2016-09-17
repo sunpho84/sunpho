@@ -4,7 +4,9 @@
 #include <functional>
 #include <iostream>
 #include <fstream>
+#ifndef NOROOT
 #include <TMatrixD.h>
+#endif
 
 using namespace std;
 
@@ -41,11 +43,13 @@ public:
   void put(double **out){for(int iel=0;iel<nel;iel++) data[iel].put(out[iel]);}
   void put(double *out){for(int iel=0;iel<nel;iel++) data[iel].put(out+iel*(N+1));}
   void get(double *in){for(int iel=0;iel<nel;iel++) data[iel].get(in+iel*(N+1));}
-  VTYPE load(const char *,int);
+  VTYPE load(string,int);
   VTYPE load(FILE *,int);
-  VTYPE load_naz(const char *,int);
-  void print_to_file(const char *,...);
-  void print_rel_err_to_file(const char *,...);
+  VTYPE load(FILE *);
+  VTYPE load_naz(string,int);
+  void print_to_file(string);
+  void print_to_file(ofstream &);
+  void print_rel_err_to_file(string);
   
   TYPE& operator[](int i){return data[i];}
   VTYPE operator=(double in){for(int iel=0;iel<nel;iel++) data[iel]=in;return *this;}
@@ -60,8 +64,8 @@ public:
   VTYPE simmetrized(int parity);
   VTYPE shifted(int);
   VTYPE write_to_binfile(FILE *);
-  VTYPE append_to_binfile(const char*,...);
-  VTYPE write_to_binfile(const char*,...);
+  VTYPE append_to_binfile(const char *format,...);
+  VTYPE write_to_binfile(const char *format,...);
 };
 
 ostream& operator<<(ostream &out,const VTYPE &obj);
@@ -112,15 +116,9 @@ VTYPE VTYPE::write_to_binfile(const char *format,...)
   return *this;
 }
 
-VTYPE VTYPE::load(FILE *fin,int i)
+VTYPE VTYPE::load(FILE *fin)
 {
-  double in[nel*(N+1)];
-  
-  if(fseeko(fin,(off_t)i*sizeof(double)*nel*(N+1),SEEK_SET))
-    {
-      fprintf(stderr,"Error while searching for correlation %d!\n",i);
-      exit(1);
-    }
+  double *in=new double[nel*(N+1)];
   
   int stat=fread(in,sizeof(double),nel*(N+1),fin);
   if(stat!=nel*(N+1))
@@ -139,10 +137,25 @@ VTYPE VTYPE::load(FILE *fin,int i)
   
   put(in);
   
+  delete[] in;
+  
   return *this;
 }  
 
-VTYPE VTYPE::load(const char *path,int i)
+VTYPE VTYPE::load(FILE *fin,int i)
+{
+  if(fseeko(fin,(off_t)i*sizeof(double)*nel*(N+1),SEEK_SET))
+    {
+      fprintf(stderr,"Error while searching for correlation %d!\n",i);
+      exit(1);
+    }
+  
+  load(fin);
+  
+  return *this;
+}  
+
+VTYPE VTYPE::load(string path,int i)
 {
   if(debug_load) cout<<"Loading corr "<<i<<" from path "<<path<<endl;
   FILE *fin=open_file(path,"r");
@@ -153,43 +166,38 @@ VTYPE VTYPE::load(const char *path,int i)
   return (*this);
 }
 
-void VTYPE::print_to_file(const char *format,...)
+void VTYPE::print_to_file(ofstream &fout)
 {
-  char buffer[1024];
-  va_list args;
-
-  va_start(args,format);
-  vsprintf(buffer,format,args);
-  va_end(args);
-
-  ofstream fout(buffer);
-  if(!fout.good()) crash("opening %s [print_to_file]",buffer);
-  
-  fout<<"@type xydy"<<endl;
+  int i=fout.precision();
+  fout.precision(16);
+  if(!(fout<<"@type xydy"<<endl)) crash("writing header");
   fout<<(*this);
+  fout.precision(i);
+}
+
+void VTYPE::print_to_file(string path)
+{
+  ofstream fout(path);
+  if(!fout.good()) crash("opening %s [print_to_file]",path.c_str());
+  
+  print_to_file(fout);
+  
   fout.close();
 }
 
-void VTYPE::print_rel_err_to_file(const char *format,...)
+void VTYPE::print_rel_err_to_file(string path)
 {
-  char buffer[1024];
-  va_list args;
-
-  va_start(args,format);
-  vsprintf(buffer,format,args);
-  va_end(args);
-
-  ofstream fout(buffer);
-  if(!fout.good()) crash("opening %s [print_rel_err_to_file]",buffer);
+  ofstream fout(path);
+  if(!fout.good()) crash("opening %s [print_rel_err_to_file]",path.c_str());
   
   fout<<"@type xy"<<endl;
   for(int t=0;t<this->nel;t++) fout<<(*this)[t].med()/(*this)[t].err()<<endl;
   fout.close();
 }
 
-VTYPE VTYPE::load_naz(const char *path,int icorr)
+VTYPE VTYPE::load_naz(string path,int icorr)
 {
-  double in[nel][2][N+1];
+  double in[nel*2*(N+1)];
   
   FILE *fin=open_file(path,"r");
   
@@ -217,7 +225,7 @@ VTYPE VTYPE::load_naz(const char *path,int icorr)
   int ri=icorr%2;
   for(int iel=0;iel<nel;iel++)
     for(int ijack=0;ijack<N+1;ijack++)
-      data[iel].data[ijack]=in[iel][ri][ijack];
+      data[iel].data[ijack]=in[ijack+(N+1)*(ri+2*iel)];
   
   fclose(fin);
   
@@ -225,28 +233,28 @@ VTYPE VTYPE::load_naz(const char *path,int icorr)
 }
 
 #ifdef BVEC
-bvec bvec_load(const char *path,int nel,int nboot,int njack,int i)
+bvec bvec_load(string path,int nel,int nboot,int njack,int i)
 {
   bvec out(nel,nboot,njack);
   
   return out.load(path,i);
 }
 
-bvec bvec_load_naz(const char *path,int nel,int nboot,int njack,int i)
+bvec bvec_load_naz(string path,int nel,int nboot,int njack,int i)
 {
   bvec out(nel,nboot,njack);
   
   return out.load_naz(path,i);
 }
 #else
-jvec jvec_load(const char *path,int nel,int njack,int i)
+jvec jvec_load(string path,int nel,int njack,int i)
 {
   jvec out(nel,njack);
   
   return out.load(path,i);
 }
 
-jvec jvec_load_naz(const char *path,int nel,int njack,int i)
+jvec jvec_load_naz(string path,int nel,int njack,int i)
 {
   jvec out(nel,njack);
   
@@ -256,7 +264,7 @@ jvec jvec_load_naz(const char *path,int nel,int njack,int i)
 
 ostream& operator<<(ostream &out,const VTYPE &obj)
 {
-  for(int iel=0;iel<obj.nel;iel++) 
+  for(int iel=0;iel<obj.nel;iel++)
     {
       double med=obj.data[iel].med();
       double err=obj.data[iel].err();
@@ -478,7 +486,7 @@ VTYPE VTYPE::inverted()
 
 VTYPE VTYPE::simmetrized(int parity)
 {
-  if(abs(parity)!=1)
+  if(abs(parity)!=1&&parity)
     {
       cerr<<"Error, parity required for simmetrization: "<<parity<<endl;
       exit(1);
@@ -497,11 +505,8 @@ VTYPE VTYPE::simmetrized(int parity)
 #endif
   
   for(int iel=0;iel<nel/2+1;iel++)
-    {
-      if(parity==1) c.data[iel]=(data[iel]+data[(nel-iel)%nel])/2;
-      else          c.data[iel]=(data[iel]-data[(nel-iel)%nel])/2;
-    }
-
+    c.data[iel]=(data[iel]+parity*data[(nel-iel)%nel])/(1+abs(parity));
+  
   return c;
 }
 
@@ -516,6 +521,21 @@ VTYPE VTYPE::shifted(int am)
     }
   
   return a;
+}  
+
+VTYPE rectangle_integrate(VTYPE in)
+{
+#ifdef BVEC
+  bvec out(in.nel+1,in.nboot,in.njack);
+#else
+  jvec out(in.nel+1,in.njack);
+#endif
+  
+  out[0]=0;
+  for(int iel=1;iel<=in.nel;iel++)
+    out[iel]=out[iel-1]+in[iel-1];
+  
+  return out;
 }  
 
 VTYPE paste(VTYPE a,VTYPE b)
@@ -557,23 +577,23 @@ string write_constant_fit_plot(VTYPE in,TYPE y,int tin,int tfin,int iset=0)
   ostringstream out;
   double ym=y.med(),dy=y.err();
   //error of the line
-  out<<"@s"<<iset+0<<" line type 1"<<endl;      
+  out<<"@s"<<iset+0<<" line type 1"<<endl;
   out<<"@s"<<iset+0<<" line color "<<iset/3%7+8<<endl;
   out<<"@s"<<iset+0<<" fill color "<<iset/3%7+8<<endl;
   out<<"@s"<<iset+0<<" fill type 1"<<endl;
-  out<<"@type xy"<<endl;      
+  out<<"@type xy"<<endl;
   out<<tin-0.4<<" "<<ym-dy<<endl<<tfin+0.4<<" "<<ym-dy<<endl;
   out<<tfin+0.4<<" "<<ym+dy<<endl<<tin-0.4<<" "<<ym+dy<<endl;
   out<<tin-0.4<<" "<<ym-dy<<endl;
   out<<"&"<<endl;
   //central line
   out<<"@s"<<iset+1<<" line color "<<iset/3%7+1<<endl;
-  out<<"@type xy"<<endl;      
+  out<<"@type xy"<<endl;
   out<<tin-0.4<<" "<<ym<<endl<<tfin+0.4<<" "<<ym<<endl;
-  //plot the original data with error  
+  //plot the original data with error
   out<<"&"<<endl;
-  out<<"@type xydy"<<endl;      
-  out<<"@s"<<iset+2<<" line type 0"<<endl;      
+  out<<"@type xydy"<<endl;
+  out<<"@s"<<iset+2<<" line type 0"<<endl;
   out<<"@s"<<iset+2<<" symbol color "<<iset/3%7+1<<endl;
   out<<"@s"<<iset+2<<" errorbar color "<<iset/3%7+1<<endl;
   out<<"@s"<<iset+2<<" symbol "<<iset/3%7+1<<endl;
@@ -582,23 +602,23 @@ string write_constant_fit_plot(VTYPE in,TYPE y,int tin,int tfin,int iset=0)
   
   return out.str();
 }
-void append_constant_fit_plot(const char *path,VTYPE in,TYPE y,int tin,int tfin,int iset)
+void append_constant_fit_plot(string path,VTYPE in,TYPE y,int tin,int tfin,int iset)
 {
   ofstream out(path,ios::app);
-  if(!out.good()) crash("opening %s [append_constant_fit_plot]",path);
+  if(!out.good()) crash("opening %s [append_constant_fit_plot]",path.c_str());
   out<<write_constant_fit_plot(in,y,tin,tfin,iset);
   out.close();
 }
-void write_constant_fit_plot(const char *path,VTYPE in,TYPE y,int tin,int tfin,int iset=0)
+void write_constant_fit_plot(string path,VTYPE in,TYPE y,int tin,int tfin,int iset=0)
 {
   ofstream out(path);
-  if(!out.good()) crash("opening %s [write_constant_fit_plot]",path);
+  if(!out.good()) crash("opening %s [write_constant_fit_plot]",path.c_str());
   out<<"@page size 800,600"<<endl;
   out.close();
   append_constant_fit_plot(path,in,y,tin,tfin,iset);
 }
 
-TYPE constant_fit(VTYPE in,int tin,int tfin,const char *path=NULL,const char *path_ch2=NULL)
+TYPE constant_fit(VTYPE in,int tin,int tfin,string path="",string path_ch2="")
 {
   TYPE E(in.data[0]);
 
@@ -629,8 +649,8 @@ TYPE constant_fit(VTYPE in,int tin,int tfin,const char *path=NULL,const char *pa
   //normalize
   E/=norm;
   
-  if(path!=NULL) write_constant_fit_plot(path,in,E,tin,tfin);
-  if(path_ch2!=NULL)
+  if(path!="") write_constant_fit_plot(path,in,E,tin,tfin);
+  if(path_ch2!="")
     {
       ofstream out(path_ch2);
       out<<"t ((teo-data)/err)^2=chi2_contr"<<endl;
@@ -651,7 +671,9 @@ TYPE constant_fit(VTYPE in,int tin,int tfin,const char *path=NULL,const char *pa
   return E;
 }
 
-TYPE correlated_constant_fit(VTYPE in,int tin,int tfin,const char *path=NULL)
+#ifndef NOROOT
+
+TYPE correlated_constant_fit(VTYPE in,int tin,int tfin,string path="")
 {
   tin=max(tin,0);
   tfin=min(tfin,in.nel);
@@ -682,13 +704,15 @@ TYPE correlated_constant_fit(VTYPE in,int tin,int tfin,const char *path=NULL)
   //normalize
   E/=norm;
   
-  if(path!=NULL) write_constant_fit_plot(path,in,E,tin,tfin);
+  if(path!="") write_constant_fit_plot(path,in,E,tin,tfin);
   
   return E;
 }
 
-string write_line_with_error(TYPE q,TYPE m,double xmin,double xmax,int npoints); 
-void linear_fit(TYPE &q,TYPE &m,double *x,VTYPE y,double xmin,double xmax,const char *plot_path=NULL)
+#endif
+
+string write_line_with_error(TYPE q,TYPE m,double xmin,double xmax,int npoints);
+void linear_fit(TYPE &q,TYPE &m,double *x,VTYPE y,double xmin,double xmax,string plot_path="")
 {
   double S,Sx,Sx2;
   TYPE Sxy(y[0]),Sy(y[0]);
@@ -714,7 +738,7 @@ void linear_fit(TYPE &q,TYPE &m,double *x,VTYPE y,double xmin,double xmax,const 
   m=(S*Sxy-Sx*Sy)/delta;
   q=(Sx2*Sy-Sxy*Sx)/delta;
 
-  if(plot_path!=NULL)
+  if(plot_path!="")
     {
       ofstream out(plot_path);
       out<<"@type xy"<<endl<<
@@ -727,7 +751,7 @@ void linear_fit(TYPE &q,TYPE &m,double *x,VTYPE y,double xmin,double xmax,const 
     }
 }
 
-void linear_fit(TYPE &q,TYPE &m,VTYPE y,int tmin,int tmax,const char *plot_path=NULL)
+void linear_fit(TYPE &q,TYPE &m,VTYPE y,int tmin,int tmax,string plot_path="")
 {
   double x[y.nel];
   for(int iel=0;iel<y.nel;iel++) x[iel]=iel;

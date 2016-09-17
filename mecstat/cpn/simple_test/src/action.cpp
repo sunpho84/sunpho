@@ -2,6 +2,11 @@
  #include "config.hpp"
 #endif
 
+#include <iostream>
+
+using namespace std;
+
+#include "charge.hpp"
 #include "data.hpp"
 #include "geometry.hpp"
 #include "parameters.hpp"
@@ -24,6 +29,7 @@ double energy(dcomplex *z,dcomplex *l)
   
   return -(2*res-2*V*NDIMS);
 }
+
 double action(dcomplex *z,dcomplex *l)
 {return energy(z,l)/g;}
 
@@ -45,6 +51,21 @@ double topo_action(double rho,int nlev,dcomplex *l)
     }
 }
 
+//return the charge action
+double charge_action(dcomplex *z,dcomplex *l)
+{
+  double act=0;
+  
+  if(use_charge_pot)
+    {
+      dcomplex c=charge(z,l);
+      
+      act+=-(cosh(ch_pot/L)-1)*c.real()/g;
+      if(use_charge_pot==2) act+=chrono_charge.compute_pot(c.imag());
+    }
+  
+  return act;
+}
 
 //return the energy/action of a single site
 //NB: the total action will be half the sum of the energy of all sites!

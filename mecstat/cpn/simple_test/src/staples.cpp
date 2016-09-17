@@ -10,7 +10,7 @@
 void site_staple(dcomplex *staple,dcomplex *z,dcomplex *l,int site)
 {
   for(int n=0;n<N;n++) staple[n]=0;
-
+  
   for(int mu=0;mu<NDIMS;mu++)
     {
       int site_up=neighup(site,mu);

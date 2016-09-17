@@ -32,7 +32,7 @@ double fun_ptheta(double theta,double a,int k)
   double f=sin(theta);
   f*=f;
   f/=1-cxmax*cxmax;
-
+  
   //compute first piece
   double p=1;
   for(int i=0;i<k-1;i++) p*=f;
@@ -130,13 +130,13 @@ double get_theta(double a,int k,int site)
       ret=get_unif_double(M_PI,site);
       pacc=fun_ptheta(ret,a,k);
       if(pacc>max) crash("ahm K ret=%lg pacc=%lg max=%lg pacc-max=%lg a=%lg",ret,pacc,max,pacc-max,a);
-
+      
       extr=get_unif_double(max,site);
       
       effK++;
     }
   while(extr>pacc);
-
+  
   estK++;
   
   return ret;

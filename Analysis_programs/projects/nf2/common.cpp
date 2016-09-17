@@ -1,6 +1,6 @@
 #pragma once
 
-#include "include.h"
+#include "../../src/include.h"
 #include "common_pars.cpp"
 
 void read_ensemble_pars(char *base_path,int &T,int &ibeta,int &nmass,double *&mass,int &iml_un,int &nlights,const char *data_list_file)

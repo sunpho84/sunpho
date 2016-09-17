@@ -57,9 +57,15 @@ int main(int narg,char **arg)
     {
       ofstream out(arg[2]);
       out<<"@type xy"<<endl<<
-	write_poly_with_error(pars_fit,0,xmax*1.1)<<endl<<
-	"&"<<endl<<
-	"@type xydy"<<endl;
+	write_poly_with_error(pars_fit,0,xmax*1.1)<<endl
+	 <<"&"<<endl
+	 <<"@s1 line color 1"<<endl
+	 <<"@type xydy"<<endl
+	 <<"@s2 linestyle 0"<<endl
+	 <<"@s2 symbol 1"<<endl
+	 <<"@s2 symbol color 2"<<endl
+	 <<"@s2 errorbar color 2"<<endl
+	;
 	
       for(int i=0;i<n;i++)
 	out<<x[i]<<" "<<Y[i]<<endl;

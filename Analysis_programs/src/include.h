@@ -1,9 +1,12 @@
-#pragma once 
+#pragma once
 
 #define _FILE_OFFSET_BITS 64
 #define _LARGEFILE_SOURCE
 
+#ifndef NOROOT
 #include <TMinuit.h>
+#endif
+
 #include <cmath>
 #include <iostream>
 #include <sstream>
@@ -15,7 +18,9 @@ using namespace std;
 bool debug_load=true;
 
 #include "tools.cpp"
-#include "auto.cpp"
+#ifndef NOAUTO
+ #include "auto.cpp"
+#endif
 
 #include "endianess.cpp"
 #include "functions.cpp"
@@ -34,5 +39,6 @@ bool debug_load=true;
 #include "rand.cpp"
 #include "interpolate.cpp"
 
-#include "gevp.cpp"
-
+#ifndef NOGEVP
+ #include "gevp.cpp"
+#endif

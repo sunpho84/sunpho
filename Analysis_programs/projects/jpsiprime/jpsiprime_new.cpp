@@ -232,7 +232,7 @@ void stage_A_fit(jvec &M,jvec &Z,jvec *corr,int ist)
   
   //fix them using non-diagonal correlator
   for(int ism=0;ism<nsm;ism++)
-    if(!(use[ist][ism] && sign[ism*nsm+ism]!=0)||isnan(Z[ist*nsm+ism].err()))
+    if(!(use[ist][ism] && sign[ism*nsm+ism]!=0)||std::isnan(Z[ist*nsm+ism].err()))
       {
 	//cout<<use[ist][ism]<<" "<<(sign[ism*nsm+ism]!=0)<<" "<<isnan(Z[ist*nsm+ism].err())<<" "<<Z[ist*nsm+ism]<<" sm: "<<ism<<" "<<nst<<endl;
 	//search a non-diagonal correlator

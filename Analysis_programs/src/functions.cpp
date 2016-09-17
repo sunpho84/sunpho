@@ -28,3 +28,9 @@ double lin_fun(double const x,double*p)
 
 double const_fun(double const x,double*p)
 {return p[0];}
+
+template <class T> T cont_e(T m,double p)
+{return sqrt(m*m+3*p*p);}
+
+template <class T> T latt_e(T m,double p)
+{return 2*asinh(sqrt(3*sqr(sin(p/2))+sqr(sinh(m/2))));}

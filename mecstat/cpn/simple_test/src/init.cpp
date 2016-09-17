@@ -6,6 +6,7 @@
 #include <iostream>
 #include <omp.h>
 
+#include "charge.hpp"
 #include "data.hpp"
 #include "geometry.hpp"
 #include "random.hpp"
@@ -46,8 +47,6 @@ void read_input(read_pars_t &read_pars,const char *path)
   read(read_pars.use_hmc,input,"UseHMC");
   switch(read_pars.use_hmc)
     {
-    case -1:
-      break;
     case 0:
        read(read_pars.nmicro,input,"NMicro");
        break;
@@ -62,24 +61,38 @@ void read_input(read_pars_t &read_pars,const char *path)
   switch(use_topo_pot)
     {
     case 0:
+      th_top=0;
       break;
     case 1:
       read(th_top,input,"ThTop");
       break;
     case 2:
       if(!read_pars.use_hmc) crash("must use hmc");
-      read(chrono_topo_after,input,"ChronoTopoAfter");
-      read(chrono_topo_each,input,"ChronoTopoEach");
-      read(chrono_topo_coeff,input,"ChronoTopoCoeff");
-      read(chrono_topo_width,input,"ChronoTopoWidth");
-      read(chrono_topo_barr,input,"ChronoTopoBarr");
-      read(chrono_topo_force_out,input,"ChronoTopoForceOut");
-      read(chrono_topo_bend,input,"ChronoTopoBend");
-      read(chrono_topo_well_tempering,input,"ChronoTopoWellTempering");
+      chrono_topo.read_pars(input,"Topo");
       break;
+    default:
+      crash("unknwon method %d",use_topo_pot);
     }
   read(nstout_lev,input,"NStoutLev");
   read(stout_rho,input,"StoutRho");
+  
+  read(use_charge_pot,input,"UseChargePot");
+  switch(use_charge_pot)
+    {
+    case 0:
+      ch_pot=0;
+      break;
+    case 1:
+      read(ch_pot,input,"ChPot");
+      break;
+    case 2:
+      read(ch_pot,input,"ChPot");
+      if(!read_pars.use_hmc) crash("must use hmc");
+      chrono_charge.read_pars(input,"Charge");
+      break;
+    default:
+      crash("unknwon method %d",use_charge_pot);
+    }
 }
 
 //initialize the system to hot
@@ -115,7 +128,7 @@ void init(int &base_isweep,read_pars_t &read_pars)
 {
   //take init time
   init_time=time(0);
-
+  
   //write nthreads
 #pragma omp parallel
   {
@@ -195,7 +208,7 @@ void init(int &base_isweep,read_pars_t &read_pars)
   //allocate force
   fpi=new dcomplex[V*N];
   fomega=new double[V*NDIMS];
-
+  
   //allocate topo staples
   topo_staples_data=new dcomplex[V*NDIMS];
   topo_staples_supp_data=new dcomplex[V*NDIMS];
@@ -226,16 +239,18 @@ void init(int &base_isweep,read_pars_t &read_pars)
       read_conf(base_isweep,"conf"); //remember rnd gen reinit
       conf_loaded=true;
     }
-
+  
   if(use_topo_pot==2)
     {
-      ngrid=(2*chrono_topo_barr+chrono_topo_width/2)/chrono_topo_width;
-      topo_grid.resize(ngrid+1);
-      for(auto &grid : topo_grid) grid=0;
-      
-      //load the potential
-      if(conf_loaded) load_chrono_topo_potential();
+      chrono_topo.init();
+      if(conf_loaded) chrono_topo.load();
     }
   
+  if(use_charge_pot==2)
+    {
+      chrono_charge.init();
+      if(conf_loaded) chrono_charge.load();
+    }
+    
   nacc=0;
 }

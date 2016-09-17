@@ -3,6 +3,7 @@
 #endif
 
 #include "action.hpp"
+#include "charge.hpp"
 #include "data.hpp"
 #include "geometry.hpp"
 #include "lambda.hpp"
@@ -42,7 +43,7 @@ double zeta_momenta_action()
   double act=0;
 #pragma omp parallel for reduction(+:act)
   for(int site=0;site<V;site++) act+=get_zeta_real_scalprod(pi+site*N,pi+site*N);
-
+  
   return act/2;
 }
 
@@ -61,7 +62,7 @@ double momenta_action()
 {return zeta_momenta_action()+lambda_momenta_action();}
 
 //compute lambda force
-void compute_lambda_forces()
+void compute_lambda_force()
 {
 #pragma omp parallel for
   for(int site=0;site<V;site++)
@@ -95,8 +96,8 @@ void compute_lambda_forces()
 #endif
 }
 
-//compute zeta forces
-void compute_zeta_forces()
+//compute zeta force
+void compute_zeta_force()
 {
   //zeta orthogonalized spin projection
 #pragma omp parallel for
@@ -117,7 +118,7 @@ void compute_zeta_forces()
     {
       for(int m=0;m<N;m++) zeta[site*N+m]=pre_val[m];
       zeta[site*N+n].imag(pre_val[n].imag()+eps);
-      zeta_unitarize(zeta+site*N);    
+      zeta_unitarize(zeta+site*N);
       double post_act=action(zeta,lambda);
       
       double f=-(post_act-pre_act)/eps;
@@ -131,9 +132,10 @@ void compute_zeta_forces()
 //update pi momenta
 void update_zeta_momenta(double eps)
 {
-  //compute the zeta forces
-  compute_zeta_forces();
-
+  //compute the zeta force
+  compute_zeta_force();
+  if(use_charge_pot) sum_charge_zeta_force(zeta,lambda);
+  
   //update zeta momenta
 #pragma omp parallel for
   for(int site=0;site<V;site++) for(int n=0;n<N;n++) pi[site*N+n]+=fpi[site*N+n]*eps;
@@ -142,21 +144,14 @@ void update_zeta_momenta(double eps)
 //update omega momenta
 void update_lambda_momenta(double eps)
 {
-  //compute the lambda forces
-  compute_lambda_forces();
-
+  //compute the lambda force
+  compute_lambda_force();
+  if(use_topo_pot) sum_topological_force(fomega,stout_rho,nstout_lev,lambda);
+  if(use_charge_pot) sum_charge_lambda_force(zeta,lambda);
+  
   //update momenta
 #pragma omp parallel for
   for(int site=0;site<V;site++) for(int mu=0;mu<NDIMS;mu++) omega[site*NDIMS+mu]+=fomega[site*NDIMS+mu]*eps;
-  
-  if(use_topo_pot)
-    {
-      //compute topological lambda forces
-      compute_topological_force(fomega,stout_rho,nstout_lev,lambda);
-      //update momenta
-#pragma omp parallel for
-      for(int site=0;site<V;site++) for(int mu=0;mu<NDIMS;mu++) omega[site*NDIMS+mu]+=fomega[site*NDIMS+mu]*eps;
-    }
 }
 
 //update both momenta
@@ -178,7 +173,7 @@ void update_zeta_positions(double eps)
       //compute parameters of rotating matrix
       double al=eps*pi_norm;
       double cal=cos(al),sal=sin(al);
-  
+      
       //update zeta according to ortho-bound
       for(int n=0;n<N;n++)
 	{
@@ -214,7 +209,7 @@ void update_positions(double eps)
 void hmc_integrate(double tl)
 {
   double dt=tl/nhmc_steps/2,dth=dt/2,ldt=dt*OMELYAN_LAMBDA,l2dt=2*OMELYAN_LAMBDA*dt,uml2dt=(1-2*OMELYAN_LAMBDA)*dt;
-
+  
   //     Compute H(t+lambda*dt) i.e. v1=v(t)+a[r(t)]*lambda*dt (first half step)
   update_momenta(ldt);
     
@@ -235,7 +230,7 @@ void hmc_integrate(double tl)
       //     Compute H(t+dt) i.e. v(t+dt)=v2+a[r(t+dt)]*lambda*dt (at last step) or *2*lambda*dt
       update_momenta(last_dt);
     }
-
+  
   //check_lambda_conf_unitarity(lambda);
   //check_zeta_conf_unitarity(zeta);
   //normalize the configuration
@@ -260,7 +255,8 @@ void hmc_update(bool skip_test=false)
   double start_mom_action=momenta_action();
   double start_theo_action=action(zeta,lambda);
   double start_topo_action=(use_topo_pot?topo_action(stout_rho,nstout_lev,lambda):0);
-  double start_action=start_mom_action+start_theo_action+start_topo_action;
+  double start_charge_action=(use_charge_pot?charge_action(zeta,lambda):0);
+  double start_action=start_mom_action+start_theo_action+start_topo_action+start_charge_action;
   //cout<<"Action: mom="<<start_mom_action<<", coord="<<start_theo_action<<", topo: "<<start_topo_action<<endl;
   
   //integrate for unitary length
@@ -270,9 +266,10 @@ void hmc_update(bool skip_test=false)
   double final_mom_action=momenta_action();
   double final_theo_action=action(zeta,lambda);
   double final_topo_action=(use_topo_pot?topo_action(stout_rho,nstout_lev,lambda):0);
-  double final_action=final_mom_action+final_theo_action+final_topo_action;
+  double final_charge_action=(use_charge_pot?charge_action(zeta,lambda):0);
+  double final_action=final_mom_action+final_theo_action+final_topo_action+final_charge_action;
   //cout<<"Action: mom="<<final_mom_action<<", coord="<<final_theo_action<<", topo: "<<final_topo_action<<endl;
-
+  
   //compute difference of action and print it
   double diff_action=final_action-start_action;
   

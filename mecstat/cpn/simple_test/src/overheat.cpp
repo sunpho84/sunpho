@@ -55,9 +55,12 @@ void overheat_update_link(int site,int mu)
   //get the staple
   dcomplex staple;
   link_staple(staple,zeta,site,mu);
-
+  
   //compute the staple norm
   double staple_norm=sqrt(norm(staple));
+  
+  cerr.precision(16);
+  cerr<<"Pre "<<arg(conj(lambda[site*NDIMS+mu])*staple)<<endl;
   
   //if the staple is 0 we can set zeta to random
   if(staple_norm==0) set_U1_to_rnd(lambda[site*NDIMS],site);
@@ -82,19 +85,21 @@ void overheat_update_link(int site,int mu)
       double perp_comp=sin(theta_new)/R_norm;
       lambda[site*NDIMS+mu]=staple*par_comp+R*perp_comp;
     }
+  
+  cerr<<"Aft "<<arg(conj(lambda[site*NDIMS+mu])*staple)<<endl;
 }
 
 //sweep all the lattice with overrelaxation/heatbath
 void overheat_sweep()
 {
   //loop over sites
-  for(int site=0;site<V;site++)
+  //for(int site=0;site<V;site++)
   
-    //for(int ipar=0;ipar<npar;ipar++)
-    //#pragma omp parallel for
-    //for(int site_par=ipar*V_per_par;site_par<(ipar+1)*V_per_par;site_par++)
+    for(int ipar=0;ipar<npar;ipar++)
+      //#pragma omp parallel for
+      for(int site_par=ipar*V_per_par;site_par<(ipar+1)*V_per_par;site_par++)
       {
-	//int site=lx_of_par[site_par];
+	int site=lx_of_par[site_par];
 	overheat_update_site(site);
 	for(int mu=0;mu<NDIMS;mu++) overheat_update_link(site,mu);
       }

@@ -31,14 +31,16 @@ void read_formatted_from_file_expecting(char *out,FILE *fin,const char *what,con
   expect_string_from_file(fin,varname);
   read_formatted_from_file(out,fin,what,varname);
 }
+int skip_line(FILE *fin)
+{return fscanf(fin,"%*[^\n]\n");}
 
-FILE *open_file(const char* path,const char* mod)
+FILE *open_file(string path,const char* mod)
 {
-  FILE *out=fopen(path,mod);
+  FILE *out=fopen(path.c_str(),mod);
 
   if(out==NULL)
     {
-      perror(combine("Error opening file '%s' in mode '%s'",path,mod).c_str());
+      perror(combine("Error opening file '%s' in mode '%s'",path.c_str(),mod).c_str());
       exit(1);
     }
   

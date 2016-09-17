@@ -2,20 +2,23 @@
  #include "config.hpp"
 #endif
 
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
 
-//crash
-void internal_crash(int line,const char *file,const char *templ,...)
+using namespace std;
+
+//crash promptin error message
+void internal_crash(int line,const char *file,const char *temp,...)
 {
-  //expand error message
-  char mess[1024];
-  va_list ap;
-  va_start(ap,templ);
-  vsprintf(mess,templ,ap);
-  va_end(ap);
+  char buffer[1024];
+  va_list args;
   
-  fprintf(stderr,"ERROR on line %d of file \"%s\", message error: \"%s\".\n",line,file,mess);
+  va_start(args,temp);
+  vsprintf(buffer,temp,args);
+  va_end(args);
+  
+  cerr<<"ERROR at line "<<line<<" of file "<<file<<": "<<buffer<<endl;
   exit(1);
 }

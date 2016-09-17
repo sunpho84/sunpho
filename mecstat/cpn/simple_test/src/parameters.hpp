@@ -9,6 +9,8 @@
 #define EXTERN_PARAMETERS extern
 #endif
 
+#include "types.hpp"
+
 //parameters
 EXTERN_PARAMETERS int N;
 EXTERN_PARAMETERS double beta;
@@ -19,14 +21,12 @@ EXTERN_PARAMETERS double stout_rho;
 EXTERN_PARAMETERS int nhmc_steps;
 EXTERN_PARAMETERS int use_topo_pot;
 EXTERN_PARAMETERS double th_top;
-EXTERN_PARAMETERS int chrono_topo_after;
-EXTERN_PARAMETERS int chrono_topo_each;
-EXTERN_PARAMETERS double chrono_topo_coeff;
-EXTERN_PARAMETERS double chrono_topo_width;
-EXTERN_PARAMETERS double chrono_topo_barr;
-EXTERN_PARAMETERS double chrono_topo_force_out;
-EXTERN_PARAMETERS double chrono_topo_well_tempering;
-EXTERN_PARAMETERS double chrono_topo_bend;
+
+EXTERN_PARAMETERS double ch_pot;
+const int ch_pot_dir=0;
+const int ch_pot_n=0;
+EXTERN_PARAMETERS int use_charge_pot;
+
 EXTERN_PARAMETERS int compute_corr_each;
 
 #endif

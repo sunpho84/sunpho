@@ -227,11 +227,15 @@ int main(int narg,char **arg)
   jvec c_pion=load("PP","ss",PION,0).simmetrized(1);
   jvec c_pion_effmass=effective_mass(c_pion);
   c_pion.print_to_file("plots/pion.xmg");
+  jvec aa(T,njacks);
+  aa.load("data/oPPo-ss_conf.1.dat",14);
+  aa*=-1.0/(L*L*L);
+  aa.print_to_file("/tmp/cicico.xmg");
   
   //kaon correlator
   jvec c_kaon=load("PP","ss",KAON_LINS,0).simmetrized(1);
   jvec c_kaon_effmass=effective_mass(c_kaon);
-  
+  c_kaon.print_to_file("plots/kaon.xmg");
   
   ////////////// load mass ib correction to the kaon //////////////////
   
@@ -251,7 +255,7 @@ int main(int narg,char **arg)
   //////////////// load self energy of the pion and compute slopes /////////////
   
   //self energy of the pion
-  jvec c_pion_self=-load("PP","es",PION,0).simmetrized(1);
+  jvec c_pion_self=load("PP","es",PION,0).simmetrized(1); /*removed sign according to nazario*/
   jvec c_pion_self_slope=c_pion_self/c_pion;
   c_pion_self_slope.print_to_file("plots/pion_self_slope.xmg");
   jack pion_self_slope=constant_fit(numerical_derivative(c_pion_self_slope),tmin_P5P5,TH,"plots/pion_self_slope_deriv.xmg");
@@ -260,29 +264,29 @@ int main(int narg,char **arg)
   //////////////// load self energy of the kaon and compute slopes /////////////
   
   //self energy of the s for the kaon
-  jvec c_kaon_s_self=-load("PP","es",KAON_SINS,0).simmetrized(1);
+  jvec c_kaon_s_self=load("PP","es",KAON_SINS,0).simmetrized(1);  /*removed sign according to nazario*/
   jvec c_kaon_s_self_slope=c_kaon_s_self/c_kaon;
   
   //self energy of the l for the kaon
-  jvec c_kaon_l_self=-load("PP","es",KAON_LINS,0).simmetrized(1);
+  jvec c_kaon_l_self=load("PP","es",KAON_LINS,0).simmetrized(1); /*removed sign according to nazario*/
   jvec c_kaon_l_self_slope=c_kaon_l_self/c_kaon;
   
   
   //////////////// load tadpole of the kaon and compute slopes /////////////
   
   //tadpole of the s for the kaon
-  jvec c_kaon_s_tad=load("PP","ts",KAON_SINS,0).simmetrized(1);
+  jvec c_kaon_s_tad=-load("PP","ts",KAON_SINS,0).simmetrized(1);  /*added sign according to nazario*/
   jvec c_kaon_s_tad_slope=c_kaon_s_tad/c_kaon;
   
   //self energy of the l for the kaon
-  jvec c_kaon_l_tad=load("PP","ts",KAON_LINS,0).simmetrized(1);
+  jvec c_kaon_l_tad=-load("PP","ts",KAON_LINS,0).simmetrized(1); /*added sign according to nazario*/
   jvec c_kaon_l_tad_slope=c_kaon_l_tad/c_kaon;
   
   
   //////////////// load photon exchange for the pion and compute slopes /////////////
   
   //photon exchange with A on the strange for the pion
-  jvec c_pion_exchange=-load("PP","ee",PION,0).simmetrized(1);
+  jvec c_pion_exchange=load("PP","ee",PION,0).simmetrized(1); /*removed sign according to nazario*/
   jvec c_pion_exchange_slope=c_pion_exchange/c_pion;
   c_pion_exchange_slope.print_to_file("plots/pion_exchange_slope.xmg");
   
@@ -290,12 +294,12 @@ int main(int narg,char **arg)
   //////////////// load photon exchange for the kaon and compute slopes /////////////
   
   //photon exchange with A on the strange for the kaon
-  jvec c_kaon_sA_exchange=-load("PP","ee",KAON_LINS,0).simmetrized(1);
+  jvec c_kaon_sA_exchange=load("PP","ee",KAON_LINS,0).simmetrized(1); /*removed sign according to nazario*/
   jvec c_kaon_sA_exchange_slope=c_kaon_sA_exchange/c_kaon;
   c_kaon_sA_exchange_slope.print_to_file("plots/kaon_sA_exchange_slope.xmg");
 
   //photon exchange with A on the strange for the kaon
-  jvec c_kaon_lA_exchange=-load("PP","ee",KAON_SINS,0).simmetrized(1);
+  jvec c_kaon_lA_exchange=load("PP","ee",KAON_SINS,0).simmetrized(1); /*removed sign according to nazario*/
   jvec c_kaon_lA_exchange_slope=c_kaon_lA_exchange/c_kaon;
   c_kaon_lA_exchange_slope.print_to_file("plots/kaon_lA_exchange_slope.xmg");  
   
@@ -350,7 +354,7 @@ int main(int narg,char **arg)
   cout<<"Pion mass: "<<pion_M<<endl;
   cout<<"Pion slope self energy: "<<pion_SL[0]<<endl;
   cout<<"Pion slope exchange: "<<pion_SL[1]<<endl;
-  jack delta=-pion_SL[1]*2*pion_M*e2/2;
+	  jack delta=-pion_SL[1]*pion_M;//*e2/2;
   cout<<"Squared pion mass difference: "<<delta<<endl;
   cout<<endl;
   
@@ -362,9 +366,9 @@ int main(int narg,char **arg)
   jack der_delta_kappa_e2(njacks);
   
   //photon exchange with A on the strange for the pion
-  jvec c_pion_exchange_V0P=-load("V0P","ee",PION,1,-1).simmetrized(-1);
-  jvec c_pion_self_V0P=-load("V0P","es",PION,1,-1).simmetrized(-1);
-  jvec c_pion_tad_V0P=load("V0P","ts",PION,1,-1).simmetrized(-1);
+  jvec c_pion_exchange_V0P=load("V0P","ee",PION,1,-1).simmetrized(-1); /*removed sign according to nazario*/
+  jvec c_pion_self_V0P=load("V0P","es",PION,1,-1).simmetrized(-1); /*removed sign according to nazario*/
+  jvec c_pion_tad_V0P=-load("V0P","ts",PION,1,-1).simmetrized(-1); /*added sign according to nazario*/
   c_pion_exchange_V0P.print_to_file("plots/pion_exchange_V0P.xmg");
   c_pion_self_V0P.print_to_file("plots/pion_self_V0P.xmg");
   c_pion_tad_V0P.print_to_file("plots/pion_tad_V0P.xmg");
@@ -394,11 +398,13 @@ int main(int narg,char **arg)
   //cout<<"test: "<<2*(ed*ed-eu*eu)*e2*kaon_SL[0]*(2*kaon_M)/a/a<<endl;
   
   //the correction is one half of the diff
-  jack K_EM_CORR=kaon_SL[i_kaon_exchange_slope]-(kaon_SL[i_kaon_l_self_slope]+kaon_SL[i_kaon_l_tad_slope]);
+  jack K_EM_CORR=-kaon_SL[i_kaon_exchange_slope]+(kaon_SL[i_kaon_l_self_slope]+kaon_SL[i_kaon_l_tad_slope]); //this are incorporating minus
   jack K_KA_CORR=der_delta_kappa_e2*kaon_SL[i_kaon_l_kib_slope]/2;
-  jack K_CORR=-(ed*ed-eu*eu)*e2*(K_EM_CORR-K_KA_CORR)*(2*kaon_M);
+  jack K_CORR=(eu*eu-ed*ed)*e2*(K_EM_CORR-K_KA_CORR)*(2*kaon_M);
   cout<<"Corr: "<<K_CORR/a/a<<" MeV^2"<<endl;
   cout<<"EM: "<<K_EM_CORR<<" KA: "<<K_KA_CORR<<endl;
+  
+  cout<<"Epsilon: "<<K_CORR/delta-1<<endl;
   
   K_CORR.write_to_binfile("DeltaM2K");
   kaon_M.write_to_binfile("MK");

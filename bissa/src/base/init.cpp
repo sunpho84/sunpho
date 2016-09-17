@@ -72,8 +72,8 @@ namespace bissa
     glb_rnd_gen_inited=0;
     grid_inited=0;
     
-    memset(rank_coord,0,4*sizeof(int));
-    memset(nrank_dir,0,4*sizeof(int));
+    memset(rank_coord,0,sizeof(coords));
+    memset(nrank_dir,0,sizeof(coords));
     
     //check endianness
     check_endianness();
@@ -87,7 +87,7 @@ namespace bissa
     warn_if_not_disallocated=BISSA_DEFAULT_WARN_IF_NOT_DISALLOCATED;
     warn_if_not_communicated=BISSA_DEFAULT_WARN_IF_NOT_COMMUNICATED;
     use_async_communications=BISSA_DEFAULT_USE_ASYNC_COMMUNICATIONS;
-    for(int mu=0;mu<4;mu++) fix_nranks[mu]=0;
+    for(int mu=0;mu<NDIM;mu++) fix_nranks[mu]=0;
     vnode_paral_dir=BISSA_DEFAULT_VNODE_PARAL_DIR;
     
     //put 0 as minimal request
@@ -147,7 +147,7 @@ namespace bissa
 	
 	mu++;
       }
-    while(intvol!=0 && mu<4);
+    while(intvol!=0 && mu<NDIM);
     
     return intvol;
   }
@@ -155,7 +155,9 @@ namespace bissa
   //compute the bulk volume of the local lattice, given by L/R
   int bulk_recip_lat_volume(int *R,int *L)
   {
-    int X[4]={L[0]/R[0],L[1]/R[1],L[2]/R[2],L[3]/R[3]};
+    int X[NDIM];
+    for(int mu=0;mu<NDIM;mu++)
+      X[mu]=L[mu]/R[mu];
     return bulk_volume(X);
   }
   
@@ -163,15 +165,15 @@ namespace bissa
   int compute_border_variance(int *L,int *P,int factorize_processor)
   {
     int S2B=0,SB=0;
-    for(int ib=0;ib<4;ib++)
+    for(int ib=0;ib<NDIM;ib++)
       {
 	int B=1;
-	for(int mu=0;mu<4;mu++) if(mu!=ib) B*=(factorize_processor) ? L[mu]/P[mu] : P[mu];
+	for(int mu=0;mu<NDIM;mu++) if(mu!=ib) B*=(factorize_processor) ? L[mu]/P[mu] : P[mu];
 	SB+=B;
 	S2B+=B*B;
       }
-    SB/=4;
-    S2B/=4;
+    SB/=NDIM;
+    S2B/=NDIM;
     S2B-=SB*SB;
     
     return S2B;
@@ -180,14 +182,16 @@ namespace bissa
   //find the grid minimizing the surface
   void find_minimal_surface_grid(int *mR,int *ext_L,int NR)
   {
-    int additionally_parallelize_dir[4]={0,0,0,0};
+    coords additionally_parallelize_dir;
+    memset(additionally_parallelize_dir,0,sizeof(coords));
     
     //if we want to repartition one dir we must take this into account
-    int L[4];
-    for(int mu=0;mu<4;mu++) L[mu]=additionally_parallelize_dir[mu]?ext_L[mu]/2:ext_L[mu];
+    coords L;
+    for(int mu=0;mu<NDIM;mu++) L[mu]=additionally_parallelize_dir[mu]?ext_L[mu]/2:ext_L[mu];
     
     //compute total and local volume
-    int V=L[0]*L[1]*L[2]*L[3];
+    int V=1;
+    for(int mu=0;mu<NDIM;mu++) V*=L[mu];
     int LV=V/NR;
     
     int something_found=1;
@@ -214,7 +218,7 @@ namespace bissa
     
     //check that we did not asked to fix in an impossible way
     int res_NR=NR;
-    for(int mu=0;mu<4;mu++)
+    for(int mu=0;mu<NDIM;mu++)
       {
 	int nmin_dir=1;
 	if(use_eo_geom) nmin_dir*=2;
@@ -234,8 +238,8 @@ namespace bissa
     //treat simple cases
     if(NR==1||NR==V)
       {
-	if(NR==1) mR[0]=mR[1]=mR[2]=mR[3]=1;
-	else for(int mu=0;mu<4;mu++) mR[mu]=L[mu];
+	if(NR==1) for(int mu=0;mu<NDIM;mu++) mR[mu]=1;
+	else for(int mu=0;mu<NDIM;mu++) mR[mu]=L[mu];
       }
     else
       {
@@ -257,19 +261,20 @@ namespace bissa
 	int nfact=factorize_rank ? nfact_NR : nfact_LV;
 	int *list_fact=factorize_rank ? list_fact_NR : list_fact_LV;
 	
-	//compute the number of combinations: this is given by 4^nfact
+	//compute the number of combinations: this is given by NDIM^nfact
 	int ncombo=1;
-	for(int ifact=0;ifact<nfact;ifact++) ncombo*=4;
+	for(int ifact=0;ifact<nfact;ifact++) ncombo*=NDIM;
 	
 	//find the partition which minimize the surface and the surface variance
 	int min_surf_LV=-1;
 	int icombo=0;
-	mR[0]=mR[1]=mR[2]=mR[3]=-1;
+	for(int mu=0;mu<NDIM;mu++) mR[mu]=-1;
 	
 	do
 	  {
 	    //number of ranks in each direction for current partitioning
-	    int R[4]={1,1,1,1};
+	    coords R;
+	    for(int mu=0;mu<NDIM;mu++) R[mu]=1;
 	    
 	    //find the partioning corresponding to icombo
 	    int ifact=nfact-1;
@@ -278,7 +283,9 @@ namespace bissa
 	      {
 		//find the direction: this is given by the ifact digit of icombo wrote in base 4
 		int mu=(icombo>>(2*ifact)) & 0x3;
-		
+#if NDIM != 4
+#error ciccia
+#endif
 		//if we are factorizing local lattice, rank factor is given by list_fact, otherwise L/list_fact
 		R[mu]*=list_fact[ifact];
 		
@@ -289,7 +296,7 @@ namespace bissa
 	    while(valid_partitioning && ifact>=0);
 	    
 	    if(valid_partitioning)
-	      for(int mu=0;mu<4;mu++)
+	      for(int mu=0;mu<NDIM;mu++)
 		{
 		  //if we are factorizing reciprocal lattice, convert back to rank grid
 		  if(!factorize_rank)  R[mu]=L[mu]/R[mu];
@@ -332,7 +339,7 @@ namespace bissa
 		if(new_minimal)
 		  {
 		    min_surf_LV=surf_LV;
-		    for(int mu=0;mu<4;mu++) mR[mu]=R[mu];
+		    for(int mu=0;mu<NDIM;mu++) mR[mu]=R[mu];
 		    something_found=1;
 		  }
 		
@@ -340,6 +347,9 @@ namespace bissa
 	      }
 	    //skip all remaining factorization using the same structure
 	    else icombo+=(ifact>1) ? 1<<(2*(ifact-1)) : 1;
+#if NDIM != 4
+#error ciccia
+#endif
 	  }
 	while(icombo<ncombo);
       }
@@ -363,7 +373,7 @@ namespace bissa
     if(T!=0 && L!=0)
       {
 	glb_size[0]=T;
-	glb_size[3]=glb_size[2]=glb_size[1]=L;
+	for(int mu=1;mu<NDIM;mu++) glb_size[mu]=L;
       }
     
     //broadcast the global sizes
@@ -371,7 +381,7 @@ namespace bissa
     
     //calculate global volume, initialize local one
     glb_vol=1;
-    for(int idir=0;idir<4;idir++)
+    for(int idir=0;idir<NDIM;idir++)
       {
 	loc_size[idir]=glb_size[idir];
 	glb_vol*=glb_size[idir];
@@ -379,7 +389,9 @@ namespace bissa
     glb_spat_vol=glb_vol/glb_size[0];
     glb_vol2=(double)glb_vol*glb_vol;
     
-    master_printf("Global lattice:\t%dx%dx%dx%d = %d\n",glb_size[0],glb_size[1],glb_size[2],glb_size[3],glb_vol);
+    master_printf("Global lattice:\t%d",glb_size[0]);
+    for(int mu=1;mu<NDIM;mu++) printf("x%d",glb_size[mu]);
+    master_printf(" = %d\n",glb_vol);
     master_printf("Number of running ranks: %d\n",nranks);
     
     //find the grid minimizing the surface
@@ -389,7 +401,7 @@ namespace bissa
     //and check wether the idir dir is parallelized or not
     int ok=(glb_vol%nranks==0);
     if(!ok) crash("The lattice is incommensurable with the total ranks amount!");
-    for(int idir=0;idir<4;idir++)
+    for(int idir=0;idir<NDIM;idir++)
       {
 	ok=ok && (nrank_dir[idir]>0);
 	if(!ok) crash("nrank_dir[%d]: %d",idir,nrank_dir[idir]);
@@ -399,20 +411,22 @@ namespace bissa
 	nparal_dir+=paral_dir[idir];
       }
     
-    master_printf("Creating grid:\t%dx%dx%dx%d\n",nrank_dir[0],nrank_dir[1],nrank_dir[2],nrank_dir[3]);  
+    master_printf("Creating grid:\t%d",nrank_dir[0]);
+    for(int mu=1;mu<NDIM;mu++) printf("x%d",nrank_dir[mu]);
+    master_printf("\n");
     
     //creates the grid
     create_MPI_cartesian_grid();
     
     //calculate the local volume
-    for(int idir=0;idir<4;idir++) loc_size[idir]=glb_size[idir]/nrank_dir[idir];
+    for(int idir=0;idir<NDIM;idir++) loc_size[idir]=glb_size[idir]/nrank_dir[idir];
     loc_vol=glb_vol/nranks;
     loc_spat_vol=loc_vol/loc_size[0];
     loc_vol2=(double)loc_vol*loc_vol;
     
     //calculate bulk size
     bulk_vol=non_bw_surf_vol=1;
-    for(int idir=0;idir<4;idir++)
+    for(int idir=0;idir<NDIM;idir++)
       if(paral_dir[idir])
 	{
 	  bulk_vol*=loc_size[idir]-2;
@@ -430,7 +444,7 @@ namespace bissa
     //calculate the border size
     bord_volh=0;
     bord_offset[0]=0;
-    for(int idir=0;idir<4;idir++)
+    for(int idir=0;idir<NDIM;idir++)
       {
 	//bord size along the idir dir
 	if(paral_dir[idir]) bord_dir_vol[idir]=loc_vol/loc_size[idir];
@@ -445,10 +459,14 @@ namespace bissa
     bord_vol=2*bord_volh;  
     
     //print information
-    master_printf("Local volume\t%dx%dx%dx%d = %d\n",loc_size[0],loc_size[1],loc_size[2],loc_size[3],loc_vol);
-    master_printf("Parallelized dirs: t=%d x=%d y=%d z=%d\n",paral_dir[0],paral_dir[1],paral_dir[2],paral_dir[3]);
+    master_printf("Local volume\t%d",loc_size[0]);
+    for(int mu=1;mu<NDIM;mu++) printf("x%d",loc_size[mu]);
+    master_printf(" = %d\n",loc_vol);
+    master_printf("Parallelized dirs:\t");
+    for(int mu=0;mu<NDIM;mu++) if(paral_dir[mu]) printf("%d ",mu);
+    master_printf("\n");
     master_printf("Border size: %d\n",bord_vol);
-    for(int idir=0;idir<4;idir++)
+    for(int idir=0;idir<NDIM;idir++)
       verbosity_lv3_master_printf("Border offset for dir %d: %d\n",idir,bord_offset[idir]);
     
     //print orderd list of the rank names
@@ -460,8 +478,12 @@ namespace bissa
 	
 	for(int irank=0;irank<nranks;irank++)
 	  {
-	    if(rank==irank) printf("Rank %d of %d running on processor %s: %d (%d %d %d %d)\n",rank,nranks,
-				   proc_name,cart_rank,rank_coord[0],rank_coord[1],rank_coord[2],rank_coord[3]);
+	    if(rank==irank)
+	      {
+		printf("Rank %d of %d running on processor %s: %d (%d",rank,nranks,proc_name,cart_rank,rank_coord[0]);
+		for(int mu=1;mu<NDIM;mu++) printf(" %d",rank_coord[mu]);
+		printf(")\n");
+	      }
 	    fflush(stdout);
 	    ranks_barrier();
 	    MPI_Barrier(MPI_COMM_WORLD);

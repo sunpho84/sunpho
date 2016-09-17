@@ -14,18 +14,17 @@
 
 using namespace std;
 
-//crash promptin error message
-void crash(const char *temp,...)
+//usual combination
+string combine(const char *format,...)
 {
   char buffer[1024];
   va_list args;
-
-  va_start(args,temp);
-  vsprintf(buffer,temp,args);
+  
+  va_start(args,format);
+  vsprintf(buffer,format,args);
   va_end(args);
-
-  cerr<<"ERROR: "<<buffer<<endl;
-  exit(1);
+  
+  return string(buffer);
 }
 
 //check if a file exists
@@ -34,7 +33,7 @@ bool file_exists(const char *path)
   ifstream file(path);
   bool ex=file.good();
   file.close();
-  return ex;  
+  return ex;
 }
 
 //write the configuration to disk

@@ -105,8 +105,8 @@ int main()
 	    Z2cor[t].data[ijack]=corr[t].data[ijack]/fun_fit(1,Meff[ijack],t);
 	jack Z2eff=constant_fit(Z2cor,ttmin,ttmax);
 	
-	if(!isnan(Z2eff[0])) minu.DefineParameter(0,"Z2",Z2eff[0],Z2eff.err(),0,2*Z2eff[0]);
-	if(!isnan(Meff[0])) minu.DefineParameter(1,"M",Meff[0],Meff.err(),0,2*Meff[0]);
+	if(!std::isnan(Z2eff[0])) minu.DefineParameter(0,"Z2",Z2eff[0],Z2eff.err(),0,2*Z2eff[0]);
+	if(!std::isnan(Meff[0])) minu.DefineParameter(1,"M",Meff[0],Meff.err(),0,2*Meff[0]);
 	for(int t=tmin[ifit_int];t<=tmax[ifit_int];t++) corr_err[t]=corr.data[t].err();
 	
 	//jacknife analysis

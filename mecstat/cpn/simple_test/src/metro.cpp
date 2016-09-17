@@ -3,6 +3,7 @@
 #endif
 
 #include <cmath>
+#include <iostream>
 
 #include "action.hpp"
 #include "data.hpp"
@@ -10,6 +11,8 @@
 #include "macros.hpp"
 #include "parameters.hpp"
 #include "random.hpp"
+
+using namespace std;
 
 //update zeta with metropolis
 inline int metro_update_site(int site)
@@ -27,10 +30,10 @@ inline int metro_update_site(int site)
   double diff_ac=fin_ac-ori_ac;
   double t=exp(-diff_ac);
   double p=get_unif_double(1,site);
-
+  
   //copy back
   if(p>t) for(int n=0;n<N;n++) zeta[site*N+n]=ori[n];
-
+  
   return p<=t;
 }
 
@@ -49,10 +52,10 @@ inline int metro_update_link(int site,int mu)
   double diff_ac=fin_ac-ori_ac;
   double t=exp(-diff_ac);
   double p=get_unif_double(1,site);
-
+  
   //copy back
   if(p>t) lambda[site*NDIMS+mu]=ori;
-
+  
   return p<=t;
 }
 

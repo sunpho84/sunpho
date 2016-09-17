@@ -4,9 +4,11 @@
 #include <fstream>
 #include <string>
 
+#include "debug.hpp"
+
 using namespace std;
 
-void crash(const char *temp,...);
+string combine(const char *format,...);
 bool file_exists(const char *path);
 void read_conf(int &itraj,const char *path);
 void write_conf(const char *path,int itraj);

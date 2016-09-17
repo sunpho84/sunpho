@@ -22,8 +22,8 @@ namespace bissa
 {  
   ///////////////// New types ///////////////////
   
-  typedef int coords[4];
-  typedef double momentum_t[4];
+  typedef int coords[NDIM];
+  typedef double momentum_t[NDIM];
   
   typedef int intpair[2];
   typedef uint32_t checksum[2];
@@ -173,9 +173,9 @@ namespace bissa
   struct comm_t
   {
     //destinations and source ranks
-    int send_rank[8],recv_rank[8];
+    int send_rank[2*NDIM],recv_rank[2*NDIM];
     //requests and message
-    MPI_Request requests[16];
+    MPI_Request requests[4*NDIM];
     int nrequest,imessage;
     
     //communication in progress
@@ -185,7 +185,7 @@ namespace bissa
     //size of the message
     uint64_t tot_mess_size;
     //offsets
-    int send_offset[8],message_length[8],recv_offset[8];
+    int send_offset[2*NDIM],message_length[2*NDIM],recv_offset[2*NDIM];
     
     //constructor
     bool initialized;

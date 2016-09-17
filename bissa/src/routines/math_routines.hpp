@@ -10,7 +10,7 @@ namespace bissa
   int log2N(int N);
 
   template <class T> T sqr(T a){return a*a;}
-  template <class T> T cube(T a){return a*a*a;};
+  template <class T> T cube(T a){return a*a*a;}
 }
 
 #endif

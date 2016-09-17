@@ -8,6 +8,7 @@
 using namespace std;
 
 void internal_crash(int line,const char *file,const char *templ,...);
+#define crash(...) internal_crash(__LINE__,__FILE__,__VA_ARGS__)
 
 class timing_t
 {

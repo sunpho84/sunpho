@@ -5,23 +5,23 @@
 int debug_fit=1;
 
 //jack-vec version
-jvec effective_mass(jvec a,int TH=-1,int par=1)
+jvec effective_mass(jvec a,int TH=-1,int par=1,int dt=1)
 {
-  if(TH==-1) TH=a.nel-1;
+  if(TH==-1) TH=a.nel-dt;
 
   int njack=a.njack;
   
-  jvec b(a.nel-1,a.njack);
+  jvec b(a.nel-dt,a.njack);
   
-  for(int t=0;t<a.nel-1;t++)
+  for(int t=0;t<a.nel-dt;t++)
     {
-      jack temp=-log(a[t+1]/a[t]);
+      jack temp=-log(a[t+dt]/a[t]);
       double miniz=temp.med();
       double einiz=temp.err();
       if(einiz==0) einiz=1.e-10;
       
       for(int ijack=0;ijack<=njack;ijack++)
-	b.data[t].data[ijack]=effective_mass(a[t][ijack],a[t+1][ijack],t,TH,miniz,einiz,par);
+	b.data[t].data[ijack]=effective_mass(a[t][ijack],a[t+dt][ijack],t,TH,miniz,einiz,par,dt);
     }
   return b;
 }
@@ -58,18 +58,17 @@ jvec simmetric_derivative(jvec a)
 //jack-vec
 jvec aperiodic_effective_mass(const jvec a)
 {
-  int TH=a.nel-1;
   int njack=a.njack;
   
-  jvec b(TH,njack);
+  jvec b(a.nel-1,njack);
   
-  for(int t=0;t<TH;t++) b.data[t]=log(a.data[t]/a.data[t+1]);
+  for(int t=0;t<a.nel-1;t++) b[t]=log(a.data[t]/a.data[t+1]);
   
   return b;
 }
 
 //fit the mass
-jack mass_fit(jvec corr,int tmin,int tmax,const char *path=NULL,int TH=-1,int parity=1)
+jack mass_fit(jvec corr,int tmin,int tmax,string path=NULL,int TH=-1,int parity=1)
 {
   jvec effe=effective_mass(corr,TH,parity);
   jack mass=constant_fit(effe,tmin,tmax-1,path);
@@ -78,7 +77,7 @@ jack mass_fit(jvec corr,int tmin,int tmax,const char *path=NULL,int TH=-1,int pa
 }
 
 //fit the mass and the matrix element
-void two_pts_fit(jack &E,jack &Z2,jvec corr,int tmin,int tmax,const char *path1=NULL,const char *path2=NULL,int TH=-1,int parity=1)
+void two_pts_fit(jack &E,jack &Z2,jvec corr,int tmin,int tmax,string path1="",string path2="",int TH=-1,int parity=1)
 {
   E=mass_fit(corr,tmin,tmax,path1,TH,parity);
   jvec temp(corr.nel,corr.njack);
@@ -96,8 +95,11 @@ int TH_two_pts_fit;
 int tmin_two_pts_fit;
 int tmax_two_pts_fit;
 
-template <class T> T fun_two_pts_migrad_fit(T Z2,T M,double t)
-{return Z2*exp(-M*TH_two_pts_fit)*cosh(M*(TH_two_pts_fit-t))/M;}
+template <class T> T fun_two_pts_migrad_fit(T Z2,T M,double t,int parity=1)
+{
+  if(parity==1) return Z2*exp(-M*TH_two_pts_fit)*cosh(M*(TH_two_pts_fit-t))/M;
+  else          return Z2*exp(-M*TH_two_pts_fit)*sinh(M*(TH_two_pts_fit-t))/M;
+}
 
 void ch2_two_pts_migrad_fit(int &npar,double *fuf,double &ch,double *p,int flag)
 {
@@ -117,6 +119,8 @@ void ch2_two_pts_migrad_fit(int &npar,double *fuf,double &ch,double *p,int flag)
 	cout<<" Z2: "<<Z2<<", M: "<<M<<", t="<<t<<", diff=("<<num<<"-"<<teo<<")="<<diff<<" err="<<err<<" cont="<<cont<<endl;
     }
 }
+
+#ifndef NOROOT
 
 void two_pts_migrad_fit(jack &M,jack &Z2,jvec corr,int tmin,int tmax,const char *path=NULL)
 {
@@ -168,9 +172,10 @@ void two_pts_migrad_fit(jack &M,jack &Z2,jvec corr,int tmin,int tmax,const char 
   
   if(path!=NULL) write_constant_fit_plot(path,ecorr,M,tmin,tmax);
 }
-
+#endif
 
 //fit the mass and the matrix element in SS and SL combo
+int parity_SL_fit[2];
 double *c_two_pts_SL_fit[2],*e_two_pts_SL_fit[2];
 double *c_two_pts_SL_fit_teo[2];
 double *c_two_pts_SL_fit_ch2_contr[2];
@@ -178,8 +183,11 @@ int TH_two_pts_SL_fit;
 int tmin_two_pts_SL_fit[2];
 int tmax_two_pts_SL_fit[2];
 
-double fun_two_pts_SL_fit(double Z1,double Z2,double M,double t)
-{return Z1*Z2*exp(-M*TH_two_pts_SL_fit)*cosh(M*(TH_two_pts_SL_fit-t))/M;}
+double fun_two_pts_SL_fit(double Z1,double Z2,double M,double t,int parity=1)
+{
+  if(parity==1) return Z1*Z2*exp(-M*TH_two_pts_SL_fit)*cosh(M*(TH_two_pts_SL_fit-t))/M;
+  else          return Z1*Z2*exp(-M*TH_two_pts_SL_fit)*sinh(M*(TH_two_pts_SL_fit-t))/M;
+}
 
 void ch2_two_pts_SL_fit(int &npar,double *fuf,double &ch,double *p,int flag)
 {
@@ -191,7 +199,7 @@ void ch2_two_pts_SL_fit(int &npar,double *fuf,double &ch,double *p,int flag)
   for(int t=tmin_two_pts_SL_fit[0];t<=min(tmax_two_pts_SL_fit[0],TH_two_pts_SL_fit);t++)
     {
       double num=c_two_pts_SL_fit[0][t];
-      double teo=c_two_pts_SL_fit_teo[0][t]=fun_two_pts_SL_fit(ZL,ZS,M,t);
+      double teo=c_two_pts_SL_fit_teo[0][t]=fun_two_pts_SL_fit(ZL,ZS,M,t,parity_SL_fit[0]);
       double diff=num-teo;
       double err=e_two_pts_SL_fit[0][t];
       double cont=c_two_pts_SL_fit_ch2_contr[0][t]=sqr(diff/err);
@@ -202,7 +210,7 @@ void ch2_two_pts_SL_fit(int &npar,double *fuf,double &ch,double *p,int flag)
   for(int t=tmin_two_pts_SL_fit[1];t<=min(tmax_two_pts_SL_fit[1],TH_two_pts_SL_fit);t++)
     {
       double num=c_two_pts_SL_fit[1][t];
-      double teo=c_two_pts_SL_fit_teo[1][t]=fun_two_pts_SL_fit(ZS,ZS,M,t);
+      double teo=c_two_pts_SL_fit_teo[1][t]=fun_two_pts_SL_fit(ZS,ZS,M,t,parity_SL_fit[1]);
       double diff=num-teo;
       double err=e_two_pts_SL_fit[1][t];
       double cont=c_two_pts_SL_fit_ch2_contr[1][t]=sqr(diff/err);
@@ -211,30 +219,19 @@ void ch2_two_pts_SL_fit(int &npar,double *fuf,double &ch,double *p,int flag)
     }
 }
 
-void two_pts_SL_fit(jack &M,jack &ZL,jack &ZS,jvec corrSL,jvec corrSS,int tminSL,int tmaxSL,int tminSS,int tmaxSS,const char *path1=NULL,const char *path2=NULL,const char *path_cls=NULL)
+#ifndef NOROOT
+
+void two_pts_SL_fit(jack &M,jack &ZL,jack &ZS,jvec corrSL,jvec corrSS,int tminSL,int tmaxSL,int tminSS,int tmaxSS,const char *path1=NULL,const char *path2=NULL,const char *path_cls=NULL,int parity_SL=1,int parity_SS=1)
 {
-  //perform the fit and set an initial estimate
-  jack MSL,MSS,ZSL,ZSS;
-  two_pts_fit(MSL,ZSL,corrSL,tminSL,tmaxSL);
-  two_pts_fit(MSS,ZSS,corrSS,tminSS,tmaxSS);
-  
-  //get estimates for ZS and ZL
-  M=MSL;
-  ZS=sqrt(ZSS);
-  ZL=ZSL/ZS;
-  
-  //define minimzer
-  TMinuit minu;
-  minu.SetPrintLevel(-1);
-  minu.SetFCN(ch2_two_pts_SL_fit);
-  
   //copy parameters
-  int njack=MSL.njack;
+  int njack=corrSS.njack;
   int TH=TH_two_pts_SL_fit=corrSL.nel-1;
   tmin_two_pts_SL_fit[0]=tminSL;
   tmin_two_pts_SL_fit[1]=tminSS;
   tmax_two_pts_SL_fit[0]=tmaxSL;
   tmax_two_pts_SL_fit[1]=tmaxSS;
+  parity_SL_fit[0]=parity_SL;
+  parity_SL_fit[1]=parity_SS;
   
   //define temporary structures
   c_two_pts_SL_fit[0]=new double[TH+1];
@@ -252,6 +249,21 @@ void two_pts_SL_fit(jack &M,jack &ZL,jack &ZS,jvec corrSL,jvec corrSS,int tminSL
       e_two_pts_SL_fit[0][iel]=corrSL[iel].err();
       e_two_pts_SL_fit[1][iel]=corrSS[iel].err();
     }
+  
+  //perform the fit and set an initial estimate
+  jack MSL,MSS,ZSL,ZSS;
+  two_pts_fit(MSL,ZSL,corrSL,tminSL,tmaxSL,"/tmp/1",NULL,TH,parity_SL);
+  two_pts_fit(MSS,ZSS,corrSS,tminSS,tmaxSS,"/tmp/2",NULL,TH,parity_SS);
+  
+  //get estimates for ZS and ZL
+  M=MSL;
+  ZS=sqrt(ZSS);
+  ZL=ZSL/ZS;
+  
+  //define minimzer
+  TMinuit minu;
+  minu.SetPrintLevel(-1);
+  minu.SetFCN(ch2_two_pts_SL_fit);
   
   //loop over jacknife
   for(int ijack_fit=0;ijack_fit<=njack;ijack_fit++)
@@ -310,10 +322,10 @@ void two_pts_SL_fit(jack &M,jack &ZL,jack &ZS,jvec corrSL,jvec corrSS,int tminSL
   //write plots
   if(path1!=NULL)
     {
-      write_constant_fit_plot(path1,effective_mass(corrSL),M,tminSL,tmaxSL);
-      if(path2==NULL) append_constant_fit_plot(path1,effective_mass(corrSS),M,tminSS,tmaxSS,3);
+      write_constant_fit_plot(path1,effective_mass(corrSL,TH,parity_SL),M,tminSL,tmaxSL);
+      if(path2==NULL) append_constant_fit_plot(path1,effective_mass(corrSS,TH,parity_SS),M,tminSS,tmaxSS,3);
     }
-  if(path2!=NULL) write_constant_fit_plot(path2,effective_mass(corrSS),M,tminSS,tmaxSS);
+  if(path2!=NULL) write_constant_fit_plot(path2,effective_mass(corrSS,TH,parity_SS),M,tminSS,tmaxSS);
   
   //delete
   delete[] c_two_pts_SL_fit[0];
@@ -325,6 +337,8 @@ void two_pts_SL_fit(jack &M,jack &ZL,jack &ZS,jvec corrSL,jvec corrSS,int tminSL
   delete[] e_two_pts_SL_fit[0];
   delete[] e_two_pts_SL_fit[1];
 }
+
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -357,6 +371,8 @@ void ch2_two_states_migrad_fit(int &npar,double *fuf,double &ch,double *p,int fl
 	  "; t="<<t<<", diff=("<<num<<"-"<<teo<<")="<<diff<<" err="<<err<<" cont="<<cont<<endl;
     }
 }
+
+#ifndef NOROOT
 
 void two_states_fit(jack &MA,jack &MB,jack &ZA,jack &ZB,int tmin,int TH,jvec corr,const char *path)
 {
@@ -436,6 +452,8 @@ void two_states_fit(jack &MA,jack &MB,jack &ZA,jack &ZB,int tmin,int TH,jvec cor
   foutB<<effective_mass(corr);
   foutB<<"&"<<endl;
 }
+
+#endif
 
 //////////////////////////////////////////////////////////////////////////////////////
 

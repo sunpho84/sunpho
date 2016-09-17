@@ -7,7 +7,13 @@ AM_CONFIG_HEADER(src/config.hpp)
 AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_HOST
 
+#silent automake
+AM_SILENT_RULES([yes])
+
 AC_PROG_CXX
+
+AX_CXX_COMPILE_STDCXX_11(noext,mandatory)
+
 AC_CONFIG_FILES(Makefile)
 
 #smart-extraction

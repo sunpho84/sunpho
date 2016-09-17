@@ -49,6 +49,6 @@ void check_lambda_conf_unitarity(dcomplex *l)
   for(int site=0;site<V;site++)
     for(int mu=0;mu<NDIMS;mu++)
       lambda_nonun+=get_lambda_norm(l[site*NDIMS+mu])-1;
-
+  
   cout<<"Lambda nonun: "<<lambda_nonun/sqrt(V*NDIMS)<<endl;
 }

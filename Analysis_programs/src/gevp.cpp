@@ -1,4 +1,6 @@
+#ifndef NOROOT
 #include <TMatrixD.h>
+#endif
 
 const int DEBUG_GEVP=0;
 
@@ -53,18 +55,36 @@ void gevp_pars_t::load_raw_data(const char *raw_data_path,const char *infile,int
   
   //load data and write the file with all the corrs used
   parity=new int[nlevls*nlevls];
+  int *sign=new int[nlevls*nlevls];
   for(int ilev_so=0;ilev_so<nlevls;ilev_so++)
     for(int ilev_si=0;ilev_si<nlevls;ilev_si++)
       {
+	int i=ilev_so*nlevls+ilev_si;
 	//load and put the correct sign
 	jvec temp=jvec_load(infile,T,njacks,map[ilev_so]*nlevls_sto+map[ilev_si]+off);
-	if(temp[1].med()<0) temp=-temp;
-        
+	sign[i]=1;
+	if(temp[1].med()<0)
+	  {
+	    temp=-temp;
+	    sign[i]=-1;
+	  }
+	
 	//infer correct parity
-	parity[ilev_so*nlevls+ilev_si]=2*((temp[1]*temp[T-2]).med()>0)-1;
-	data[ilev_so*nlevls+ilev_si]=temp.simmetrized(parity[ilev_so*nlevls+ilev_si]);
-      }
-  
+	parity[i]=2*((temp[1]*temp[T-2]).med()>0)-1;
+	data[i]=temp.simmetrized(parity[i]);
+      } 
+
+  cout<<"Parity, sign:"<<endl;
+  for(int ilev_so=0;ilev_so<nlevls;ilev_so++)
+    {
+      cout<<" ";
+      for(int ilev_si=0;ilev_si<nlevls;ilev_si++) cout<<parity[ilev_so*nlevls+ilev_si]<<" ";
+      cout<<"\t";
+      for(int ilev_si=0;ilev_si<nlevls;ilev_si++) cout<<sign[ilev_so*nlevls+ilev_si]<<" ";
+      cout<<endl;
+    }
+  cout<<endl;
+
   //change correlator with the more precise
   int tch=14;
   for(int ilev_so=0;ilev_so<nlevls;ilev_so++)
@@ -79,7 +99,7 @@ void gevp_pars_t::load_raw_data(const char *raw_data_path,const char *infile,int
   if(raw_data_path!=NULL)
     for(int ilev_so=0;ilev_so<nlevls;ilev_so++)
       for(int ilev_si=0;ilev_si<nlevls;ilev_si++)
-	if(ilev_so==ilev_si)
+	//if(ilev_so==ilev_si)
 	{
 	  raw_data<<data[ilev_so*nlevls+ilev_si]<<"&"<<endl;
 	  eff_mass_raw_data<<effective_mass(data[ilev_so*nlevls+ilev_si],TH,
@@ -109,10 +129,11 @@ void gevp_pars_t::check_norm(int tch)
       cout<<endl;
     }
 }
-  
-  //check singularity
+
+//check singularity
 void gevp_pars_t::check_singularity(int tch)
 {
+#ifndef NOROOT
   for(int t=0;t<=TH;t++)
     {
       bool is_sing;
@@ -130,7 +151,9 @@ void gevp_pars_t::check_singularity(int tch)
       is_sing=(3*sing.err()>=fabs(sing.med()));
       if(is_sing) cout<<"WARNING data matrix singular at: "<<t<<": "<<smart_print(sing)<<endl;
     }
-}  
+
+#endif
+}
 
 gevp_pars_t::gevp_pars_t(int nlevls,int njacks,int TH,int t0) : nlevls(nlevls),njacks(njacks),TH(TH),t0(t0)
 {
@@ -298,8 +321,8 @@ void gevp_pars_t::reorder_eig()
       int ijack0=ijack1;
       int ijack2=ijack1;
       
-      int imax[TH+1][nlevls];
-      int sign[TH+1][nlevls];
+      int imax[(TH+1)*nlevls];
+      int sign[(TH+1)*nlevls];
       
       //check other times
       for(int t1=0;t1<=TH;t1++)
@@ -319,7 +342,7 @@ void gevp_pars_t::reorder_eig()
 	    {
 	      if(DEBUG_GEVP) printf("Searching for %d max\n",ilev_ext);
 	      double max_found=0;
-	      int ilev1_found,ilev2_found;
+	      int ilev1_found=0,ilev2_found=0;
 	      
 	      //scan the various levels
 	      int found=0;
@@ -349,8 +372,8 @@ void gevp_pars_t::reorder_eig()
 	      
 	      //mark as assigned
 	      assigned2[ilev2_found]=assigned1[ilev1_found]=1;
-	      imax[t1][ilev1_found]=ilev2_found;
-	      sign[t1][ilev1_found]=(max_found<0)?-1:+1;
+	      imax[t1*nlevls+ilev1_found]=ilev2_found;
+	      sign[t1*nlevls+ilev1_found]=(max_found<0)?-1:+1;
 	    }
 	}
 
@@ -368,14 +391,14 @@ void gevp_pars_t::reorder_eig()
 	  //really reorder
 	  for(int ilev=0;ilev<nlevls;ilev++)
 	    {
-	      int ilev_max=imax[t1][ilev];
+	      int ilev_max=imax[t1*nlevls+ilev];
 	      eig_va[ilev][t1].data[ijack1]=eig_va_te[ilev_max];
 	      for(int iop=0;iop<nlevls;iop++) 
-		eig_ve[iop*nlevls+ilev][t1].data[ijack1]=sign[t1][ilev_max]*eig_ve_te[iop*nlevls+ilev_max];
+		eig_ve[iop*nlevls+ilev][t1].data[ijack1]=sign[t1*nlevls+ilev_max]*eig_ve_te[iop*nlevls+ilev_max];
 	      
 	      if(DEBUG_GEVP) printf("Lev %d most overlap with lev %d with sign %+d\n",
-				    ilev,ilev_max,sign[t1][ilev_max]);
-	      if(imax[t1][ilev]!=ilev)
+				    ilev,ilev_max,sign[t1*nlevls+ilev_max]);
+	      if(imax[t1*nlevls+ilev]!=ilev)
 		{
 		  flipped[t1]++;
 		  if(DEBUG_GEVP) printf("!!!!!! Time %d jack %d, ilev %d exchanged to %d\n",t1,ijack1,ilev,ilev_max);

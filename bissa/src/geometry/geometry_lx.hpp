@@ -38,8 +38,5 @@ namespace bissa
   void set_lx_bord_senders_and_receivers(MPI_Datatype *MPI_BORD_SEND,MPI_Datatype *MPI_BORD_RECE,MPI_Datatype *base);
   void set_lx_geometry();
   void unset_lx_geometry();
-  void red_coords_of_hypercubic_red_point(coords h,int hyp_red);
-  void lx_coords_of_hypercube_vertex(coords lx,int hyp_cube);
-  int hypercubic_red_point_of_red_coords(coords h);
 }
 #endif

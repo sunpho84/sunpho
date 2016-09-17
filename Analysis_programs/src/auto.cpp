@@ -11,7 +11,7 @@
 
 int autocorr_debug=true;
 
-const long unsigned int max_njacks=2048;
+const long unsigned int max_njacks=512;
 
 using namespace std;
 
@@ -59,7 +59,7 @@ void autocorr_data_t::ave_err(double &ave,double &err)
 }
 
 #define EXCLUDING_LOOP(i,j,ijack)					\
-  for(long unsigned int imin[2]={0,(ijack+1)*clust_size},imax[2]={ijack*clust_size,size},iter=0;iter<2;iter++) \
+  for(long unsigned int imin[2]={0,(ijack+1)*clust_size},imax[2]={ijack*clust_size,njacks*clust_size},iter=0;iter<2;iter++) \
     for(long unsigned int j=imin[iter],i=j-iter*clust_size;j<imax[iter];j++,i++)
 
 void autocorr_data_t::autocorr(double *ave_corr,double *jck_corr,double *err_corr)
@@ -67,14 +67,18 @@ void autocorr_data_t::autocorr(double *ave_corr,double *jck_corr,double *err_cor
   //allocate fftw
   fftw_complex *in=(fftw_complex*)fftw_malloc(jackniffed_size*sizeof(fftw_complex));
   fftw_complex *out=(fftw_complex*)fftw_malloc(jackniffed_size*sizeof(fftw_complex));
+  for(int i=0;i<jackniffed_size;i++) in[i][0]=in[i][1]=0;
+
   fftw_plan pf=fftw_plan_dft_1d(jackniffed_size,in,out,FFTW_FORWARD,FFTW_ESTIMATE);
   fftw_plan pb=fftw_plan_dft_1d(jackniffed_size,in,out,FFTW_BACKWARD,FFTW_ESTIMATE);
+  for(int i=0;i<jackniffed_size;i++) in[i][0]=in[i][1]=0;
   
   for(int i=0;i<jackniffed_size;i++) ave_corr[i]=err_corr[i]=0;
+  for(int i=0;i<jackniffed_size;i++) in[i][0]=in[i][1]=0;
   
   for(int ijack=0;ijack<njacks;ijack++)
     {
-      cerr<<ijack<<"/"<<njacks<<endl;
+      cout<<ijack<<"/"<<njacks<<endl;
       
       //compute ave
       double ave=0;
@@ -82,6 +86,7 @@ void autocorr_data_t::autocorr(double *ave_corr,double *jck_corr,double *err_cor
       ave/=jackniffed_size;
       
       //copy in
+  for(int i=0;i<jackniffed_size;i++) in[i][0]=in[i][1]=0;
       EXCLUDING_LOOP(i,j,ijack)
 	{
 	  in[i][0]=(*this)[j]-ave;
@@ -97,7 +102,7 @@ void autocorr_data_t::autocorr(double *ave_corr,double *jck_corr,double *err_cor
 	  in[i][0]=out[i][0]*out[i][0]+out[i][1]*out[i][1];
 	  in[i][1]=0;
 	}
-
+      
       //take fftw
       fftw_execute(pb);
       
@@ -168,6 +173,12 @@ void autocorr_data_t::compute_tint(double &med_tint,double &err_tint,const char 
       double *ave_corr=(double*)malloc(sizeof(double)*jackniffed_size);
       double *jck_corr=(double*)malloc(sizeof(double)*jackniffed_size*njacks);
       double *err_corr=(double*)malloc(sizeof(double)*jackniffed_size);
+      if(ave_corr==NULL||jck_corr==NULL||err_corr==NULL)
+	{
+	  cerr<<"unable to allocate"<<endl;
+	  exit(1);
+	}
+
       autocorr(ave_corr,jck_corr,err_corr);
       
       //fix where to stop and plot autocorr
@@ -180,7 +191,7 @@ void autocorr_data_t::compute_tint(double &med_tint,double &err_tint,const char 
 	  if(path!=NULL) autocorr_plot<<istop<<" "<<ave_corr[istop]<<" "<<err_corr[istop]<<endl;
 	  istop++;
 	}
-      while(fabs(ave_corr[istop])>0.5*err_corr[istop] && istop<jackniffed_size-1);
+      while((1||fabs(ave_corr[istop])>0.5*err_corr[istop]) && istop<jackniffed_size-1);
       
       //compute tint across jacknives
       med_tint=0,err_tint=0;

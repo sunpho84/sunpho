@@ -5,7 +5,8 @@ LDADD+=-lfftw3_threads
 
 cpn_source_files= \
 	src/action.cpp \
-        src/close.cpp \
+	src/charge.cpp \
+	src/close.cpp \
         src/corr.cpp \
         src/data.cpp \
         src/debug.cpp \
@@ -28,7 +29,8 @@ cpn_source_files= \
 
 include_HEADERS= \
 	src/action.hpp \
-        src/close.hpp \
+	src/charge.hpp \
+	src/close.hpp \
         src/corr.hpp \
         src/cpn.hpp \
         src/data.hpp \
@@ -56,7 +58,9 @@ include_HEADERS= \
 
 bin_PROGRAMS= \
 	$(top_builddir)/bin/main \
+	$(top_builddir)/bin/reco_pote \
 	$(top_builddir)/bin/reversibility_check
 
 __top_builddir__bin_main_SOURCES=${cpn_source_files} src/main.cpp
+__top_builddir__bin_reco_pote_SOURCES=${cpn_source_files} src/reco_pote.cpp
 __top_builddir__bin_reversibility_check_SOURCES=${cpn_source_files} src/reversibility_check.cpp
