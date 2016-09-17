@@ -1,0 +1,8 @@
+#include "bissa.hpp"
+
+using namespace bissa;
+
+int main()
+{
+  return 0;
+}

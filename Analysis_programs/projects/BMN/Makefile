@@ -1,0 +1,2 @@
+BMN: BMN.cpp
+	g++ -o BMN BMN.cpp -I /home/francesco/Prace/sunpho/Analysis_programs/src -Wall -Wall -O3 -fPIC -I/usr/include/root -pthread -m64 -I/usr/include/root -L/usr/lib/x86_64-linux-gnu -lGui -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread -pthread -lm -ldl -rdynamic -lMinuit -L/usr/lib/x86_64-linux-gnu/root5.34 -O3 -ggdb3 -lblas -lfftw3 -std=c++1y /usr/lib/liblapack.so.3
