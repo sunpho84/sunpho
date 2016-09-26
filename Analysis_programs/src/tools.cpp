@@ -40,11 +40,11 @@ void crash(const char *temp,...)
   exit(1);
 }
 
-int file_exists(const char *path)
+int file_exists(string path)
 {
   int status=0;
   
-  FILE *f=fopen(path,"r");
+  FILE *f=fopen(path.c_str(),"r");
   if(f!=NULL)
     {
       status=1;

@@ -299,11 +299,11 @@ VTYPE pair_operator(const VTYPE &a,const VTYPE &b,double (*fun)(const double,con
   int nboot=a.nboot;
   if(b.nboot!=nboot){cerr<<"Error, unmatched nboot!"<<endl;exit(1);}
   if(b.njack!=njack){cerr<<"Error, unmatched njack!"<<endl;exit(1);}
-  if(b.nel!=nel){cerr<<"Error, unmatched nel!"<<endl;exit(1);}
+  if(b.nel!=nel){cerr<<"Error, unmatched nel: "<<nel<<" vs "<<b.nel<<"!"<<endl;exit(1);}
   bvec c(nel,nboot,njack);
 #else
   if(b.njack!=njack){cerr<<"Error, unmatched njack!"<<endl;exit(1);}
-  if(b.nel!=nel){cerr<<"Error, unmatched nel!"<<endl;exit(1);}
+  if(b.nel!=nel){cerr<<"Error, unmatched nel: "<<nel<<" vs "<<b.nel<<"!"<<endl;exit(1);}
   jvec c(nel,njack);
 #endif
   
