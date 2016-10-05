@@ -1,13 +1,16 @@
 #include "include.h"
 
 //basic parameters
-const int T=96,L=48;
+const int T=96,L=TH_two_pts_fit=48;
 const int njacks=60;
 const int nind_mom=3;
 
+const double amone_gev=1.7295;
+const double agev=1/amone_gev;
+
 //list of time separations
-const int ntseps=8;
-int tsep_list[ntseps]={22,26,28,30,32,34,36,38};
+const int ntseps_known=8,ntseps=ntseps_known;
+int tsep_list[ntseps_known]={22,26,28,30,32,34,36,38};
 
 //quark name and short name
 const int nquarks=6;
@@ -17,7 +20,7 @@ enum Q_T{LI,ST,C1,C2,C3,C4};
 //meson in term of constituents
 const int nmes=8;
 typedef pair<Q_T,Q_T> mes_cont_t;
-const char full_mes_name[nmes][114]={"\\xp\\0","K","D\\S1\\N","D\\S2\\N","D\\S3\\N","D\\S4\\N","D\\S4\\N\\ss\\N","D\\S4\\N\\ss\\N"};
+string full_mes_name[nmes];
 enum MES_T{PI,KA,D1,D2,D3,D4,DS1,DS4};
 vector<mes_cont_t> mes(nmes);
 
@@ -87,7 +90,7 @@ struct semi_t
 };
 
 //all three points known
-int nsemi_known=10,nsemi=nsemi_known;
+const int nsemi_known=10,nsemi=nsemi_known;
 enum SEMI_CORR_ID{PI_to_PI,KA_to_PI,KA_to_KA,D1_to_PI,D4_to_PI,DS1_to_KA,DS4_to_KA,D2_to_D1,D3_to_D1,D4_to_D1};
 vector<semi_t> semi(nsemi_known);
 
@@ -115,10 +118,19 @@ void set_mesons()
   semi[D2_to_D1].init(D2,D1,LI);
   semi[D3_to_D1].init(D3,D1,LI);
   semi[D4_to_D1].init(D4,D1,LI);
+  
+  full_mes_name[PI]="\\xp\\0";
+  full_mes_name[KA]="K";
+  full_mes_name[D1]="D\\S1\\N";
+  full_mes_name[D2]="D\\S2\\N";
+  full_mes_name[D3]="D\\S3\\N";
+  full_mes_name[D4]="D\\S4\\N";
+  full_mes_name[DS1]="D\\S1\\N\\ss\\N";
+  full_mes_name[DS4]="D\\S4\\N\\ss\\N";
 }
 
 //currents
-int ncurrs=4;
+const int ncurrs=4;
 enum CURR_T{S0,VK,V0,TK};
 char curr_name[4][10]={"S0","Vi","V0","Ti"};
 

@@ -28,11 +28,11 @@ for (int i=0;i<num_prod-1;i++)
   {
    if(i==0)
    {
-   X[icopy][i] = X[icopy+1][i] + MAT_RES[icopy+1][iflav*nind_trace + traces_id[num_prod-1-i]];
+   X[icopy][i] =                MAT_RES[icopy+1][iflav*nind_trace+traces_id[num_prod-1-i]]+X[icopy+1][i];
    }
    else
    {
-    X[icopy][i] = X[icopy+1][i] + MAT_RES[icopy+1][iflav*nind_trace+traces_id[num_prod-1-i]]*X[icopy][i-1];
+    X[icopy][i] = X[icopy][i-1]*MAT_RES[icopy+1][iflav*nind_trace+traces_id[num_prod-1-i]]+X[icopy+1][i];
    }
   }
 

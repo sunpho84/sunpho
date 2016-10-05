@@ -1,2 +1,2 @@
 combina: combina.cpp Makefile 
-	g++ -o combina combina.cpp -I /home/francesco/Prace/sunpho/Analysis_programs/src -Wall -O0 -DNOROOT -DNOGEVP -DNOAUTO -std=c++11 -ggdb3
+	g++ -o combina combina.cpp -I /home/francesco/Prace/sunpho/Analysis_programs/src -Wall -O3 -DNOROOT -DNOGEVP -DNOAUTO -std=c++11

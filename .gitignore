@@ -22,3 +22,6 @@ mecstat/metatest/build
 mecstat/ising/build
 mecstat/cpn/build
 /esagoni/config/compile
+/Analysis_programs/projects/BMN/compile_commands.json
+/Analysis_programs/projects/rendens/combina
+/Analysis_programs/projects/rendens/compile_commands.json

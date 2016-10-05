@@ -39,11 +39,47 @@ jack load_single_obs(const char *path)
   return obs;
 }
 
+//load a single file
+void load_write(const char *path_out,const char *path)
+{
+  FILE *fin_obs=open_file(path,"r");
+  map<int,array<double,njacks>> temp;
+  map<int,int> clust_size;
+  int ijack,it;
+  double y;
+  int cl;
+  while(fscanf(fin_obs,"%d %d %d %lg",&ijack,&it,&cl,&y)==4)
+    {
+      temp[it][ijack]=y;
+      clust_size[it]=cl;
+    }
+  
+  int i=0;
+  FILE *fout_obs=open_file(path_out,"w");
+  fprintf(fout_obs,"@type xydy\n");
+  for(auto d : temp)
+    {
+      jack data(njacks);
+      for(int ijack=0;ijack<njacks;ijack++) data[ijack]=d.second[ijack];
+      data.clusterize(clust_size[d.first]);
+      if(i==121) cout<<data[0]<<" "<<data[1]<<endl;
+      fprintf(fout_obs,"%d %lg %lg\n",i++,data.med(),data.err());
+    }
+  
+  fclose(fout_obs);
+  fclose(fin_obs);
+}
+
 //load all the data
 void load()
 {
-  get_par(dtmeas,"dt",0.1);
+  get_par(dtmeas,"dt",0.05);
   get_par(N,"../../N",10);
+  
+  load_write("therm.xmg","obs_sq_Y_trace");
+  load_write("o.xmg","obs_sq_Y_trace_ch2");
+  load_single_obs("obs_energy").write_to_file("energy");
+  exit(0);
   
   //open the file and load
   FILE *fin=open_file("obs_sq_Y_trace_ch2","r");
@@ -53,14 +89,12 @@ void load()
     int ijack,it;
     double y;
     int each;
-    get_par(each,"../each",3);
+    get_par(each,"../each",1);
     cout<<"Each: "<<each<<endl;
     while(fscanf(fin,"%d %d %d %lg",&ijack,&it,&clust_size,&y)==4)
       if(it%each==0) temp[it][ijack]=y;
   }
   
-  load_single_obs("obs_energy").write_to_file("energy");
-
   if(file_exists("obs_sq_Y_trace_ch_modulo"))
   {
     jack mod=load_single_obs("obs_sq_Y_trace_ch_modulo");
@@ -230,8 +264,11 @@ void setup_fit()
   
   //resize the covariance matrix
   diff.resize(px.size());
-  cova.ResizeTo(px.size(),px.size());
-  inv_cova.ResizeTo(cova);
+  if(use_corr)
+    {
+      cova.ResizeTo(px.size(),px.size());
+      inv_cova.ResizeTo(cova);
+    }
   
   double tol=1e-16;
   int iflag;

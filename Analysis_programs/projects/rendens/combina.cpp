@@ -7,8 +7,10 @@ const double N_t=8;
 const int ncopies=256;
 const int nflavs=3;
 //const int nconfs=124;
-const int nconfs=141;
-const int njacks=nconfs;
+const int nconfs_poss=176;
+const int njacks=20;
+const int clust_size=nconfs_poss/njacks;
+const int nconfs=clust_size*njacks;
 const int Ns=32,Nt=8;
 const int V4=Ns*Ns*Ns/Nt;
 FILE *fin;
@@ -34,7 +36,7 @@ void read_conf()
     {
       //read the label
       int conf_lab;
-      if(fscanf(fin,"%d",&conf_lab)!=1) crash("reading iconf: %d",conf_lab);
+      if(fscanf(fin,"%d",&conf_lab)!=1) crash("reading iconf: %d for copy %d",conf_lab,icopy);
       
       for(int iflav=0;iflav<nflavs;iflav++)
 	for(int itrace=0;itrace<nbase_traces;itrace++)
@@ -67,13 +69,14 @@ dcompl Tr_noperm(vector<int> itrace_list,int iflav)
       dcompl prev=P[0];
       P[0]=0;
       
-      //Use "prev" as a temporary storage for the result, then
-      //swap it so that at the next round it will contain the
-      //previous partial sum
+      //Put the result in a temporary storage, take note of old
+      //partial sum of icopy, and replace it with the result, to avoid
+      //using different vectors for partial sums
       for(int icopy=1;icopy<=ncopies;icopy++)
 	{
+	  dcompl res=P[icopy-1]+base_Tr[ind(iflav,itrace_list[itr],icopy-1)]*prev*fact;
 	  prev=P[icopy];
-	  P[icopy]=P[icopy-1]+base_Tr[ind(iflav,itrace_list[itr],icopy-1)]*prev*fact;
+	  P[icopy]=res;
 	}
     }
   
@@ -106,7 +109,7 @@ dcompl Tr(vector<int> itrace_list,int iflav)
 }
 
 //return the number of permutations
-int Tr_nperm(vector<int> itrace_list)
+int Tr_get_nperm(vector<int> itrace_list)
 {
   int nperm=0;
   sort(itrace_list.begin(),itrace_list.end());
@@ -118,7 +121,7 @@ int Tr_nperm(vector<int> itrace_list)
 }
 
 //return the multiplicity
-int Tr_mult(vector<int> itrace_list)
+int Tr_get_mult(vector<int> itrace_list)
 {
   int fact=1;
   for(size_t itr=0;itr<itrace_list.size();itr++) fact*=itr+1.0;
@@ -181,6 +184,8 @@ inline jack fTr(int ifull)
 
 int main()
 {
+  cout<<"Effective confs: "<<nconfs<<endl;
+  
   fin=open_file("rende_new","r");
   vector<pair<vector<int>,string>> full_Tr_map(nfull_Tr);
   
@@ -210,46 +215,41 @@ int main()
   //read all flavour, confs and take all trace products conf by conf
   for(int iconf=0;iconf<nconfs;iconf++)
     {
+      const int ijack=iconf/clust_size;
+      
       read_conf();
       
       for(int iflav=0;iflav<nflavs;iflav++)
-	for(int ifull=0;ifull<nfull_Tr;ifull++)
-	  full_Tr[ind_full(iflav,ifull)][iconf]=
-	    Tr(full_Tr_map[ifull].first,iflav).real();
+  	for(int ifull=0;ifull<nfull_Tr;ifull++)
+  	  full_Tr[ind_full(iflav,ifull)][ijack]+=
+  	    Tr(full_Tr_map[ifull].first,iflav).real();
       
-      // dcompl a=0;
-      // int nc=0;
-      // for(int icopy=0;icopy<ncopies;icopy++)
-      // 	for(int jcopy=icopy+1;jcopy<ncopies;jcopy++)
-      // 	  for(int kcopy=jcopy+1;kcopy<ncopies;kcopy++)
-      // 	    {
-      // 	      a+=
-      // 		base_Tr[ind(0,M_d2M,icopy)]*
-      // 		base_Tr[ind(0,M_dM,jcopy)]*
-      // 		base_Tr[ind(0,M_dM,kcopy)]+
-		
-      // 		base_Tr[ind(0,M_d2M,jcopy)]*
-      // 		base_Tr[ind(0,M_dM,icopy)]*
-      // 		base_Tr[ind(0,M_dM,kcopy)]+
-		
-      // 		base_Tr[ind(0,M_d2M,kcopy)]*
-      // 		base_Tr[ind(0,M_dM,jcopy)]*
-      // 		base_Tr[ind(0,M_dM,icopy)];
-	      
-      // 	      nc+=3;
-      // 	    }
+  //     dcompl a=0;
+  //     double nc=0;
+  //     for(int icopy=0;icopy<ncopies;icopy++)
+  //     	for(int jcopy=icopy+1;jcopy<ncopies;jcopy++)
+  //     	   for(int kcopy=jcopy+1;kcopy<ncopies;kcopy++)
+  // 	     for(int lcopy=kcopy+1;lcopy<ncopies;lcopy++)
+  // 	     {
+  // 	       a+=
+  // 		 base_Tr[ind(0,M_dM,icopy)]*
+  // 		 base_Tr[ind(0,M_dM,jcopy)]*
+  // 		 base_Tr[ind(0,M_dM,kcopy)]*
+  // 		 base_Tr[ind(0,M_dM,lcopy)];
+  // 	       nc+=1;
+  //     	      }
       
-      // double ex=a.real()/nc;
-      // double al=full_Tr[ind_full(0,Tr_M_d2M_Tr_M_dM_Tr_M_dM)][iconf];
-      // cout<<"exact: "<<ex<<", algo: "<<al<<", rel diff: "<<(ex-al)/(ex+al)<<endl;
+  //     double ex=a.real()/nc;
+  //     double al=full_Tr[ind_full(0,Tr_M_dM_Tr_M_dM_Tr_M_dM_Tr_M_dM)][iconf];
+  //     cout<<"exact: "<<ex<<", algo: "<<al<<", rel diff: "<<(ex-al)/(ex+al)<<", nc: "<<nc<<" "<<((1.0)*(nconfs)*(ncopies)*(ncopies-1)*(ncopies-2)*(ncopies-3))<<endl;
     }
   
   //close and clusterize
   fclose(fin);
-  full_Tr.clusterize();
+  full_Tr.clusterize(clust_size);
   
   for(int ifull=0;ifull<nfull_Tr;ifull++)
-    cout<<full_Tr_map[ifull].second<<" ("<<Tr_nperm(full_Tr_map[ifull].first)<<" "<<Tr_mult(full_Tr_map[ifull].first)<<") = "<<fTr(ifull)<<endl;
+    cout<<full_Tr_map[ifull].second<<" ("<<Tr_get_nperm(full_Tr_map[ifull].first)<<" "<<Tr_get_mult(full_Tr_map[ifull].first)<<") = "<<fTr(ifull)<<endl;
   
   //compute susc2
   jack susc2_disc=(fTr(Tr_M_dM_Tr_M_dM)-sqr(fTr(Tr_M_dM)))/(16*V4);
@@ -266,7 +266,7 @@ int main()
     -6*fTr(Tr_M_d2M_Tr_M_dM_M_dM)/16
     +3*fTr(Tr_M_dM_M_dM_Tr_M_dM_M_dM)/16
     +1*fTr(Tr_M_dM_M_dM_M_dM_Tr_M_dM)/2
-    -1*fTr(Tr_M_dM_Tr_M_dM)/16
+    +1*fTr(Tr_M_dM_Tr_M_dM)/16
     +3*fTr(Tr_M_d2M_Tr_M_d2M)/16
     -33*fTr(Tr_M_dM_Tr_M_dM_M_d2M)/64
     -3*fTr(Tr_M_d2M)*fTr(Tr_M_d2M)/16
@@ -274,9 +274,9 @@ int main()
     -3*fTr(Tr_M_d2M)*fTr(Tr_M_dM_Tr_M_dM)/64
     -3*fTr(Tr_M_d2M_M_d2M)/4
     +3*fTr(Tr_M_d2M_M_dM_M_dM)/1
-    +1*fTr(Tr_M_dM_M_dM)/1
+    -1*fTr(Tr_M_dM_M_dM)/1
     -3*fTr(Tr_M_dM_M_dM_M_dM_M_dM)/2
-    -1*fTr(Tr_M_d2M)/4
+    +1*fTr(Tr_M_d2M)/4
     +3*fTr(Tr_M_dM_M_dM)*fTr(Tr_M_d2M)/16
     -3*fTr(Tr_M_dM_M_dM)*fTr(Tr_M_dM_M_dM)/16
     +3*fTr(Tr_M_dM_M_dM)*fTr(Tr_M_dM_Tr_M_dM)/64;
